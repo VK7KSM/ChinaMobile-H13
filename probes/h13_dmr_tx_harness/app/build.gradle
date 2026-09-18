@@ -8,8 +8,8 @@ android {
         applicationId 'net.elfradio.h13dmrtx'
         minSdk 21
         targetSdk 27
-        versionCode 81
-        versionName '0.81-voice-burst-format-no-rf'
+        versionCode 82
+        versionName '0.82-voice-burst-format-gate-fix-no-rf'
         testInstrumentationRunner 'android.support.test.runner.AndroidJUnitRunner'
         ndk {
             abiFilters 'armeabi-v7a'

@@ -101,6 +101,14 @@ final class DmrTxController {
     }
 
     /** 三个语音突发验证模式共用 v0.79 的主动节拍供数路径。 */
+    /**
+     * 本次会话三遍摩尔斯正文的期望包数。语音帧流长度固定为 2808 字节，
+     * 历史格式每包 36 字节共 78 包，语音突发格式每包 27 字节共 104 包。
+     */
+    static int expectedTripleSosUnits(DmrProtocol.VoiceFormat format) {
+        return RealtimeRelay.TRIPLE_SOS_BYTES / TxPlan.unitBytes(format);
+    }
+
     static boolean isVoiceBurstMode(String mode) {
         return MODE_VOICE_BURST_TYPE3_NO_RF.equals(mode)
                 || MODE_VOICE_BURST_TYPE0_NO_RF.equals(mode)
@@ -2161,7 +2169,8 @@ final class DmrTxController {
             throws Exception {
         if (activeRelay == null || activeRelay.requiredTriggerUnits()
                 != RealtimeRelay.EXTERNAL_SOURCE_TRIGGER_UNITS
-                || activeRelay.maximumUnits() != RealtimeRelay.TRIPLE_SOS_UNITS
+                || activeRelay.maximumUnits()
+                        != expectedTripleSosUnits(activeRelay.voiceFormat())
                 || !RELAY_SOURCE_ACK_PACED_SOFTWARE_TRIPLE_SOS.equals(
                         activeRelay.payloadSource())
                 || activeRelay.unitsWritten() != 0
@@ -2207,7 +2216,8 @@ final class DmrTxController {
                     recordedTarget);
         }
         if (!activeRelay.activePacedComplete()
-                || activeRelay.unitsWritten() != RealtimeRelay.TRIPLE_SOS_UNITS
+                || activeRelay.unitsWritten()
+                        != expectedTripleSosUnits(activeRelay.voiceFormat())
                 || activeRelay.creditsConsumed() != 0) {
             throw new IOException("主动三遍SOS正文计数未闭合");
         }
@@ -2764,7 +2774,8 @@ final class DmrTxController {
                 activeRelay.payloadSource())) {
             return;
         }
-        if (activeRelay.maximumUnits() != RealtimeRelay.TRIPLE_SOS_UNITS
+        if (activeRelay.maximumUnits()
+                        != expectedTripleSosUnits(activeRelay.voiceFormat())
                 || activeRelay.unitsWritten() != activeRelay.maximumUnits()
                 || activeRelay.creditsConsumed() != activeRelay.maximumUnits()) {
             throw new IOException("三遍SOS播放窗前正文或信用未完成");
