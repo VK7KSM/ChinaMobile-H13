@@ -1,0 +1,12 @@
+# 开始 uptime=841.65
+# 列: uptime audio_switch dmr_switch pa_enable ptt_d
+841.65 0 1 0 in
+860.26 1 1 0 in
+864.36 0 1 0 in
+868.07 1 1 0 in
+872.05 0 1 0 in
+948.84 1 1 0 in
+951.38 0 1 0 in
+955.62 1 1 0 in
+960.32 0 1 0 in
+# 结束 uptime=995.46 采样 200000 次
