@@ -55,13 +55,20 @@ run_step() {
 # 开跑前确认生产基线到位。应用重新启动后取回串口需要时间，
 # 过早启动预检会在生产基线门被拒。这里等待而不是假定。
 wait_production() {
-    local i owner
+    # 宿主要求串口唯一所有者。仅确认生产应用在列是不够的：
+    # 上次会话遗留的探针进程可能仍持有串口，形成两个所有者而被基线门拒绝。
+    local i count
     for i in $(seq 1 20); do
-        owner=$(adb_sh "su -c 'for p in /proc/[0-9]*; do ls -l \$p/fd 2>/dev/null | grep -q ttyHS0 && cat \$p/cmdline | tr -d \\0; done'")
-        case "$owner" in
-            *h13interphone*) echo "  生产基线就绪：$owner 持有串口"; return 0 ;;
-        esac
-        [ "$i" -eq 1 ] && restore_production >/dev/null
+        count=$(adb_sh "su -c 'for p in /proc/[0-9]*; do ls -l \$p/fd 2>/dev/null | grep -q ttyHS0 && echo X; done'" | grep -c X)
+        if [ "$count" -eq 1 ]; then
+            echo "  生产基线就绪：串口唯一所有者"
+            return 0
+        elif [ "$count" -gt 1 ]; then
+            echo "  串口有 $count 个所有者，停止遗留探针"
+            adb_sh "su -c 'am force-stop net.elfradio.h13dmrtx'" >/dev/null
+        else
+            restore_production >/dev/null
+        fi
         sleep 3
     done
     echo "  生产基线未在预期时间内就绪，终止"
