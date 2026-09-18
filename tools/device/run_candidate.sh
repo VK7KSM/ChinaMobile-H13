@@ -13,7 +13,7 @@ STEP_TIMEOUT=${2:-420}
 
 TOOLS=/c/Dev/H13_D22/research/h13_dmr_tx_harness/tools
 CAPDIR=/c/Dev/H13_D22/research/h13_radio/captures/$(date +%Y-%m-%d)
-SCRIPT=run_h13_dmr_tx_harness_v084_usb.ps1
+SCRIPT=run_h13_dmr_tx_harness_v085_usb.ps1
 ADB=/c/Dev/android-sdk/platform-tools/adb.exe
 PKG=net.elfradio.h13interphone
 ENTRY=$PKG/com.bozhou.interphone.ui.talk.MainActivity
