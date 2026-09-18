@@ -102,11 +102,22 @@ final class DmrTxController {
 
     /** 三个语音突发验证模式共用 v0.79 的主动节拍供数路径。 */
     /**
-     * 本次会话三遍摩尔斯正文的期望包数。语音帧流长度固定为 2808 字节，
-     * 历史格式每包 36 字节共 78 包，语音突发格式每包 27 字节共 104 包。
+     * 按正文字节数与格式计算期望包数。正文长度不再写死：
+     * 三遍摩尔斯为 2808 字节，人声素材为 12960 字节，
+     * 换素材时只需换正文，包数与节拍随之而变。
      */
+    static int expectedUnitsFor(int bodyBytes, DmrProtocol.VoiceFormat format) {
+        int unitBytes = TxPlan.unitBytes(format);
+        if (bodyBytes <= 0 || bodyBytes % unitBytes != 0) {
+            throw new IllegalArgumentException("正文" + bodyBytes
+                    + "字节不能被单元长度" + unitBytes + "整除");
+        }
+        return bodyBytes / unitBytes;
+    }
+
+    /** 历史三遍摩尔斯正文的期望包数，保留给既有路径。 */
     static int expectedTripleSosUnits(DmrProtocol.VoiceFormat format) {
-        return RealtimeRelay.TRIPLE_SOS_BYTES / TxPlan.unitBytes(format);
+        return expectedUnitsFor(RealtimeRelay.TRIPLE_SOS_BYTES, format);
     }
 
     /**
@@ -121,10 +132,19 @@ final class DmrTxController {
      */
     static String voiceFormatConsistencyError(DmrProtocol.VoiceFormat format,
             int relayMaximumUnits) {
+        return voiceFormatConsistencyError(format, relayMaximumUnits,
+                RealtimeRelay.TRIPLE_SOS_BYTES);
+    }
+
+    static String voiceFormatConsistencyError(DmrProtocol.VoiceFormat format,
+            int relayMaximumUnits, int bodyBytes) {
         int unitBytes = TxPlan.unitBytes(format);
         int framesPerUnit = TxPlan.framesPerUnit(format);
         long interval = TxPlan.unitIntervalMs(format);
-        int expected = expectedTripleSosUnits(format);
+        if (bodyBytes <= 0 || bodyBytes % unitBytes != 0) {
+            return "正文" + bodyBytes + "字节不能被单元长度" + unitBytes + "整除";
+        }
+        int expected = bodyBytes / unitBytes;
 
         if (unitBytes != framesPerUnit * TxPlan.AMBE_BYTES_PER_FRAME) {
             return "单元长度与每包帧数不自洽: " + unitBytes + " vs " + framesPerUnit;
@@ -132,18 +152,16 @@ final class DmrTxController {
         if (interval != framesPerUnit * 20L) {
             return "节拍与每包帧数不自洽: " + interval + " vs " + framesPerUnit;
         }
-        if (RealtimeRelay.TRIPLE_SOS_BYTES % unitBytes != 0) {
-            return "正文长度" + RealtimeRelay.TRIPLE_SOS_BYTES
-                    + "不能被单元长度" + unitBytes + "整除";
-        }
         if (relayMaximumUnits != expected) {
             return "中继包数" + relayMaximumUnits + "与本格式期望" + expected + "不一致";
         }
+        // 同一段正文在不同格式下总时长应当一致：内容相同，只是打包粒度不同
         long totalMs = (expected - 1L) * interval;
-        long legacyMs = (RealtimeRelay.TRIPLE_SOS_UNITS - 1L)
+        long legacyMs = (bodyBytes / TxPlan.unitBytes(
+                DmrProtocol.VoiceFormat.LEGACY_CHAN_D36) - 1L)
                 * TxPlan.UNIT_INTERVAL_MS;
         if (Math.abs(totalMs - legacyMs) > 500L) {
-            return "总时长" + totalMs + "毫秒偏离历史基线" + legacyMs + "毫秒过多";
+            return "总时长" + totalMs + "毫秒与同正文历史格式" + legacyMs + "毫秒偏离过多";
         }
         return null;
     }
@@ -2208,8 +2226,8 @@ final class DmrTxController {
             throws Exception {
         if (activeRelay == null || activeRelay.requiredTriggerUnits()
                 != RealtimeRelay.EXTERNAL_SOURCE_TRIGGER_UNITS
-                || activeRelay.maximumUnits()
-                        != expectedTripleSosUnits(activeRelay.voiceFormat())
+                || activeRelay.maximumUnits() != expectedUnitsFor(
+                        activeRelay.bodyBytes(), activeRelay.voiceFormat())
                 || !RELAY_SOURCE_ACK_PACED_SOFTWARE_TRIPLE_SOS.equals(
                         activeRelay.payloadSource())
                 || activeRelay.unitsWritten() != 0
@@ -2260,8 +2278,8 @@ final class DmrTxController {
                     recordedTarget);
         }
         if (!activeRelay.activePacedComplete()
-                || activeRelay.unitsWritten()
-                        != expectedTripleSosUnits(activeRelay.voiceFormat())
+                || activeRelay.unitsWritten() != expectedUnitsFor(
+                        activeRelay.bodyBytes(), activeRelay.voiceFormat())
                 || activeRelay.creditsConsumed() != 0) {
             throw new IOException("主动三遍SOS正文计数未闭合");
         }
@@ -2818,8 +2836,8 @@ final class DmrTxController {
                 activeRelay.payloadSource())) {
             return;
         }
-        if (activeRelay.maximumUnits()
-                        != expectedTripleSosUnits(activeRelay.voiceFormat())
+        if (activeRelay.maximumUnits() != expectedUnitsFor(
+                        activeRelay.bodyBytes(), activeRelay.voiceFormat())
                 || activeRelay.unitsWritten() != activeRelay.maximumUnits()
                 || activeRelay.creditsConsumed() != activeRelay.maximumUnits()) {
             throw new IOException("三遍SOS播放窗前正文或信用未完成");

@@ -23,6 +23,14 @@ final class RealtimeRelay {
     static final int SPEECH_BYTES = 900;
     static final int TRIPLE_SOS_UNITS = 78;
     static final int TRIPLE_SOS_BYTES = TRIPLE_SOS_UNITS * PLAIN_BYTES;
+
+    // 人声测试素材：26 个字母加 10 个数字逐个朗读，28.8 秒、1440 个语音帧。
+    // 选用人声而非音调，是因为语音声码器按人声建模；实测摩尔斯经该编解码链
+    // 之后已无法辨认字符，而人声内容完整可辨。
+    // 1440 帧同时能被 3 和 4 整除，两种打包格式都不需要补位，可直接对照。
+    static final int SPEECH_AZ09_FRAMES = 1440;
+    static final int SPEECH_AZ09_BYTES =
+            SPEECH_AZ09_FRAMES * TxPlan.AMBE_BYTES_PER_FRAME;
     static final int MAX_ACCEPTED_RAW_BYTES = 1024 * 1024;
     static final int SPEECH_BYTE_OFFSET = 1296;
 
@@ -308,6 +316,11 @@ final class RealtimeRelay {
             this.replacementIsFinalWirePayload = replacementIsFinalWirePayload;
             this.maximumUnits = replacementPlain36.length / unitSize;
         }
+    }
+
+    /** 本次会话的正文字节数。没有替换正文时为零。 */
+    int bodyBytes() {
+        return replacementStream == null ? 0 : replacementStream.length;
     }
 
     /** 本次会话所用格式的单元载荷长度。历史格式为 36 字节，语音突发为 27 字节。 */
