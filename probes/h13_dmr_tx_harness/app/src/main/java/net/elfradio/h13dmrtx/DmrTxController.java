@@ -82,6 +82,18 @@ final class DmrTxController {
     static final String MODE_VOICE_BURST_DIGC_NO_RF =
             "voice_burst_digc_frame_no_rf";
 
+    // 人声素材验证模式（2026-09-18）。正文为 26 字母加 10 数字逐个朗读、
+    // 28.80 秒、1440 个语音帧，替代此前 6.24 秒的摩尔斯正文。
+    // 摩尔斯经该软件编解码链之后字符已无法辨认，不适合作为听辨判据；
+    // 人声内容可正常识别，且能逐项核对从第几个条目开始丢失。
+    // 三者均为无射频模式，正文长度与节拍由素材实际长度决定。
+    static final String MODE_SPEECH_AZ09_TYPE3_NO_RF =
+            "speech_az09_chan_d27_type3_no_rf";
+    static final String MODE_SPEECH_AZ09_TYPE0_NO_RF =
+            "speech_az09_chan_d27_type0_no_rf";
+    static final String MODE_SPEECH_AZ09_DIGC_NO_RF =
+            "speech_az09_digc_frame_no_rf";
+
     static final String RF_PERMISSION = "authorized_low_power_once";
     /**
      * 会话所用的语音注入格式。除三个语音突发验证模式外一律为历史实现，
@@ -95,6 +107,15 @@ final class DmrTxController {
             return DmrProtocol.VoiceFormat.CHAN_D27_TYPE0;
         }
         if (MODE_VOICE_BURST_DIGC_NO_RF.equals(mode)) {
+            return DmrProtocol.VoiceFormat.DIGC_VOICE_BURST;
+        }
+        if (MODE_SPEECH_AZ09_TYPE3_NO_RF.equals(mode)) {
+            return DmrProtocol.VoiceFormat.CHAN_D27_TYPE3;
+        }
+        if (MODE_SPEECH_AZ09_TYPE0_NO_RF.equals(mode)) {
+            return DmrProtocol.VoiceFormat.CHAN_D27_TYPE0;
+        }
+        if (MODE_SPEECH_AZ09_DIGC_NO_RF.equals(mode)) {
             return DmrProtocol.VoiceFormat.DIGC_VOICE_BURST;
         }
         return DmrProtocol.VoiceFormat.LEGACY_CHAN_D36;
@@ -166,12 +187,20 @@ final class DmrTxController {
         return null;
     }
 
+    /** 使用人声素材的模式。正文为 28.80 秒、1440 帧。 */
+    static boolean isSpeechAz09Mode(String mode) {
+        return MODE_SPEECH_AZ09_TYPE3_NO_RF.equals(mode)
+                || MODE_SPEECH_AZ09_TYPE0_NO_RF.equals(mode)
+                || MODE_SPEECH_AZ09_DIGC_NO_RF.equals(mode);
+    }
+
     static boolean isVoiceBurstMode(String mode) {
         return MODE_VOICE_BURST_TYPE3_NO_RF.equals(mode)
                 || MODE_VOICE_BURST_TYPE0_NO_RF.equals(mode)
                 || MODE_VOICE_BURST_DIGC_NO_RF.equals(mode);
     }
 
+    static final String RELAY_SOURCE_SPEECH_AZ09 = "speech_az09";
     static final String RELAY_SOURCE_ENCODE_DMR_SILENCE =
             "encode_dmr_silence";
     static final String RELAY_SOURCE_ENCODE_DMR_TONE800 =
@@ -351,6 +380,7 @@ final class DmrTxController {
                 usesAckPacedTripleSos(mode);
         boolean ackPacedVlcSoftware = ackPacedVlcSoftwareOne
                 || ackPacedVlcSoftwareTripleSos;
+        boolean speechAz09 = isSpeechAz09Mode(mode);
         boolean softwarePrivacyTripleSos =
                 MODE_RELAY_SOFTWARE_PRIVACY_TRIPLE_SOS_NO_RF.equals(mode)
                 || MODE_RELAY_SOFTWARE_PRIVACY_TRIPLE_SOS_LOW_POWER_RF
@@ -468,7 +498,51 @@ final class DmrTxController {
                 byte[] software49Bit36 = null;
                 String software49BitSource = null;
                 boolean softwareFinalWirePayload = false;
-                if (softwarePrivacyMorse || softwarePrivacyTripleSos) {
+                if (speechAz09) {
+                    // 人声素材：26 字母加 10 数字逐个朗读，28.80 秒、1440 帧。
+                    // 与摩尔斯分支并列，不复用其帧数与单元数的固定判定。
+                    status("人声字母数字素材经软件AMBE编解码闭环");
+                    byte[] inputPcmRaw = readAll(assets.open(
+                            "software_ambe_vectors/speech_az09.pcm_s16le"));
+                    short[] inputPcm = TxPlan.decodePcmS16Le(inputPcmRaw);
+                    byte[] goldenChannel72 = readAll(assets.open(
+                            "software_ambe_vectors/speech_az09.ambe9_sequence.bin"));
+                    long encodeStarted = System.nanoTime();
+                    byte[] actualChannel72;
+                    try (SoftwareAmbeEncoder encoder =
+                            new SoftwareAmbeEncoder()) {
+                        actualChannel72 = encoder.encode(inputPcm);
+                    }
+                    long encodeElapsedUs = (System.nanoTime() - encodeStarted)
+                            / 1000L;
+                    if (!Arrays.equals(actualChannel72, goldenChannel72)) {
+                        throw new IOException("人声素材软件AMBE输出不匹配冻结向量");
+                    }
+                    if (actualChannel72.length != RealtimeRelay.SPEECH_AZ09_BYTES) {
+                        throw new IOException("人声素材帧流长度错误："
+                                + actualChannel72.length);
+                    }
+                    SoftwareDmrPrivacyPipeline.Result pipeline =
+                            SoftwareDmrPrivacyPipeline.buildFromClearChannel72(
+                                    runtime14, actualChannel72);
+                    if (pipeline.frames() != RealtimeRelay.SPEECH_AZ09_FRAMES) {
+                        throw new IOException("人声素材帧数错误："
+                                + pipeline.frames());
+                    }
+                    software49Bit36 = pipeline.channel72;
+                    software49BitSource = RELAY_SOURCE_SPEECH_AZ09;
+                    softwareFinalWirePayload = true;
+                    evidence.saveEvent("ambe", "speech_az09_input_pcm",
+                            inputPcmRaw);
+                    evidence.saveEvent("ambe", "speech_az09_channel72",
+                            pipeline.channel72);
+                    evidence.saveText("ambe", "speech_az09_summary",
+                            "frames=" + pipeline.frames() + "\n"
+                            + "channel72_bytes="
+                            + pipeline.channel72.length + "\n"
+                            + "encode_elapsed_us=" + encodeElapsedUs + "\n"
+                            + "seconds=" + (pipeline.frames() * 0.02) + "\n");
+                } else if (softwarePrivacyMorse || softwarePrivacyTripleSos) {
                     int repetitions = softwarePrivacyTripleSos ? 3 : 1;
                     status(repetitions == 3
                             ? "三遍完整SOS经软件AMBE编解码闭环"
@@ -1034,7 +1108,8 @@ final class DmrTxController {
         return MODE_ACK_PACED_VLC_SOFTWARE_TRIPLE_SOS_NO_RF.equals(mode)
                 || MODE_RELAY_SOFTWARE_PRIVACY_TRIPLE_SOS_LOW_POWER_RF
                         .equals(mode)
-                || isVoiceBurstMode(mode);
+                || isVoiceBurstMode(mode)
+                || isSpeechAz09Mode(mode);
     }
 
     static boolean requestsLowPowerRf(String mode) {
@@ -2228,8 +2303,10 @@ final class DmrTxController {
                 != RealtimeRelay.EXTERNAL_SOURCE_TRIGGER_UNITS
                 || activeRelay.maximumUnits() != expectedUnitsFor(
                         activeRelay.bodyBytes(), activeRelay.voiceFormat())
-                || !RELAY_SOURCE_ACK_PACED_SOFTWARE_TRIPLE_SOS.equals(
+                || !(RELAY_SOURCE_ACK_PACED_SOFTWARE_TRIPLE_SOS.equals(
                         activeRelay.payloadSource())
+                        || RELAY_SOURCE_SPEECH_AZ09.equals(
+                                activeRelay.payloadSource()))
                 || activeRelay.unitsWritten() != 0
                 || activeRelay.creditsConsumed() != 0
                 || activeRelay.vlcAckCount() != DmrProtocol.VLC_COUNT

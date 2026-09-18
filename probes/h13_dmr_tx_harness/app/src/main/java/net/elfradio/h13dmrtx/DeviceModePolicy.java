@@ -29,7 +29,8 @@ final class DeviceModePolicy {
                 || DmrTxController.MODE_POST_VLC_THREE_LIVE_SOFTWARE_ONE_NO_RF.equals(mode)
                 || DmrTxController.MODE_ACK_PACED_VLC_SOFTWARE_ONE_NO_RF.equals(mode)
                 || DmrTxController.MODE_ACK_PACED_VLC_SOFTWARE_TRIPLE_SOS_NO_RF.equals(mode)
-                || DmrTxController.isVoiceBurstMode(mode);
+                || DmrTxController.isVoiceBurstMode(mode)
+                || DmrTxController.isSpeechAz09Mode(mode);
     }
 
     static boolean showsRelayStatus(String mode) {
