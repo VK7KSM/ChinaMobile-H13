@@ -72,7 +72,41 @@ final class DmrTxController {
             "ack_paced_vlc_software_one_data36_no_rf";
     static final String MODE_ACK_PACED_VLC_SOFTWARE_TRIPLE_SOS_NO_RF =
             "ack_paced_vlc_software_triple_sos_active_no_rf";
+    // 语音突发格式验证模式（2026-09-18）。三者与 v0.79 的主动节拍供数完全相同，
+    // 唯一差别是语音单元的线上格式：单元由 36 字节四帧改为 27 字节三帧，
+    // 节拍由 80 毫秒改为 60 毫秒，语音帧流逐字节不变。均为无射频模式。
+    static final String MODE_VOICE_BURST_TYPE3_NO_RF =
+            "voice_burst_chan_d27_type3_no_rf";
+    static final String MODE_VOICE_BURST_TYPE0_NO_RF =
+            "voice_burst_chan_d27_type0_no_rf";
+    static final String MODE_VOICE_BURST_DIGC_NO_RF =
+            "voice_burst_digc_frame_no_rf";
+
     static final String RF_PERMISSION = "authorized_low_power_once";
+    /**
+     * 会话所用的语音注入格式。除三个语音突发验证模式外一律为历史实现，
+     * 保证既有模式的行为逐字节不变。
+     */
+    static DmrProtocol.VoiceFormat voiceFormatForMode(String mode) {
+        if (MODE_VOICE_BURST_TYPE3_NO_RF.equals(mode)) {
+            return DmrProtocol.VoiceFormat.CHAN_D27_TYPE3;
+        }
+        if (MODE_VOICE_BURST_TYPE0_NO_RF.equals(mode)) {
+            return DmrProtocol.VoiceFormat.CHAN_D27_TYPE0;
+        }
+        if (MODE_VOICE_BURST_DIGC_NO_RF.equals(mode)) {
+            return DmrProtocol.VoiceFormat.DIGC_VOICE_BURST;
+        }
+        return DmrProtocol.VoiceFormat.LEGACY_CHAN_D36;
+    }
+
+    /** 三个语音突发验证模式共用 v0.79 的主动节拍供数路径。 */
+    static boolean isVoiceBurstMode(String mode) {
+        return MODE_VOICE_BURST_TYPE3_NO_RF.equals(mode)
+                || MODE_VOICE_BURST_TYPE0_NO_RF.equals(mode)
+                || MODE_VOICE_BURST_DIGC_NO_RF.equals(mode);
+    }
+
     static final String RELAY_SOURCE_ENCODE_DMR_SILENCE =
             "encode_dmr_silence";
     static final String RELAY_SOURCE_ENCODE_DMR_TONE800 =
@@ -713,7 +747,8 @@ final class DmrTxController {
                         softwareFinalWirePayload, allowRf,
                         postVlcThreeLiveSoftwareOne,
                         ackPacedVlcSoftware,
-                        ackPacedVlcSoftwareTripleSos);
+                        ackPacedVlcSoftwareTripleSos,
+                        voiceFormatForMode(mode));
                 if (allowRf) {
                     status("第一桥射频窗已关闭，禁止第二桥");
                     if (secondBridgeExitConfirmed || !rfPrepareExecuted
@@ -929,9 +964,12 @@ final class DmrTxController {
     }
 
     static boolean usesAckPacedTripleSos(String mode) {
+        // 三个语音突发验证模式共用这条 v0.79 已验证的主动节拍供数路径，
+        // 唯一差别是语音单元的线上格式，由 voiceFormatForMode 决定。
         return MODE_ACK_PACED_VLC_SOFTWARE_TRIPLE_SOS_NO_RF.equals(mode)
                 || MODE_RELAY_SOFTWARE_PRIVACY_TRIPLE_SOS_LOW_POWER_RF
-                        .equals(mode);
+                        .equals(mode)
+                || isVoiceBurstMode(mode);
     }
 
     static boolean requestsLowPowerRf(String mode) {
@@ -940,11 +978,23 @@ final class DmrTxController {
     }
 
     static long activePacedTargetAt(long firstFlushAt, int unitIndex) {
+        return activePacedTargetAt(firstFlushAt, unitIndex,
+                DmrProtocol.VoiceFormat.LEGACY_CHAN_D36,
+                RealtimeRelay.TRIPLE_SOS_UNITS);
+    }
+
+    /**
+     * 按会话格式计算第 unitIndex 包的绝对节拍目标时刻。
+     * 历史格式为每包 80 毫秒共 78 包，语音突发格式为每包 60 毫秒共 104 包，
+     * 两者总时长相同。
+     */
+    static long activePacedTargetAt(long firstFlushAt, int unitIndex,
+            DmrProtocol.VoiceFormat format, int maximumUnits) {
         if (firstFlushAt <= 0 || unitIndex <= 0
-                || unitIndex >= RealtimeRelay.TRIPLE_SOS_UNITS) {
+                || unitIndex >= maximumUnits) {
             throw new IllegalArgumentException("主动绝对节拍参数无效");
         }
-        return firstFlushAt + unitIndex * TxPlan.UNIT_INTERVAL_MS;
+        return firstFlushAt + unitIndex * TxPlan.unitIntervalMs(format);
     }
 
     static boolean firstBridgeRfCleanupBudgetWellFormed() {
@@ -1344,7 +1394,8 @@ final class DmrTxController {
             String software49BitSource, boolean softwareFinalWirePayload,
             boolean allowRf, boolean postVlcThreeLiveSoftwareOne,
             boolean ackPacedVlcSoftware,
-            boolean ackPacedVlcSoftwareTripleSos)
+            boolean ackPacedVlcSoftwareTripleSos,
+            DmrProtocol.VoiceFormat voiceFormat)
             throws Exception {
         byte[] fullprep = asset(allowRf
                 ? McuAssets.FULLPREP_RF_FILE : McuAssets.FULLPREP_FILE,
@@ -1502,7 +1553,8 @@ final class DmrTxController {
                                     ? RealtimeRelay.SOFTWARE_REPLACEMENT_TRIGGER_UNITS
                                     : RealtimeRelay.REQUIRED_UNITS,
                             postVlcThreeLiveSoftwareOne,
-                            ackPacedVlcSoftwareTripleSos);
+                            ackPacedVlcSoftwareTripleSos,
+                            voiceFormat);
                 } else if (fixedAssetRelay) {
                     byte[] asset = readAll(assets.open(
                             "v090_chan_d_244units.bin"));
@@ -2123,7 +2175,9 @@ final class DmrTxController {
         long firstFlushAt = -1L;
         for (int index = 0; index < activeRelay.maximumUnits(); index++) {
             long targetAt = index == 0 ? SystemClock.elapsedRealtime()
-                    : activePacedTargetAt(firstFlushAt, index);
+                    : activePacedTargetAt(firstFlushAt, index,
+                            activeRelay.voiceFormat(),
+                            activeRelay.maximumUnits());
             sleepUntil(targetAt);
             long callAt = SystemClock.elapsedRealtime();
             if (callAt < targetAt || callAt > targetAt + TxPlan.MAX_LATE_MS) {
@@ -2568,7 +2622,10 @@ final class DmrTxController {
             throw new IOException("连续发送关键窗口未启用");
         }
         long creditReadyAt = SystemClock.elapsedRealtime();
-        long minimumTargetAt = relayMinimumTargetAt(relayLastWriteAt);
+        long minimumTargetAt = relayMinimumTargetAt(relayLastWriteAt,
+                activeRelay == null
+                        ? DmrProtocol.VoiceFormat.LEGACY_CHAN_D36
+                        : activeRelay.voiceFormat());
         long targetAt = relayCreditGatedTargetAt(relayLastWriteAt,
                 creditReadyAt);
         sleepUntil(targetAt);
@@ -2767,10 +2824,17 @@ final class DmrTxController {
     }
 
     static long relayMinimumTargetAt(long previousFlushAt) {
+        return relayMinimumTargetAt(previousFlushAt,
+                DmrProtocol.VoiceFormat.LEGACY_CHAN_D36);
+    }
+
+    /** 按会话格式计算下一包的最早允许写出时刻。 */
+    static long relayMinimumTargetAt(long previousFlushAt,
+            DmrProtocol.VoiceFormat format) {
         if (previousFlushAt <= 0) {
             throw new IllegalArgumentException("data36上一包写出时刻错误");
         }
-        return previousFlushAt + TxPlan.UNIT_INTERVAL_MS;
+        return previousFlushAt + TxPlan.unitIntervalMs(format);
     }
 
     static boolean relayDataWriteAllowedDuringVlc(String label,
