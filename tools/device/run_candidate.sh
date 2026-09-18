@@ -9,7 +9,11 @@
 
 set -u
 MODE=${1:?用法: run_candidate.sh <模式名> [超时秒]}
-STEP_TIMEOUT=${2:-420}
+# v0.86首次跑通480个单元的完整会话，主机侧要拉6800+个证据文件，
+# 全程约475秒——贴着旧的420秒默认值，收尾打印阶段被外层timeout掐掉，
+# 会话其实已经PASS（result=PASS/relay_units_written=480/failure=空）。
+# 默认值改大留出余量，避免以后的成功会话被误判成超时失败。
+STEP_TIMEOUT=${2:-700}
 
 TOOLS=/c/Dev/H13_D22/research/h13_dmr_tx_harness/tools
 CAPDIR=/c/Dev/H13_D22/research/h13_radio/captures/$(date +%Y-%m-%d)

@@ -7,7 +7,8 @@
 # 用法: run_all_candidates.sh [单步超时秒数]
 
 set -u
-STEP_TIMEOUT=${1:-560}
+# 与run_candidate.sh的默认值保持一致，见那边的说明。
+STEP_TIMEOUT=${1:-700}
 HERE=$(cd "$(dirname "$0")" && pwd)
 ADB=/c/Dev/android-sdk/platform-tools/adb.exe
 CAPROOT=/c/Dev/H13_D22/research/h13_radio/captures
