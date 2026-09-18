@@ -516,6 +516,8 @@ def main():
                     help="记录直接调用期间的执行路径（基本块）")
     ap.add_argument("--stub", action="append", default=[],
                     help="函数打桩，格式 地址:返回值[:名称]，跳过依赖外部芯片应答的调用")
+    ap.add_argument("--setmem", action="append", default=[],
+                    help="调用前预置内存，格式 地址:十六进制字节，如 20005000:3100")
     ap.add_argument("--call", default=None,
                     help="启动阶段结束后直接调用该地址的函数（十六进制），用于观察"
                          "指定控制链的实际寄存器写序")
@@ -577,6 +579,11 @@ def main():
                 print(f"  {name} 新增输出: {new[:400]!r}")
         if not got:
             print("  （无串口输出）")
+    for spec in args.setmem:
+        addr_s, _, hexs = spec.partition(":")
+        data = bytes.fromhex(hexs)
+        emu.uc.mem_write(int(addr_s, 16), data)
+        print(f"预置内存 {int(addr_s, 16):#010x} <- {data.hex()}")
     if args.call:
         target = int(args.call, 16)
         from unicorn.arm_const import UC_ARM_REG_R0 as _R0
