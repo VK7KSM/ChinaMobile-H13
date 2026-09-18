@@ -177,6 +177,14 @@ final class DmrTxController {
             return "中继包数" + relayMaximumUnits + "与本格式期望" + expected + "不一致";
         }
         // 同一段正文在不同格式下总时长应当一致：内容相同，只是打包粒度不同
+        // 热路径证据缓冲容量必须覆盖本次包数。历史上该容量按 78 包写死，
+        // 换用 480 包的人声正文后在第 257 包触上限，会话中途失败。
+        // 此处在准入期核对，避免把容量不足表现成协议失败。
+        if (expected > RelayHotPathEvidence.MAX_EVENTS) {
+            return "本次" + expected + "包超出热路径证据容量"
+                    + RelayHotPathEvidence.MAX_EVENTS + "项";
+        }
+
         long totalMs = (expected - 1L) * interval;
         long legacyMs = (bodyBytes / TxPlan.unitBytes(
                 DmrProtocol.VoiceFormat.LEGACY_CHAN_D36) - 1L)

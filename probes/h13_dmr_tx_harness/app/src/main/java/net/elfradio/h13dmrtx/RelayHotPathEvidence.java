@@ -5,13 +5,23 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/** 最长78包实时窗口只保存有界内存证据，退桥并关射频后再落盘。 */
+/**
+ * 实时供数窗口只保存有界内存证据，退桥并关射频后再落盘。
+ *
+ * 之所以不在热路径上直接落盘：历史上 v0.53 每包同步建文件并刷盘，
+ * 导致第六包迟到 67 毫秒；改为有界内存缓冲后最大迟到降到 1 毫秒。
+ *
+ * 容量按最长正文估算。原值 256 项是按 78 包（6.24 秒摩尔斯）设计的，
+ * 人声素材为 480 包（28.8 秒），第 257 包即触上限。现按 480 包留余量取 1024 项，
+ * 字节上限同步放大。仍为有界内存，不会无限增长。
+ */
 final class RelayHotPathEvidence {
-    static final int MAX_EVENTS = 256;
-    static final int MAX_EVENT_BYTES = 65536;
-    // 三个VLC确认窗都可能触发信用背压；512项覆盖最坏读取轮询且仍为有界内存。
-    static final int MAX_READ_SAMPLES = 512;
-    static final int MAX_READ_BYTES = 65536;
+    static final int MAX_EVENTS = 1024;
+    static final int MAX_EVENT_BYTES = 262144;
+    // 三个VLC确认窗都可能触发信用背压。读取轮询次数随包数增长，
+    // 按 480 包留余量取 2048 项，仍为有界内存。
+    static final int MAX_READ_SAMPLES = 2048;
+    static final int MAX_READ_BYTES = 262144;
 
     static final class Event {
         final String category;
