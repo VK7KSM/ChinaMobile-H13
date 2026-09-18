@@ -109,6 +109,45 @@ final class DmrTxController {
         return RealtimeRelay.TRIPLE_SOS_BYTES / TxPlan.unitBytes(format);
     }
 
+    /**
+     * 会话开始前的格式一致性自检。
+     *
+     * 历史教训：格式贯通后仍有校验常量散落各处未跟随，这类常量不影响正常构造，
+     * 只在校验时触发，因此构造与写出的离线回放覆盖不到。此处在接触协议之前
+     * 集中核对各处按格式计算的量是否自洽，一旦不一致立即以明确信息拒绝，
+     * 避免把实现缺陷表现成协议层失败。
+     *
+     * @return 不一致时返回描述，自洽时返回 null
+     */
+    static String voiceFormatConsistencyError(DmrProtocol.VoiceFormat format,
+            int relayMaximumUnits) {
+        int unitBytes = TxPlan.unitBytes(format);
+        int framesPerUnit = TxPlan.framesPerUnit(format);
+        long interval = TxPlan.unitIntervalMs(format);
+        int expected = expectedTripleSosUnits(format);
+
+        if (unitBytes != framesPerUnit * TxPlan.AMBE_BYTES_PER_FRAME) {
+            return "单元长度与每包帧数不自洽: " + unitBytes + " vs " + framesPerUnit;
+        }
+        if (interval != framesPerUnit * 20L) {
+            return "节拍与每包帧数不自洽: " + interval + " vs " + framesPerUnit;
+        }
+        if (RealtimeRelay.TRIPLE_SOS_BYTES % unitBytes != 0) {
+            return "正文长度" + RealtimeRelay.TRIPLE_SOS_BYTES
+                    + "不能被单元长度" + unitBytes + "整除";
+        }
+        if (relayMaximumUnits != expected) {
+            return "中继包数" + relayMaximumUnits + "与本格式期望" + expected + "不一致";
+        }
+        long totalMs = (expected - 1L) * interval;
+        long legacyMs = (RealtimeRelay.TRIPLE_SOS_UNITS - 1L)
+                * TxPlan.UNIT_INTERVAL_MS;
+        if (Math.abs(totalMs - legacyMs) > 500L) {
+            return "总时长" + totalMs + "毫秒偏离历史基线" + legacyMs + "毫秒过多";
+        }
+        return null;
+    }
+
     static boolean isVoiceBurstMode(String mode) {
         return MODE_VOICE_BURST_TYPE3_NO_RF.equals(mode)
                 || MODE_VOICE_BURST_TYPE0_NO_RF.equals(mode)
@@ -2177,7 +2216,12 @@ final class DmrTxController {
                 || activeRelay.creditsConsumed() != 0
                 || activeRelay.vlcAckCount() != DmrProtocol.VLC_COUNT
                 || machine.phase() != TxStateMachine.Phase.WAIT_RELAY_COMPLETION) {
-            throw new IOException("ACK节拍五VLC后主动三遍SOS准入状态错误");
+            String formatError = activeRelay == null ? "中继未建立"
+                    : voiceFormatConsistencyError(activeRelay.voiceFormat(),
+                            activeRelay.maximumUnits());
+            throw new IOException("ACK节拍五VLC后主动三遍SOS准入状态错误"
+                    + (formatError == null ? ""
+                            : "（格式一致性：" + formatError + "）"));
         }
         beginRelayHotPath();
         long fifthAckCompleteAt = SystemClock.elapsedRealtime();
