@@ -1,0 +1,63 @@
+00-00: MultiMedia1 (*) :  : playback 1 : capture 1
+00-01: MultiMedia2 (*) :  : playback 1 : capture 1
+00-02: CS-Voice (*) :  : playback 1 : capture 1
+00-03: VoIP (*) :  : playback 1 : capture 1
+00-04: ULL (*) :  : playback 1
+00-05: Primary MI2S_RX Hostless (*) :  : playback 1
+00-06: INT_FM Hostless (*) :  : capture 1
+00-07: AFE-PROXY RX msm-stub-rx-7 :  : playback 1
+00-08: AFE-PROXY TX msm-stub-tx-8 :  : capture 1
+00-09: (Compress1) :  : playback 1 : capture 1
+00-10: AUXPCM Hostless (*) :  : playback 1 : capture 1
+00-11: Tertiary MI2S_TX Hostless (*) :  : capture 1
+00-12: MultiMedia5 (*) :  : playback 1 : capture 1
+00-13: Voice2 (*) :  : playback 1 : capture 1
+00-14: MultiMedia9 (*) :  : playback 1 : capture 1
+00-15: VoLTE (*) :  : playback 1 : capture 1
+00-16: VoWLAN (*) :  : playback 1 : capture 1
+00-17: INT_HFP_BT Hostless (*) :  : playback 1 : capture 1
+00-18: MultiMedia6 (*) :  : playback 1 : capture 1
+00-19: Listen 1 Audio Service (*) :  : capture 1
+00-20: Listen 2 Audio Service (*) :  : capture 1
+00-21: Listen 3 Audio Service (*) :  : capture 1
+00-22: Listen 4 Audio Service (*) :  : capture 1
+00-23: Listen 5 Audio Service (*) :  : capture 1
+00-24: (Compress2) :  : playback 1
+00-25: QUAT_MI2S Hostless (*) :  : playback 1
+00-26: Senary_mi2s Capture cajon_vifeedback-26 :  : capture 1
+00-27: (Compress3) :  : playback 1
+00-28: (Compress4) :  : playback 1
+00-29: (Compress5) :  : playback 1
+00-30: (Compress6) :  : playback 1
+00-31: (Compress7) :  : playback 1
+00-32: (Compress8) :  : playback 1
+00-33: (Compress9) :  : playback 1
+00-34: VoiceMMode1 (*) :  : playback 1 : capture 1
+00-35: VoiceMMode2 (*) :  : playback 1 : capture 1
+00-36: MultiMedia8 (*) :  : playback 1 : capture 1
+00-37: QCHAT (*) :  : playback 1 : capture 1
+00-38: (Compress10) :  : capture 1
+00-39: (Compress11) :  : capture 1
+00-40: (Compress12) :  : capture 1
+00-41: (Compress13) :  : capture 1
+00-42: (Compress14) :  : capture 1
+00-43: (Primary MI2S Playback) :  : playback 1
+00-44: (Secondary MI2S Playback) :  : playback 1
+00-45: (Tertiary MI2S Capture) :  : capture 1
+00-46: (Quaternary MI2S Playback) :  : playback 1
+00-47: (Quaternary MI2S Capture) :  : capture 1
+00-48: (AUX PCM Playback) :  : playback 1
+00-49: (AUX PCM Capture) :  : capture 1
+00-50: (Internal BT-SCO Playback) :  : playback 1
+00-51: (Internal BT-SCO Capture) :  : capture 1
+00-52: (Internal FM Playback) :  : playback 1
+00-53: (Internal FM Capture) :  : capture 1
+00-54: (AFE Playback) :  : playback 1
+00-55: (AFE Capture) :  : capture 1
+00-56: (Voice Uplink Capture) :  : capture 1
+00-57: (Voice Downlink Capture) :  : capture 1
+00-58: (Voice Farend Playback) :  : playback 1
+00-59: (Voice2 Farend Playback) :  : playback 1
+00-60: (Quinary MI2S Capture) :  : capture 1
+00-61: (Quinary MI2S Playback) :  : playback 1
+00-62: (Internal BT-A2DP Playback) :  : playback 1

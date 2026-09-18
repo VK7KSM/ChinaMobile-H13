@@ -1,0 +1,245 @@
+Requested pin control handlers their pinmux maps:
+device: 78b6000.i2c current state: none
+  state: i2c_active
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio111 (111) function: blsp_i2c2 (139)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio112 (112) function: blsp_i2c2 (139)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio111 (111) 00000000 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio112 (112) 00000000 00020009
+  state: i2c_sleep
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio111 (111) function: blsp_i2c2 (139)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio112 (112) function: blsp_i2c2 (139)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio111 (111) 00000000 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio112 (112) 00000000 00020009
+device: 78b8000.i2c current state: none
+  state: i2c_active
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio14 (14) function: blsp_i2c4 (23)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio15 (15) function: blsp_i2c4 (23)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio14 (14) 00000000 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio15 (15) 00000000 00020009
+  state: i2c_sleep
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio14 (14) function: blsp_i2c4 (23)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio15 (15) function: blsp_i2c4 (23)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio14 (14) 00000000 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio15 (15) 00000000 00020009
+device: 78b9000.i2c current state: i2c_sleep
+  state: i2c_active
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio19 (19) function: blsp_i2c5 (27)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio18 (18) function: blsp_i2c5 (27)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio19 (19) 00000000 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio18 (18) 00000000 00020009
+  state: i2c_sleep
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio19 (19) function: blsp_i2c5 (27)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio18 (18) function: blsp_i2c5 (27)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio19 (19) 00000000 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio18 (18) 00000000 00020009
+device: 78b7000.i2c current state: i2c_sleep
+  state: i2c_active
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio29 (29) function: blsp_i2c3 (45)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio30 (30) function: blsp_i2c3 (45)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio29 (29) 00000000 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio30 (30) 00000000 00020009
+  state: i2c_sleep
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio29 (29) function: blsp_i2c3 (45)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio30 (30) function: blsp_i2c3 (45)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio29 (29) 00000000 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio30 (30) 00000000 00020009
+device: 78b5000.i2c current state: i2c_sleep
+  state: i2c_active
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio6 (6) function: blsp_i2c1 (12)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio7 (7) function: blsp_i2c1 (12)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio6 (6) 00000000 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio7 (7) 00000000 00020009
+  state: i2c_sleep
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio6 (6) function: blsp_i2c1 (12)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio7 (7) function: blsp_i2c1 (12)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio6 (6) 00000000 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio7 (7) 00000000 00020009
+device: soc:qcom,mdss_spi current state: mdss_sleep
+  state: mdss_default
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio24 (24) function: mdp_vsync (30)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio24 (24) 00010004 00020009
+  state: mdss_sleep
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio24 (24) function: mdp_vsync (30)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio24 (24) 00010004 00020009
+device: 78b0000.uart current state: default
+  state: default
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio20 (20) function: blsp_uart2 (36)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio21 (21) function: blsp_uart2 (36)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio20 (20) 00000000 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio21 (21) 00000000 00020009
+  state: sleep
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio20 (20) function: blsp_uart2 (36)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio21 (21) function: blsp_uart2 (36)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio20 (20) 00000000 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio21 (21) 00000000 00020009
+device: 78ba000.spi current state: spi_sleep
+  state: spi_default
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio8 (8) function: blsp_spi6 (16)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio11 (11) function: blsp_spi6 (16)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio8 (8) 00000000 000c0009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio11 (11) 00000000 000c0009
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio10 (10) function: blsp_spi6 (16)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio10 (10) 00000000 00020009
+  state: spi_sleep
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio8 (8) function: gpio (1)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio11 (11) function: gpio (1)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio8 (8) 00010004 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio11 (11) 00010004 00020009
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio10 (10) function: gpio (1)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio10 (10) 00000000 00020009
+device: msm_hsusb current state: none
+device: 5-005d current state: pmx_ts_active
+  state: pmx_ts_active
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio13 (13) function: gpio (1)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio13 (13) 00010003 00080009
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio12 (12) function: gpio (1)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio12 (12) 00010003 00080009
+  state: pmx_ts_suspend
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio13 (13) function: gpio (1)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio13 (13) 00010004 00020009
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio12 (12) function: gpio (1)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio12 (12) 00010004 00020009
+device: 7824900.sdhci current state: sleep
+  state: active
+    type: CONFIGS_GROUP controller 1000000.pinctrl group sdc1_clk (113) 00000000 00100009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group sdc1_cmd (114) 00010003 000a0009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group sdc1_data (115) 00010003 000a0009
+  state: sleep
+    type: CONFIGS_GROUP controller 1000000.pinctrl group sdc1_clk (113) 00000000 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group sdc1_cmd (114) 00010003 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group sdc1_data (115) 00010003 00020009
+device: 7864900.sdhci current state: sleep
+  state: active
+    type: CONFIGS_GROUP controller 1000000.pinctrl group sdc2_clk (116) 00000000 00100009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group sdc2_cmd (117) 00010003 000a0009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group sdc2_data (118) 00010003 000a0009
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio38 (38) function: gpio (1)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio38 (38) 00010003 00020009
+  state: sleep
+    type: CONFIGS_GROUP controller 1000000.pinctrl group sdc2_clk (116) 00000000 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group sdc2_cmd (117) 00010003 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group sdc2_data (118) 00010003 00020009
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio38 (38) function: gpio (1)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio38 (38) 00000000 00020009
+device: soc:gpio_keys current state: tlmm_gpio_key_active
+  state: tlmm_gpio_key_active
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio112 (112) function: gpio (1)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio90 (90) function: gpio (1)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio91 (91) function: gpio (1)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio92 (92) function: gpio (1)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio93 (93) function: gpio (1)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio112 (112) 00010003 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio90 (90) 00010003 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio91 (91) 00010003 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio92 (92) 00010003 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio93 (93) 00010003 00020009
+  state: tlmm_gpio_key_suspend
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio112 (112) function: gpio (1)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio90 (90) function: gpio (1)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio91 (91) function: gpio (1)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio92 (92) function: gpio (1)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio93 (93) function: gpio (1)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio112 (112) 00010003 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio90 (90) 00010003 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio91 (91) 00010003 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio92 (92) 00010003 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio93 (93) 00010003 00020009
+device: soc:flashlight current state: flash_default
+  state: flash_default
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio32 (32) function: gpio (1)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio32 (32) 00000000 00020009
+device: 7702000.sound current state: all_off
+  state: all_off
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio59 (59) function: cdc_pdm0 (89)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio60 (60) function: cdc_pdm0 (89)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio61 (61) function: cdc_pdm0 (89)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio62 (62) function: cdc_pdm0 (89)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio63 (63) function: cdc_pdm0 (89)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio64 (64) function: cdc_pdm0 (89)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio59 (59) 00000000 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio60 (60) 00000000 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio61 (61) 00000000 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio62 (62) 00000000 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio63 (63) 00000000 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio64 (64) 00000000 00020009
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio97 (97) function: gpio (1)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio97 (97) 00010004 00020009
+  state: pri_i2s_act
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio59 (59) function: cdc_pdm0 (89)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio60 (60) function: cdc_pdm0 (89)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio61 (61) function: cdc_pdm0 (89)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio62 (62) function: cdc_pdm0 (89)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio63 (63) function: cdc_pdm0 (89)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio64 (64) function: cdc_pdm0 (89)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio59 (59) 00080009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio60 (60) 00080009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio61 (61) 00080009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio62 (62) 00080009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio63 (63) 00080009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio64 (64) 00080009
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio97 (97) function: gpio (1)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio97 (97) 00010004 00020009
+  state: us_eu_gpio_act
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio59 (59) function: cdc_pdm0 (89)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio60 (60) function: cdc_pdm0 (89)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio61 (61) function: cdc_pdm0 (89)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio62 (62) function: cdc_pdm0 (89)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio63 (63) function: cdc_pdm0 (89)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio64 (64) function: cdc_pdm0 (89)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio59 (59) 00000000 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio60 (60) 00000000 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio61 (61) 00000000 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio62 (62) 00000000 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio63 (63) 00000000 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio64 (64) 00000000 00020009
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio97 (97) function: gpio (1)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio97 (97) 00010004 00080009 00000011
+  state: pri_i2s_us_eu_gpio_act
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio59 (59) function: cdc_pdm0 (89)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio60 (60) function: cdc_pdm0 (89)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio61 (61) function: cdc_pdm0 (89)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio62 (62) function: cdc_pdm0 (89)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio63 (63) function: cdc_pdm0 (89)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio64 (64) function: cdc_pdm0 (89)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio59 (59) 00080009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio60 (60) 00080009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio61 (61) 00080009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio62 (62) 00080009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio63 (63) 00080009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio64 (64) 00080009
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio97 (97) function: gpio (1)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio97 (97) 00010004 00080009 00000011
+device: a000000.qcom,wcnss-wlan current state: wcnss_default
+  state: wcnss_default
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio40 (40) function: wcss_wlan2 (63)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio41 (41) function: wcss_wlan1 (64)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio42 (42) function: wcss_wlan0 (65)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio43 (43) function: wcss_wlan (66)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio44 (44) function: wcss_wlan (66)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio40 (40) 00010003 00060009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio41 (41) 00010003 00060009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio42 (42) 00010003 00060009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio43 (43) 00010003 00060009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio44 (44) 00010003 00060009
+  state: wcnss_sleep
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio40 (40) function: wcss_wlan2 (63)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio41 (41) function: wcss_wlan1 (64)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio42 (42) function: wcss_wlan0 (65)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio43 (43) function: wcss_wlan (66)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio44 (44) function: wcss_wlan (66)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio40 (40) 00010004 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio41 (41) 00010004 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio42 (42) 00010004 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio43 (43) 00010004 00020009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio44 (44) 00010004 00020009
+  state: wcnss_gpio_default
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio40 (40) function: gpio (1)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio41 (41) function: gpio (1)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio42 (42) function: gpio (1)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio43 (43) function: gpio (1)
+    type: MUX_GROUP controller 1000000.pinctrl group: gpio44 (44) function: gpio (1)
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio40 (40) 00010003 00060009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio41 (41) 00010003 00060009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio42 (42) 00010003 00060009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio43 (43) 00010003 00060009
+    type: CONFIGS_GROUP controller 1000000.pinctrl group gpio44 (44) 00010003 00060009

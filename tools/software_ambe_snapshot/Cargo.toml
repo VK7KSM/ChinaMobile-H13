@@ -1,0 +1,29 @@
+[package]
+name = "mmdvm-elfradio"
+version = "0.2.0"
+edition = "2021"
+description = "MMDVM Homebrew protocol library for DMR networks"
+build = "build.rs"
+
+[lib]
+name = "mmdvm_elfradio"
+path = "src/lib.rs"
+
+[[bin]]
+name = "dmr-client"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+sha2 = "0.10"
+rand = "0.8"
+byteorder = "1.5"
+hound = "3.5"
+chrono = "0.4"
+hex = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8"
+tracing = "0.1"
+
+[build-dependencies]
+cc = "1.0"

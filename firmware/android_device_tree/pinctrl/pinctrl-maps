@@ -1,0 +1,1467 @@
+Pinctrl maps:
+device 78b6000.i2c
+state i2c_active
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio111
+function blsp_i2c2
+
+device 78b6000.i2c
+state i2c_active
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio112
+function blsp_i2c2
+
+device 78b6000.i2c
+state i2c_active
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio111
+config 00000000
+config 00020009
+
+device 78b6000.i2c
+state i2c_active
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio112
+config 00000000
+config 00020009
+
+device 78b6000.i2c
+state i2c_sleep
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio111
+function blsp_i2c2
+
+device 78b6000.i2c
+state i2c_sleep
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio112
+function blsp_i2c2
+
+device 78b6000.i2c
+state i2c_sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio111
+config 00000000
+config 00020009
+
+device 78b6000.i2c
+state i2c_sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio112
+config 00000000
+config 00020009
+
+device 78b8000.i2c
+state i2c_active
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio14
+function blsp_i2c4
+
+device 78b8000.i2c
+state i2c_active
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio15
+function blsp_i2c4
+
+device 78b8000.i2c
+state i2c_active
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio14
+config 00000000
+config 00020009
+
+device 78b8000.i2c
+state i2c_active
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio15
+config 00000000
+config 00020009
+
+device 78b8000.i2c
+state i2c_sleep
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio14
+function blsp_i2c4
+
+device 78b8000.i2c
+state i2c_sleep
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio15
+function blsp_i2c4
+
+device 78b8000.i2c
+state i2c_sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio14
+config 00000000
+config 00020009
+
+device 78b8000.i2c
+state i2c_sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio15
+config 00000000
+config 00020009
+
+device 78b9000.i2c
+state i2c_active
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio19
+function blsp_i2c5
+
+device 78b9000.i2c
+state i2c_active
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio18
+function blsp_i2c5
+
+device 78b9000.i2c
+state i2c_active
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio19
+config 00000000
+config 00020009
+
+device 78b9000.i2c
+state i2c_active
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio18
+config 00000000
+config 00020009
+
+device 78b9000.i2c
+state i2c_sleep
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio19
+function blsp_i2c5
+
+device 78b9000.i2c
+state i2c_sleep
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio18
+function blsp_i2c5
+
+device 78b9000.i2c
+state i2c_sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio19
+config 00000000
+config 00020009
+
+device 78b9000.i2c
+state i2c_sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio18
+config 00000000
+config 00020009
+
+device 78b7000.i2c
+state i2c_active
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio29
+function blsp_i2c3
+
+device 78b7000.i2c
+state i2c_active
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio30
+function blsp_i2c3
+
+device 78b7000.i2c
+state i2c_active
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio29
+config 00000000
+config 00020009
+
+device 78b7000.i2c
+state i2c_active
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio30
+config 00000000
+config 00020009
+
+device 78b7000.i2c
+state i2c_sleep
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio29
+function blsp_i2c3
+
+device 78b7000.i2c
+state i2c_sleep
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio30
+function blsp_i2c3
+
+device 78b7000.i2c
+state i2c_sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio29
+config 00000000
+config 00020009
+
+device 78b7000.i2c
+state i2c_sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio30
+config 00000000
+config 00020009
+
+device 78b5000.i2c
+state i2c_active
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio6
+function blsp_i2c1
+
+device 78b5000.i2c
+state i2c_active
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio7
+function blsp_i2c1
+
+device 78b5000.i2c
+state i2c_active
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio6
+config 00000000
+config 00020009
+
+device 78b5000.i2c
+state i2c_active
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio7
+config 00000000
+config 00020009
+
+device 78b5000.i2c
+state i2c_sleep
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio6
+function blsp_i2c1
+
+device 78b5000.i2c
+state i2c_sleep
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio7
+function blsp_i2c1
+
+device 78b5000.i2c
+state i2c_sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio6
+config 00000000
+config 00020009
+
+device 78b5000.i2c
+state i2c_sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio7
+config 00000000
+config 00020009
+
+device soc:qcom,mdss_spi
+state mdss_default
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio24
+function mdp_vsync
+
+device soc:qcom,mdss_spi
+state mdss_default
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio24
+config 00010004
+config 00020009
+
+device soc:qcom,mdss_spi
+state mdss_sleep
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio24
+function mdp_vsync
+
+device soc:qcom,mdss_spi
+state mdss_sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio24
+config 00010004
+config 00020009
+
+device 78b0000.uart
+state default
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio20
+function blsp_uart2
+
+device 78b0000.uart
+state default
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio21
+function blsp_uart2
+
+device 78b0000.uart
+state default
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio20
+config 00000000
+config 00020009
+
+device 78b0000.uart
+state default
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio21
+config 00000000
+config 00020009
+
+device 78b0000.uart
+state sleep
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio20
+function blsp_uart2
+
+device 78b0000.uart
+state sleep
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio21
+function blsp_uart2
+
+device 78b0000.uart
+state sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio20
+config 00000000
+config 00020009
+
+device 78b0000.uart
+state sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio21
+config 00000000
+config 00020009
+
+device 78ba000.spi
+state spi_default
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio8
+function blsp_spi6
+
+device 78ba000.spi
+state spi_default
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio11
+function blsp_spi6
+
+device 78ba000.spi
+state spi_default
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio8
+config 00000000
+config 000c0009
+
+device 78ba000.spi
+state spi_default
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio11
+config 00000000
+config 000c0009
+
+device 78ba000.spi
+state spi_default
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio10
+function blsp_spi6
+
+device 78ba000.spi
+state spi_default
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio10
+config 00000000
+config 00020009
+
+device 78ba000.spi
+state spi_sleep
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio8
+function gpio
+
+device 78ba000.spi
+state spi_sleep
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio11
+function gpio
+
+device 78ba000.spi
+state spi_sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio8
+config 00010004
+config 00020009
+
+device 78ba000.spi
+state spi_sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio11
+config 00010004
+config 00020009
+
+device 78ba000.spi
+state spi_sleep
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio10
+function gpio
+
+device 78ba000.spi
+state spi_sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio10
+config 00000000
+config 00020009
+
+device 5-005d
+state pmx_ts_active
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio13
+function gpio
+
+device 5-005d
+state pmx_ts_active
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio13
+config 00010003
+config 00080009
+
+device 5-005d
+state pmx_ts_active
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio12
+function gpio
+
+device 5-005d
+state pmx_ts_active
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio12
+config 00010003
+config 00080009
+
+device 5-005d
+state pmx_ts_suspend
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio13
+function gpio
+
+device 5-005d
+state pmx_ts_suspend
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio13
+config 00010004
+config 00020009
+
+device 5-005d
+state pmx_ts_suspend
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio12
+function gpio
+
+device 5-005d
+state pmx_ts_suspend
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio12
+config 00010004
+config 00020009
+
+device 7824900.sdhci
+state active
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group sdc1_clk
+config 00000000
+config 00100009
+
+device 7824900.sdhci
+state active
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group sdc1_cmd
+config 00010003
+config 000a0009
+
+device 7824900.sdhci
+state active
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group sdc1_data
+config 00010003
+config 000a0009
+
+device 7824900.sdhci
+state sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group sdc1_clk
+config 00000000
+config 00020009
+
+device 7824900.sdhci
+state sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group sdc1_cmd
+config 00010003
+config 00020009
+
+device 7824900.sdhci
+state sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group sdc1_data
+config 00010003
+config 00020009
+
+device 7864900.sdhci
+state active
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group sdc2_clk
+config 00000000
+config 00100009
+
+device 7864900.sdhci
+state active
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group sdc2_cmd
+config 00010003
+config 000a0009
+
+device 7864900.sdhci
+state active
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group sdc2_data
+config 00010003
+config 000a0009
+
+device 7864900.sdhci
+state active
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio38
+function gpio
+
+device 7864900.sdhci
+state active
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio38
+config 00010003
+config 00020009
+
+device 7864900.sdhci
+state sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group sdc2_clk
+config 00000000
+config 00020009
+
+device 7864900.sdhci
+state sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group sdc2_cmd
+config 00010003
+config 00020009
+
+device 7864900.sdhci
+state sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group sdc2_data
+config 00010003
+config 00020009
+
+device 7864900.sdhci
+state sleep
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio38
+function gpio
+
+device 7864900.sdhci
+state sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio38
+config 00000000
+config 00020009
+
+device soc:gpio_keys
+state tlmm_gpio_key_active
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio112
+function gpio
+
+device soc:gpio_keys
+state tlmm_gpio_key_active
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio90
+function gpio
+
+device soc:gpio_keys
+state tlmm_gpio_key_active
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio91
+function gpio
+
+device soc:gpio_keys
+state tlmm_gpio_key_active
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio92
+function gpio
+
+device soc:gpio_keys
+state tlmm_gpio_key_active
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio93
+function gpio
+
+device soc:gpio_keys
+state tlmm_gpio_key_active
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio112
+config 00010003
+config 00020009
+
+device soc:gpio_keys
+state tlmm_gpio_key_active
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio90
+config 00010003
+config 00020009
+
+device soc:gpio_keys
+state tlmm_gpio_key_active
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio91
+config 00010003
+config 00020009
+
+device soc:gpio_keys
+state tlmm_gpio_key_active
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio92
+config 00010003
+config 00020009
+
+device soc:gpio_keys
+state tlmm_gpio_key_active
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio93
+config 00010003
+config 00020009
+
+device soc:gpio_keys
+state tlmm_gpio_key_suspend
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio112
+function gpio
+
+device soc:gpio_keys
+state tlmm_gpio_key_suspend
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio90
+function gpio
+
+device soc:gpio_keys
+state tlmm_gpio_key_suspend
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio91
+function gpio
+
+device soc:gpio_keys
+state tlmm_gpio_key_suspend
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio92
+function gpio
+
+device soc:gpio_keys
+state tlmm_gpio_key_suspend
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio93
+function gpio
+
+device soc:gpio_keys
+state tlmm_gpio_key_suspend
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio112
+config 00010003
+config 00020009
+
+device soc:gpio_keys
+state tlmm_gpio_key_suspend
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio90
+config 00010003
+config 00020009
+
+device soc:gpio_keys
+state tlmm_gpio_key_suspend
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio91
+config 00010003
+config 00020009
+
+device soc:gpio_keys
+state tlmm_gpio_key_suspend
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio92
+config 00010003
+config 00020009
+
+device soc:gpio_keys
+state tlmm_gpio_key_suspend
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio93
+config 00010003
+config 00020009
+
+device soc:flashlight
+state flash_default
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio32
+function gpio
+
+device soc:flashlight
+state flash_default
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio32
+config 00000000
+config 00020009
+
+device 7702000.sound
+state all_off
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio59
+function cdc_pdm0
+
+device 7702000.sound
+state all_off
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio60
+function cdc_pdm0
+
+device 7702000.sound
+state all_off
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio61
+function cdc_pdm0
+
+device 7702000.sound
+state all_off
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio62
+function cdc_pdm0
+
+device 7702000.sound
+state all_off
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio63
+function cdc_pdm0
+
+device 7702000.sound
+state all_off
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio64
+function cdc_pdm0
+
+device 7702000.sound
+state all_off
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio59
+config 00000000
+config 00020009
+
+device 7702000.sound
+state all_off
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio60
+config 00000000
+config 00020009
+
+device 7702000.sound
+state all_off
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio61
+config 00000000
+config 00020009
+
+device 7702000.sound
+state all_off
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio62
+config 00000000
+config 00020009
+
+device 7702000.sound
+state all_off
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio63
+config 00000000
+config 00020009
+
+device 7702000.sound
+state all_off
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio64
+config 00000000
+config 00020009
+
+device 7702000.sound
+state all_off
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio97
+function gpio
+
+device 7702000.sound
+state all_off
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio97
+config 00010004
+config 00020009
+
+device 7702000.sound
+state pri_i2s_act
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio59
+function cdc_pdm0
+
+device 7702000.sound
+state pri_i2s_act
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio60
+function cdc_pdm0
+
+device 7702000.sound
+state pri_i2s_act
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio61
+function cdc_pdm0
+
+device 7702000.sound
+state pri_i2s_act
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio62
+function cdc_pdm0
+
+device 7702000.sound
+state pri_i2s_act
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio63
+function cdc_pdm0
+
+device 7702000.sound
+state pri_i2s_act
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio64
+function cdc_pdm0
+
+device 7702000.sound
+state pri_i2s_act
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio59
+config 00080009
+
+device 7702000.sound
+state pri_i2s_act
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio60
+config 00080009
+
+device 7702000.sound
+state pri_i2s_act
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio61
+config 00080009
+
+device 7702000.sound
+state pri_i2s_act
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio62
+config 00080009
+
+device 7702000.sound
+state pri_i2s_act
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio63
+config 00080009
+
+device 7702000.sound
+state pri_i2s_act
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio64
+config 00080009
+
+device 7702000.sound
+state pri_i2s_act
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio97
+function gpio
+
+device 7702000.sound
+state pri_i2s_act
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio97
+config 00010004
+config 00020009
+
+device 7702000.sound
+state us_eu_gpio_act
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio59
+function cdc_pdm0
+
+device 7702000.sound
+state us_eu_gpio_act
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio60
+function cdc_pdm0
+
+device 7702000.sound
+state us_eu_gpio_act
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio61
+function cdc_pdm0
+
+device 7702000.sound
+state us_eu_gpio_act
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio62
+function cdc_pdm0
+
+device 7702000.sound
+state us_eu_gpio_act
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio63
+function cdc_pdm0
+
+device 7702000.sound
+state us_eu_gpio_act
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio64
+function cdc_pdm0
+
+device 7702000.sound
+state us_eu_gpio_act
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio59
+config 00000000
+config 00020009
+
+device 7702000.sound
+state us_eu_gpio_act
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio60
+config 00000000
+config 00020009
+
+device 7702000.sound
+state us_eu_gpio_act
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio61
+config 00000000
+config 00020009
+
+device 7702000.sound
+state us_eu_gpio_act
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio62
+config 00000000
+config 00020009
+
+device 7702000.sound
+state us_eu_gpio_act
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio63
+config 00000000
+config 00020009
+
+device 7702000.sound
+state us_eu_gpio_act
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio64
+config 00000000
+config 00020009
+
+device 7702000.sound
+state us_eu_gpio_act
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio97
+function gpio
+
+device 7702000.sound
+state us_eu_gpio_act
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio97
+config 00010004
+config 00080009
+config 00000011
+
+device 7702000.sound
+state pri_i2s_us_eu_gpio_act
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio59
+function cdc_pdm0
+
+device 7702000.sound
+state pri_i2s_us_eu_gpio_act
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio60
+function cdc_pdm0
+
+device 7702000.sound
+state pri_i2s_us_eu_gpio_act
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio61
+function cdc_pdm0
+
+device 7702000.sound
+state pri_i2s_us_eu_gpio_act
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio62
+function cdc_pdm0
+
+device 7702000.sound
+state pri_i2s_us_eu_gpio_act
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio63
+function cdc_pdm0
+
+device 7702000.sound
+state pri_i2s_us_eu_gpio_act
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio64
+function cdc_pdm0
+
+device 7702000.sound
+state pri_i2s_us_eu_gpio_act
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio59
+config 00080009
+
+device 7702000.sound
+state pri_i2s_us_eu_gpio_act
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio60
+config 00080009
+
+device 7702000.sound
+state pri_i2s_us_eu_gpio_act
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio61
+config 00080009
+
+device 7702000.sound
+state pri_i2s_us_eu_gpio_act
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio62
+config 00080009
+
+device 7702000.sound
+state pri_i2s_us_eu_gpio_act
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio63
+config 00080009
+
+device 7702000.sound
+state pri_i2s_us_eu_gpio_act
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio64
+config 00080009
+
+device 7702000.sound
+state pri_i2s_us_eu_gpio_act
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio97
+function gpio
+
+device 7702000.sound
+state pri_i2s_us_eu_gpio_act
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio97
+config 00010004
+config 00080009
+config 00000011
+
+device a000000.qcom,wcnss-wlan
+state wcnss_default
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio40
+function wcss_wlan2
+
+device a000000.qcom,wcnss-wlan
+state wcnss_default
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio41
+function wcss_wlan1
+
+device a000000.qcom,wcnss-wlan
+state wcnss_default
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio42
+function wcss_wlan0
+
+device a000000.qcom,wcnss-wlan
+state wcnss_default
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio43
+function wcss_wlan
+
+device a000000.qcom,wcnss-wlan
+state wcnss_default
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio44
+function wcss_wlan
+
+device a000000.qcom,wcnss-wlan
+state wcnss_default
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio40
+config 00010003
+config 00060009
+
+device a000000.qcom,wcnss-wlan
+state wcnss_default
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio41
+config 00010003
+config 00060009
+
+device a000000.qcom,wcnss-wlan
+state wcnss_default
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio42
+config 00010003
+config 00060009
+
+device a000000.qcom,wcnss-wlan
+state wcnss_default
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio43
+config 00010003
+config 00060009
+
+device a000000.qcom,wcnss-wlan
+state wcnss_default
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio44
+config 00010003
+config 00060009
+
+device a000000.qcom,wcnss-wlan
+state wcnss_sleep
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio40
+function wcss_wlan2
+
+device a000000.qcom,wcnss-wlan
+state wcnss_sleep
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio41
+function wcss_wlan1
+
+device a000000.qcom,wcnss-wlan
+state wcnss_sleep
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio42
+function wcss_wlan0
+
+device a000000.qcom,wcnss-wlan
+state wcnss_sleep
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio43
+function wcss_wlan
+
+device a000000.qcom,wcnss-wlan
+state wcnss_sleep
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio44
+function wcss_wlan
+
+device a000000.qcom,wcnss-wlan
+state wcnss_sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio40
+config 00010004
+config 00020009
+
+device a000000.qcom,wcnss-wlan
+state wcnss_sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio41
+config 00010004
+config 00020009
+
+device a000000.qcom,wcnss-wlan
+state wcnss_sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio42
+config 00010004
+config 00020009
+
+device a000000.qcom,wcnss-wlan
+state wcnss_sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio43
+config 00010004
+config 00020009
+
+device a000000.qcom,wcnss-wlan
+state wcnss_sleep
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio44
+config 00010004
+config 00020009
+
+device a000000.qcom,wcnss-wlan
+state wcnss_gpio_default
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio40
+function gpio
+
+device a000000.qcom,wcnss-wlan
+state wcnss_gpio_default
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio41
+function gpio
+
+device a000000.qcom,wcnss-wlan
+state wcnss_gpio_default
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio42
+function gpio
+
+device a000000.qcom,wcnss-wlan
+state wcnss_gpio_default
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio43
+function gpio
+
+device a000000.qcom,wcnss-wlan
+state wcnss_gpio_default
+type MUX_GROUP (2)
+controlling device 1000000.pinctrl
+group gpio44
+function gpio
+
+device a000000.qcom,wcnss-wlan
+state wcnss_gpio_default
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio40
+config 00010003
+config 00060009
+
+device a000000.qcom,wcnss-wlan
+state wcnss_gpio_default
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio41
+config 00010003
+config 00060009
+
+device a000000.qcom,wcnss-wlan
+state wcnss_gpio_default
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio42
+config 00010003
+config 00060009
+
+device a000000.qcom,wcnss-wlan
+state wcnss_gpio_default
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio43
+config 00010003
+config 00060009
+
+device a000000.qcom,wcnss-wlan
+state wcnss_gpio_default
+type CONFIGS_GROUP (4)
+controlling device 1000000.pinctrl
+group gpio44
+config 00010003
+config 00060009
+

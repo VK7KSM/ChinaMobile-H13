@@ -1,0 +1,82 @@
+  2: [ 0]   : control
+  3: [ 0- 0]: digital audio playback
+  4: [ 0- 0]: digital audio capture
+  5: [ 0- 1]: digital audio playback
+  6: [ 0- 1]: digital audio capture
+  7: [ 0- 2]: digital audio playback
+  8: [ 0- 2]: digital audio capture
+  9: [ 0- 3]: digital audio playback
+ 10: [ 0- 3]: digital audio capture
+ 11: [ 0- 4]: digital audio playback
+ 12: [ 0- 5]: digital audio playback
+ 13: [ 0- 6]: digital audio capture
+ 14: [ 0- 7]: digital audio playback
+ 15: [ 0- 8]: digital audio capture
+ 16: [ 0-10]: digital audio playback
+ 17: [ 0-10]: digital audio capture
+ 18: [ 0-11]: digital audio capture
+ 19: [ 0-12]: digital audio playback
+ 20: [ 0-12]: digital audio capture
+ 21: [ 0-13]: digital audio playback
+ 22: [ 0-13]: digital audio capture
+ 23: [ 0-14]: digital audio playback
+ 24: [ 0-14]: digital audio capture
+ 25: [ 0-15]: digital audio playback
+ 26: [ 0-15]: digital audio capture
+ 27: [ 0-16]: digital audio playback
+ 28: [ 0-16]: digital audio capture
+ 29: [ 0-17]: digital audio playback
+ 30: [ 0-17]: digital audio capture
+ 31: [ 0-18]: digital audio playback
+ 33:        : timer
+ 34: [ 0-18]: digital audio capture
+ 35: [ 0-19]: digital audio capture
+ 36: [ 0-20]: digital audio capture
+ 37: [ 0-21]: digital audio capture
+ 38: [ 0-22]: digital audio capture
+ 39: [ 0-23]: digital audio capture
+ 40: [ 0-25]: digital audio playback
+ 41: [ 0-26]: digital audio capture
+ 42: [ 0-34]: digital audio playback
+ 43: [ 0-34]: digital audio capture
+ 44: [ 0-35]: digital audio playback
+ 45: [ 0-35]: digital audio capture
+ 46: [ 0-36]: digital audio playback
+ 47: [ 0-36]: digital audio capture
+ 48: [ 0-37]: digital audio playback
+ 49: [ 0-37]: digital audio capture
+ 50: [ 0- 9]: ?
+ 51: [ 0-24]: ?
+ 52: [ 0-27]: ?
+ 53: [ 0-28]: ?
+ 54: [ 0-29]: ?
+ 55: [ 0-30]: ?
+ 56: [ 0-31]: ?
+ 57: [ 0-32]: ?
+ 58: [ 0-33]: ?
+ 59: [ 0-38]: ?
+ 60: [ 0-39]: ?
+ 61: [ 0-40]: ?
+ 62: [ 0-41]: ?
+ 63: [ 0-42]: ?
+ 65: [ 0-1000]: hardware dependent
+ 66: [ 0-34]: hardware dependent
+ 67: [ 0-32]: hardware dependent
+ 68: [ 0-37]: hardware dependent
+ 69: [ 0-30]: hardware dependent
+ 70: [ 0-31]: hardware dependent
+ 71: [ 0-11]: hardware dependent
+ 72: [ 0-12]: hardware dependent
+ 73: [ 0- 5]: hardware dependent
+ 74: [ 0- 6]: hardware dependent
+ 75: [ 0- 7]: hardware dependent
+ 76: [ 0- 8]: hardware dependent
+ 77: [ 0- 9]: hardware dependent
+ 78: [ 0-10]: hardware dependent
+ 79: [ 0-16]: hardware dependent
+ 80: [ 0-15]: hardware dependent
+ 81: [ 0-13]: hardware dependent
+ 82: [ 0-14]: hardware dependent
+ 83: [ 0-47]: hardware dependent
+ 84: [ 0-46]: hardware dependent
+ 85: [ 0-113]: hardware dependent

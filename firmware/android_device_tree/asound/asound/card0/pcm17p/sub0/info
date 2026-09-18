@@ -1,0 +1,11 @@
+card: 0
+device: 17
+subdevice: 0
+stream: PLAYBACK
+id: INT_HFP_BT Hostless (*)
+name: 
+subname: subdevice #0
+class: 0
+subclass: 0
+subdevices_count: 1
+subdevices_avail: 1

@@ -1,0 +1,376 @@
+registered pin groups:
+group: gpio0
+pin 0 (GPIO_0)
+
+group: gpio1
+pin 1 (GPIO_1)
+
+group: gpio2
+pin 2 (GPIO_2)
+
+group: gpio3
+pin 3 (GPIO_3)
+
+group: gpio4
+pin 4 (GPIO_4)
+
+group: gpio5
+pin 5 (GPIO_5)
+
+group: gpio6
+pin 6 (GPIO_6)
+
+group: gpio7
+pin 7 (GPIO_7)
+
+group: gpio8
+pin 8 (GPIO_8)
+
+group: gpio9
+pin 9 (GPIO_9)
+
+group: gpio10
+pin 10 (GPIO_10)
+
+group: gpio11
+pin 11 (GPIO_11)
+
+group: gpio12
+pin 12 (GPIO_12)
+
+group: gpio13
+pin 13 (GPIO_13)
+
+group: gpio14
+pin 14 (GPIO_14)
+
+group: gpio15
+pin 15 (GPIO_15)
+
+group: gpio16
+pin 16 (GPIO_16)
+
+group: gpio17
+pin 17 (GPIO_17)
+
+group: gpio18
+pin 18 (GPIO_18)
+
+group: gpio19
+pin 19 (GPIO_19)
+
+group: gpio20
+pin 20 (GPIO_20)
+
+group: gpio21
+pin 21 (GPIO_21)
+
+group: gpio22
+pin 22 (GPIO_22)
+
+group: gpio23
+pin 23 (GPIO_23)
+
+group: gpio24
+pin 24 (GPIO_24)
+
+group: gpio25
+pin 25 (GPIO_25)
+
+group: gpio26
+pin 26 (GPIO_26)
+
+group: gpio27
+pin 27 (GPIO_27)
+
+group: gpio28
+pin 28 (GPIO_28)
+
+group: gpio29
+pin 29 (GPIO_29)
+
+group: gpio30
+pin 30 (GPIO_30)
+
+group: gpio31
+pin 31 (GPIO_31)
+
+group: gpio32
+pin 32 (GPIO_32)
+
+group: gpio33
+pin 33 (GPIO_33)
+
+group: gpio34
+pin 34 (GPIO_34)
+
+group: gpio35
+pin 35 (GPIO_35)
+
+group: gpio36
+pin 36 (GPIO_36)
+
+group: gpio37
+pin 37 (GPIO_37)
+
+group: gpio38
+pin 38 (GPIO_38)
+
+group: gpio39
+pin 39 (GPIO_39)
+
+group: gpio40
+pin 40 (GPIO_40)
+
+group: gpio41
+pin 41 (GPIO_41)
+
+group: gpio42
+pin 42 (GPIO_42)
+
+group: gpio43
+pin 43 (GPIO_43)
+
+group: gpio44
+pin 44 (GPIO_44)
+
+group: gpio45
+pin 45 (GPIO_45)
+
+group: gpio46
+pin 46 (GPIO_46)
+
+group: gpio47
+pin 47 (GPIO_47)
+
+group: gpio48
+pin 48 (GPIO_48)
+
+group: gpio49
+pin 49 (GPIO_49)
+
+group: gpio50
+pin 50 (GPIO_50)
+
+group: gpio51
+pin 51 (GPIO_51)
+
+group: gpio52
+pin 52 (GPIO_52)
+
+group: gpio53
+pin 53 (GPIO_53)
+
+group: gpio54
+pin 54 (GPIO_54)
+
+group: gpio55
+pin 55 (GPIO_55)
+
+group: gpio56
+pin 56 (GPIO_56)
+
+group: gpio57
+pin 57 (GPIO_57)
+
+group: gpio58
+pin 58 (GPIO_58)
+
+group: gpio59
+pin 59 (GPIO_59)
+
+group: gpio60
+pin 60 (GPIO_60)
+
+group: gpio61
+pin 61 (GPIO_61)
+
+group: gpio62
+pin 62 (GPIO_62)
+
+group: gpio63
+pin 63 (GPIO_63)
+
+group: gpio64
+pin 64 (GPIO_64)
+
+group: gpio65
+pin 65 (GPIO_65)
+
+group: gpio66
+pin 66 (GPIO_66)
+
+group: gpio67
+pin 67 (GPIO_67)
+
+group: gpio68
+pin 68 (GPIO_68)
+
+group: gpio69
+pin 69 (GPIO_69)
+
+group: gpio70
+pin 70 (GPIO_70)
+
+group: gpio71
+pin 71 (GPIO_71)
+
+group: gpio72
+pin 72 (GPIO_72)
+
+group: gpio73
+pin 73 (GPIO_73)
+
+group: gpio74
+pin 74 (GPIO_74)
+
+group: gpio75
+pin 75 (GPIO_75)
+
+group: gpio76
+pin 76 (GPIO_76)
+
+group: gpio77
+pin 77 (GPIO_77)
+
+group: gpio78
+pin 78 (GPIO_78)
+
+group: gpio79
+pin 79 (GPIO_79)
+
+group: gpio80
+pin 80 (GPIO_80)
+
+group: gpio81
+pin 81 (GPIO_81)
+
+group: gpio82
+pin 82 (GPIO_82)
+
+group: gpio83
+pin 83 (GPIO_83)
+
+group: gpio84
+pin 84 (GPIO_84)
+
+group: gpio85
+pin 85 (GPIO_85)
+
+group: gpio86
+pin 86 (GPIO_86)
+
+group: gpio87
+pin 87 (GPIO_87)
+
+group: gpio88
+pin 88 (GPIO_88)
+
+group: gpio89
+pin 89 (GPIO_89)
+
+group: gpio90
+pin 90 (GPIO_90)
+
+group: gpio91
+pin 91 (GPIO_91)
+
+group: gpio92
+pin 92 (GPIO_92)
+
+group: gpio93
+pin 93 (GPIO_93)
+
+group: gpio94
+pin 94 (GPIO_94)
+
+group: gpio95
+pin 95 (GPIO_95)
+
+group: gpio96
+pin 96 (GPIO_96)
+
+group: gpio97
+pin 97 (GPIO_97)
+
+group: gpio98
+pin 98 (GPIO_98)
+
+group: gpio99
+pin 99 (GPIO_99)
+
+group: gpio100
+pin 100 (GPIO_100)
+
+group: gpio101
+pin 101 (GPIO_101)
+
+group: gpio102
+pin 102 (GPIO_102)
+
+group: gpio103
+pin 103 (GPIO_103)
+
+group: gpio104
+pin 104 (GPIO_104)
+
+group: gpio105
+pin 105 (GPIO_105)
+
+group: gpio106
+pin 106 (GPIO_106)
+
+group: gpio107
+pin 107 (GPIO_107)
+
+group: gpio108
+pin 108 (GPIO_108)
+
+group: gpio109
+pin 109 (GPIO_109)
+
+group: gpio110
+pin 110 (GPIO_110)
+
+group: gpio111
+pin 111 (GPIO_111)
+
+group: gpio112
+pin 112 (GPIO_112)
+
+group: sdc1_clk
+pin 113 (SDC1_CLK)
+
+group: sdc1_cmd
+pin 114 (SDC1_CMD)
+
+group: sdc1_data
+pin 115 (SDC1_DATA)
+
+group: sdc2_clk
+pin 116 (SDC2_CLK)
+
+group: sdc2_cmd
+pin 117 (SDC2_CMD)
+
+group: sdc2_data
+pin 118 (SDC2_DATA)
+
+group: qdsd_clk
+pin 119 (QDSD_CLK)
+
+group: qdsd_cmd
+pin 120 (QDSD_CMD)
+
+group: qdsd_data0
+pin 121 (QDSD_DATA0)
+
+group: qdsd_data1
+pin 122 (QDSD_DATA1)
+
+group: qdsd_data2
+pin 123 (QDSD_DATA2)
+
+group: qdsd_data3
+pin 124 (QDSD_DATA3)
+
