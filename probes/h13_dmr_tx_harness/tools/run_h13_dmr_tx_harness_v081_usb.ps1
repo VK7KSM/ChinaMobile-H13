@@ -2725,9 +2725,18 @@ try {
         'ack_paced_vlc_software_one_data36_no_rf' { 'ack_paced_vlc_software_one_data36_no_rf' }
         'ack_paced_vlc_software_triple_sos_active_no_rf' { 'ack_paced_vlc_software_triple_sos_active_no_rf' }
         'realtime_relay_software_privacy_triple_sos_low_power_rf' { 'realtime_relay_software_privacy_triple_sos_low_power_rf' }
+        'voice_burst_chan_d27_type3_no_rf' { 'voice_burst_chan_d27_type3_no_rf' }
+        'voice_burst_chan_d27_type0_no_rf' { 'voice_burst_chan_d27_type0_no_rf' }
+        'voice_burst_digc_frame_no_rf' { 'voice_burst_digc_frame_no_rf' }
         'setup0_only' { 'setup0_only_no_rf' }
         'clear_only' { 'clear_channel_only_no_rf' }
         default { 'session_prepare_no_rf' }
+    }
+    # 防止模式落入默认分支。历史上 v0.75 因新模式未加入分派而空等整轮，
+    # 这里在启动前显式核对：非默认模式的设备模式名必须与传入模式一致。
+    if ($Mode -ne 'no_rf' -and $Mode -ne 'setup0_only' -and
+            $Mode -ne 'clear_only' -and $DeviceMode -eq 'session_prepare_no_rf') {
+        throw "模式 $Mode 未在设备模式映射中登记，会落入默认分支。"
     }
     $StartArguments = @('shell','am','start','-W','-n',$Activity,
         '--es','mode',$DeviceMode)
