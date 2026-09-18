@@ -36,12 +36,15 @@ restore_production() {
 run_step() {
     local desc=$1; shift
     echo "=== $desc ==="
-    if timeout "$STEP_TIMEOUT" powershell -NoProfile -ExecutionPolicy Bypass \
-            -File "$TOOLS/$SCRIPT" "$@" 2>&1 | tail -6; then
+    # 管道到 tail 时 $? 取到的是 tail 的退出码，会把宿主的失败吞掉。
+    # 必须用 PIPESTATUS 取管道第一段的真实退出码。
+    timeout "$STEP_TIMEOUT" powershell -NoProfile -ExecutionPolicy Bypass \
+            -File "$TOOLS/$SCRIPT" "$@" 2>&1 | tail -8
+    local code=${PIPESTATUS[0]}
+    if [ "$code" -eq 0 ]; then
         return 0
     fi
-    local code=$?
-    if [ $code -eq 124 ]; then
+    if [ "$code" -eq 124 ]; then
         echo "  超时 ${STEP_TIMEOUT} 秒，终止该步"
     else
         echo "  该步失败，退出码 $code"
@@ -49,7 +52,26 @@ run_step() {
     return 1
 }
 
+# 开跑前确认生产基线到位。应用重新启动后取回串口需要时间，
+# 过早启动预检会在生产基线门被拒。这里等待而不是假定。
+wait_production() {
+    local i owner
+    for i in $(seq 1 20); do
+        owner=$(adb_sh "su -c 'for p in /proc/[0-9]*; do ls -l \$p/fd 2>/dev/null | grep -q ttyHS0 && cat \$p/cmdline | tr -d \\0; done'")
+        case "$owner" in
+            *h13interphone*) echo "  生产基线就绪：$owner 持有串口"; return 0 ;;
+        esac
+        [ "$i" -eq 1 ] && restore_production >/dev/null
+        sleep 3
+    done
+    echo "  生产基线未在预期时间内就绪，终止"
+    return 1
+}
+
 cd "$TOOLS" || exit 1
+
+echo "=== 开跑前基线确认 ==="
+wait_production || exit 1
 
 if ! run_step "新鲜预检" -Mode clear_only -AllowDisableInterphone; then
     restore_production
