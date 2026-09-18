@@ -142,6 +142,11 @@ final class RealtimeRelay {
     private final String replacementSource;
     private final boolean replacementIsFinalWirePayload;
     private final int maximumUnits;
+    /**
+     * 语音注入格式。默认为历史实现，切换前后语音帧流逐字节相同，
+     * 只改变打包粒度与节拍。见 DmrProtocol.VoiceFormat。
+     */
+    private final DmrProtocol.VoiceFormat voiceFormat;
     private final int requiredTriggerUnits;
     private final boolean triggerOnlyAfterArm;
     private final boolean activePacedWrites;
@@ -214,6 +219,25 @@ final class RealtimeRelay {
             String replacementSource, boolean replacementIsFinalWirePayload,
             int requiredTriggerUnits, boolean triggerOnlyAfterArm,
             boolean activePacedWrites) {
+        this(runtime14, replacementPlain36, replacementSource,
+                replacementIsFinalWirePayload, requiredTriggerUnits,
+                triggerOnlyAfterArm, activePacedWrites,
+                DmrProtocol.VoiceFormat.LEGACY_CHAN_D36);
+    }
+
+    /**
+     * 指定语音注入格式。默认格式与历史实现逐字节相同；其余格式改变打包
+     * 粒度与节拍，但语音帧流不变。格式由会话开始时确定，中途不得更改。
+     */
+    RealtimeRelay(byte[] runtime14, byte[] replacementPlain36,
+            String replacementSource, boolean replacementIsFinalWirePayload,
+            int requiredTriggerUnits, boolean triggerOnlyAfterArm,
+            boolean activePacedWrites,
+            DmrProtocol.VoiceFormat voiceFormat) {
+        if (voiceFormat == null) {
+            throw new IllegalArgumentException("语音格式不得为空");
+        }
+        this.voiceFormat = voiceFormat;
         if (runtime14 == null || runtime14.length != 14) {
             throw new IllegalArgumentException("实时relay需要同次14字节运行快照");
         }
@@ -240,8 +264,11 @@ final class RealtimeRelay {
             this.replacementIsFinalWirePayload = false;
             this.maximumUnits = 1;
         } else {
+            boolean legacyFormat = this.voiceFormat
+                    == DmrProtocol.VoiceFormat.LEGACY_CHAN_D36;
             if (replacementSource == null || replacementSource.length() == 0
-                    || (replacementPlain36.length != PLAIN_BYTES
+                    || (legacyFormat
+                    && replacementPlain36.length != PLAIN_BYTES
                     && replacementPlain36.length != CONTINUOUS_BYTES
                     && replacementPlain36.length != SUPERFRAME_BYTES
                     && replacementPlain36.length != SPEECH_BYTES
@@ -263,16 +290,38 @@ final class RealtimeRelay {
                     != SPEECH_UNITS) {
                 throw new IllegalArgumentException("连续25单元明文长度必须为900字节");
             }
+            int unitSize = TxPlan.unitBytes(this.voiceFormat);
+            if (replacementPlain36.length % unitSize != 0) {
+                throw new IllegalArgumentException("明文长度"
+                        + replacementPlain36.length + "不能被单元长度"
+                        + unitSize + "整除");
+            }
             if (replacementPlain36.length == TRIPLE_SOS_BYTES
-                    && replacementPlain36.length / PLAIN_BYTES
+                    && this.voiceFormat
+                    == DmrProtocol.VoiceFormat.LEGACY_CHAN_D36
+                    && replacementPlain36.length / unitSize
                     != TRIPLE_SOS_UNITS) {
                 throw new IllegalArgumentException("三遍SOS明文长度必须为2808字节");
             }
             this.replacementStream = replacementPlain36.clone();
             this.replacementSource = replacementSource;
             this.replacementIsFinalWirePayload = replacementIsFinalWirePayload;
-            this.maximumUnits = replacementPlain36.length / PLAIN_BYTES;
+            this.maximumUnits = replacementPlain36.length / unitSize;
         }
+    }
+
+    /** 本次会话所用格式的单元载荷长度。历史格式为 36 字节，语音突发为 27 字节。 */
+    int unitBytes() {
+        return TxPlan.unitBytes(voiceFormat);
+    }
+
+    /** 本次会话所用格式的绝对节拍。 */
+    long unitIntervalMs() {
+        return TxPlan.unitIntervalMs(voiceFormat);
+    }
+
+    DmrProtocol.VoiceFormat voiceFormat() {
+        return voiceFormat;
     }
 
     static void requireChanDLastNibbleZero(byte[] packed) {
@@ -646,9 +695,9 @@ final class RealtimeRelay {
             throw new IllegalStateException("上一单元信用尚未消费，禁止写下一单元");
         }
         if (replacementStream != null) {
-            int offset = unitsWritten * PLAIN_BYTES;
+            int offset = unitsWritten * unitBytes();
             byte[] next = Arrays.copyOfRange(replacementStream, offset,
-                    offset + PLAIN_BYTES);
+                    offset + unitBytes());
             if (unitsWritten == 0 && Arrays.equals(next, candidate36)) {
                 throw new IllegalStateException(
                         "独立载荷与本次实时前36字节相同，无法证明音源独立性");
@@ -662,7 +711,7 @@ final class RealtimeRelay {
         }
         byte[] encrypted = replacementIsFinalWirePayload
                 ? plain36.clone() : privacy.encrypt(plain36);
-        request44 = DmrProtocol.data36(encrypted);
+        request44 = DmrProtocol.voiceUnit(voiceFormat, encrypted);
         writeAttempted = true;
         unitsWritten++;
         return request44.clone();
@@ -677,10 +726,10 @@ final class RealtimeRelay {
             throw new IllegalStateException("主动绝对节拍写出状态错误: "
                     + activePacedState());
         }
-        int offset = unitsWritten * PLAIN_BYTES;
+        int offset = unitsWritten * unitBytes();
         plain36 = Arrays.copyOfRange(replacementStream, offset,
-                offset + PLAIN_BYTES);
-        request44 = DmrProtocol.data36(plain36);
+                offset + unitBytes());
+        request44 = DmrProtocol.voiceUnit(voiceFormat, plain36);
         writeAttempted = true;
         unitsWritten++;
         return request44.clone();
