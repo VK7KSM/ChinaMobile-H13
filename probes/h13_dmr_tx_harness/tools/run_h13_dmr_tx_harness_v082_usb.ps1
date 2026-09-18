@@ -2751,6 +2751,17 @@ try {
     }
     $ProbeActivityStartIssued = $true
 
+    # 设备可用空间预检。每次会话归档四千余个小文件，空间不足会在恢复取证阶段
+    # 中途失败并丢失恢复闭环，历史上已发生过一次。此处在启动前拒绝，而非中途崩溃。
+    $ProbeUsage = (Invoke-AdbOptional shell su -c "du -sm /data/data/$Package 2>/dev/null | cut -f1").Output
+    $ProbeMb = 0
+    if ($ProbeUsage -and [int]::TryParse(($ProbeUsage | Select-Object -First 1).Trim(), [ref]$ProbeMb)) {
+        Save-Text 'probe_storage_mb.txt' "probe_private_mb=$ProbeMb"
+        if ($ProbeMb -gt 600) {
+            throw "探针私有目录已占用 $ProbeMb MB，请先归档并清理旧会话再运行。"
+        }
+    }
+
     $Deadline = (Get-Date).AddSeconds($WaitSeconds)
     $SessionDiscoveryDeadline = (Get-Date).AddSeconds(30)
     while ((Get-Date) -lt $Deadline) {
