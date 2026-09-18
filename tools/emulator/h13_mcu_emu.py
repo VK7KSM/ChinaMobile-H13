@@ -20,7 +20,8 @@ from collections import Counter, deque
 
 from unicorn import (
     UC_ARCH_ARM, UC_MODE_THUMB, UC_MODE_MCLASS, UC_HOOK_CODE, UC_HOOK_MEM_READ,
-    UC_HOOK_MEM_WRITE, UC_HOOK_MEM_UNMAPPED, UC_HOOK_INTR, Uc, UcError,
+    UC_HOOK_MEM_WRITE, UC_HOOK_MEM_UNMAPPED, UC_HOOK_INTR, UC_HOOK_BLOCK,
+    Uc, UcError,
 )
 from unicorn.arm_const import (
     UC_ARM_REG_PC, UC_ARM_REG_SP, UC_ARM_REG_LR, UC_ARM_REG_R0, UC_ARM_REG_R1,
@@ -133,6 +134,11 @@ class Emu:
         self.watch_hit: Counter = Counter()
         self.watch_limit = 20
         self.watch_reads = False
+        self.call_return_pending = False
+        self.func_stubs: dict[int, tuple[int, str]] = {}
+        self.stub_hit: Counter = Counter()
+        self.trace_path = False
+        self.path: list[tuple[int, int]] = []
         self.usart_irq_next = 0
         self.usart_irq_interval = 40
         self.spin_counter = Counter()
@@ -157,6 +163,7 @@ class Emu:
                     begin=SRAM_BASE, end=SRAM_BASE + SRAM_SIZE)
         uc.hook_add(UC_HOOK_MEM_READ, self.on_sram_read,
                     begin=SRAM_BASE, end=SRAM_BASE + SRAM_SIZE)
+        uc.hook_add(UC_HOOK_BLOCK, self.on_block)
         uc.hook_add(UC_HOOK_CODE, self.on_code)
         uc.hook_add(UC_HOOK_MEM_UNMAPPED, self.on_unmapped)
         uc.hook_add(UC_HOOK_INTR, self.on_intr)
@@ -303,6 +310,14 @@ class Emu:
         self.log(f"CPU 异常 intno={intno} pc={pc:#010x}")
         uc.emu_stop()
 
+    def on_block(self, uc, addr, size, user):
+        """记录执行路径。只在开启时工作，用于还原控制链实际走到了哪里。"""
+        if not self.trace_path:
+            return
+        if self.in_exception:
+            return
+        self.path.append((self.steps, addr))
+
     # ---------- SRAM 监视 ----------
     def _watch_name(self, addr):
         for lo, hi, name in self.watches:
@@ -384,7 +399,26 @@ class Emu:
         self.steps += 1
         if addr in self.func_hooks:
             self.dump_call(addr)
-        if addr >= TRAMP_BASE:
+        if addr in self.func_stubs:
+            # 打桩：直接返回给定值并跳回调用者。用于跳过依赖 SCT3258 真实应答
+            # 的函数，从而观察 MCU 侧后续控制写序。被跳过的调用都会记录，
+            # 结论中必须标注这些点是替身而非真实行为。
+            ret, name = self.func_stubs[addr]
+            lr = uc.reg_read(UC_ARM_REG_LR)
+            self.stub_hit[addr] += 1
+            if self.stub_hit[addr] <= 12:
+                r0 = uc.reg_read(UC_ARM_REG_R0)
+                r1 = uc.reg_read(UC_ARM_REG_R1)
+                self.log(f"打桩跳过 {name}@{addr:#010x} r0={r0:#x} r1={r1:#x} "
+                         f"-> 返回{ret:#x} 回到 {lr:#010x}")
+            uc.reg_write(UC_ARM_REG_R0, ret)
+            uc.reg_write(UC_ARM_REG_PC, lr | 1)
+            return
+        if addr >= TRAMP_BASE and addr < TRAMP_BASE + TRAMP_SIZE:
+            if self.call_return_pending and self.in_exception == 0:
+                self.log("=== 直接调用返回 ===")
+                uc.emu_stop()
+                return
             self.exception_return()
             return
         if self.in_exception == 0:
@@ -478,6 +512,16 @@ def main():
     ap.add_argument("--tick-steps", type=int, default=0,
                     help="固定 SysTick 注入间隔（指令数），压缩毫秒忙等；0 为按重装载值")
     ap.add_argument("--trace-usart", action="store_true", help="记录串口标志轮询")
+    ap.add_argument("--trace-path", action="store_true",
+                    help="记录直接调用期间的执行路径（基本块）")
+    ap.add_argument("--stub", action="append", default=[],
+                    help="函数打桩，格式 地址:返回值[:名称]，跳过依赖外部芯片应答的调用")
+    ap.add_argument("--call", default=None,
+                    help="启动阶段结束后直接调用该地址的函数（十六进制），用于观察"
+                         "指定控制链的实际寄存器写序")
+    ap.add_argument("--call-args", default="",
+                    help="调用参数，逗号分隔的十六进制，依次放入 r0..r3")
+    ap.add_argument("--call-steps", type=int, default=2_000_000)
     ap.add_argument("--dump", action="append", default=[],
                     help="结束时转储内存，格式 起始[+长度][:名称]，如 20000504+40:接收环")
     ap.add_argument("--watch", action="append", default=[],
@@ -507,6 +551,11 @@ def main():
         lo_i = int(lo, 16)
         hi_i = int(hi, 16) + 1 if hi else lo_i + 4
         emu.watches.append((lo_i, hi_i, nm or f"{lo_i:#x}"))
+    for spec in args.stub:
+        parts = spec.split(":")
+        emu.func_stubs[int(parts[0], 16)] = (
+            int(parts[1], 16) if len(parts) > 1 else 0,
+            parts[2] if len(parts) > 2 else f"fn_{parts[0]}")
     for spec in args.hook:
         part = spec.split(":")
         emu.func_hooks[int(part[0], 16)] = part[1] if len(part) > 1 else f"fn_{part[0]}"
@@ -528,6 +577,37 @@ def main():
                 print(f"  {name} 新增输出: {new[:400]!r}")
         if not got:
             print("  （无串口输出）")
+    if args.call:
+        target = int(args.call, 16)
+        from unicorn.arm_const import UC_ARM_REG_R0 as _R0
+        argv = [int(x, 16) for x in args.call_args.split(",") if x.strip()]
+        for i, v in enumerate(argv[:4]):
+            emu.uc.reg_write([UC_ARM_REG_R0, UC_ARM_REG_R1,
+                              UC_ARM_REG_R2, UC_ARM_REG_R3][i], v)
+        # 返回地址指向跳板，函数返回时模拟自然停止
+        emu.uc.reg_write(UC_ARM_REG_LR, TRAMP_BASE | 1)
+        emu.call_return_pending = True
+        emu.trace_path = args.trace_path
+        emu.path.clear()
+        emu.trace_gpio = True
+        emu.log(f"=== 直接调用 {target:#010x} 参数={[hex(a) for a in argv]} ===")
+        mark = len(emu.events)
+        emu.run(emu.steps + args.call_steps, start=target)
+        print(f"直接调用 {target:#010x} 结束：steps={emu.steps} "
+              f"pc={emu.uc.reg_read(UC_ARM_REG_PC):#010x} "
+              f"r0={emu.uc.reg_read(UC_ARM_REG_R0):#x}")
+        print(f"该调用期间记录 {len(emu.events) - mark} 条事件")
+        if args.trace_path:
+            print(f"执行路径 {len(emu.path)} 个基本块，首次进入顺序：")
+            seen = set()
+            order = []
+            for st, a in emu.path:
+                if a not in seen:
+                    seen.add(a)
+                    order.append((st, a))
+            for st, a in order[:120]:
+                print(f"  {st:>10} {a:#010x}")
+
     for spec in args.dump:
         rng, _, nm = spec.partition(":")
         lo, _, ln = rng.partition("+")
