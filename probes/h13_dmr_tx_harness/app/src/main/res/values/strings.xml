@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">H13 DMR 发射工具</string>
+    <string name="status_initial">当前版本只执行离线合同，不连接串口，不产生射频。</string>
+    <string name="run_offline">运行离线合同</string>
+    <string name="run_setup0">运行setup0单独无射频验证</string>
+    <string name="run_no_rf">运行无射频会话准备</string>
+    <string name="run_relay_one">运行实时relay无射频一包</string>
+    <string name="run_low_power_rf">执行一次低功率摩尔斯发射</string>
+    <string name="status_offline_running">正在编码并核对冻结向量&#8230;</string>
+    <string name="status_offline_failed">离线合同失败：%1$s</string>
+    <string name="status_setup0_running">正在执行setup0单独无射频验证&#8230;</string>
+    <string name="status_no_rf_running">正在执行无射频会话准备&#8230;</string>
+    <string name="status_relay_running">正在执行实时relay无射频一包&#8230;</string>
+    <string name="status_rf_running">正在执行一次低功率摩尔斯发射&#8230;</string>
+    <string name="status_device_failed">设备流程失败：%1$s</string>
+</resources>

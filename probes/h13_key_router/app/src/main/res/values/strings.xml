@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">H13 按键路由</string>
+    <string name="service_name">H13 大 PTT 路由器</string>
+    <string name="service_description">将 H13 大 PTT 的按下和松开直接路由至 Zello。</string>
+</resources>

@@ -1,0 +1,63 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace 'net.elfradio.h13interphoneprobe'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'net.elfradio.h13interphoneprobe'
+        minSdk 21
+        targetSdk 27
+        versionCode 394
+        versionName '3.94-production-rf-state-attestation'
+        ndk {
+            abiFilters 'armeabi-v7a'
+        }
+        externalNativeBuild {
+            cmake {
+                arguments '-DANDROID_STL=c++_static'
+            }
+        }
+    }
+
+    ndkVersion '26.3.11579264'
+
+    externalNativeBuild {
+        cmake {
+            path file('src/main/cpp/CMakeLists.txt')
+            version '3.22.1'
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    signingConfigs {
+        debug {
+            // 固定使用项目既有调试证书，避免隔离构建账户生成不兼容证书。
+            storeFile file('C:/Users/x/.android/debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+            enableV1Signing true
+            enableV2Signing true
+            enableV3Signing true
+            enableV4Signing false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    lint {
+        // 本探针只部署到Android 8.1实验设备，不发布Google Play；保持厂商兼容语义。
+        disable 'ExpiredTargetSdkVersion'
+    }
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+}

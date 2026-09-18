@@ -1,0 +1,50 @@
+variant=external_dmr_slot_gate_rf_prep_v008_m0
+rf_prep_address=0x20003100 len=60 sha256=c242231dce31e96356140924c698d667528103bb9f07639717839e77396fb040
+rf_prepare_sequence=PE6_low,PF3_low,completion=0,count=16,strb_gate,mirror_helper
+stock_count_helper=0x0800845C
+stock_gate_store=strb_0x08019676
+
+[rf_prep]
+stub.o:	file format elf32-littlearm
+
+Disassembly of section .text:
+
+20003100 <$t.0>:
+20003100: 4808         	ldr	r0, [pc, #0x20]         @ 0x24 <pe_brr>
+20003102: 2140         	movs	r1, #0x40
+20003104: 6001         	str	r1, [r0]
+20003106: 4808         	ldr	r0, [pc, #0x20]         @ 0x28 <pf_brr>
+20003108: 2108         	movs	r1, #0x8
+2000310a: 6001         	str	r1, [r0]
+2000310c: 4807         	ldr	r0, [pc, #0x1c]         @ 0x2c <completion>
+2000310e: 2100         	movs	r1, #0x0
+20003110: 7001         	strb	r1, [r0]
+20003112: 4807         	ldr	r0, [pc, #0x1c]         @ 0x30 <slot_count>
+20003114: 2110         	movs	r1, #0x10
+20003116: 8001         	strh	r1, [r0]
+20003118: 4806         	ldr	r0, [pc, #0x18]         @ 0x34 <active_gate>
+2000311a: 2101         	movs	r1, #0x1
+2000311c: 7001         	strb	r1, [r0]
+2000311e: 4b06         	ldr	r3, [pc, #0x18]         @ 0x38 <mirror_helper>
+20003120: 4718         	bx	r3
+20003122: bf00         	nop
+
+20003124 <pe_brr>:
+      24: 28 10 00 48  	.word	0x48001028
+
+20003128 <pf_brr>:
+      28: 28 14 00 48  	.word	0x48001428
+
+2000312c <completion>:
+      2c: 3c 01 00 20  	.word	0x2000013c
+
+20003130 <slot_count>:
+      30: 3a 01 00 20  	.word	0x2000013a
+
+20003134 <active_gate>:
+      34: 38 01 00 20  	.word	0x20000138
+
+20003138 <mirror_helper>:
+      38: 81 30 00 20  	.word	0x20003081
+
+rf_prep_words=0x21404808,0x48086001,0x60012108,0x21004807,0x48077001,0x80012110,0x21014806,0x4b067001,0xbf004718,0x48001028,0x48001428,0x2000013c,0x2000013a,0x20000138,0x20003081

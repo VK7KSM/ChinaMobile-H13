@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <array name="before_app_names">
+        <item>@*com.bozhou.launcher:array/app_1_2</item>
+        <item>@*com.bozhou.launcher:array/app_1_3</item>
+    </array>
+</resources>

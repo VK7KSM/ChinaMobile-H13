@@ -1,0 +1,13 @@
+# 构建缓存与中间产物
+**/build/
+**/.gradle/
+**/.gradle-user-home/
+**/.cxx/
+**/__pycache__/
+*.pyc
+*.log.tmp
+# 本地环境
+local.properties
+.venv/
+# 大体积原始捕获默认不入库，按需用 LFS 或单独归档
+captures/

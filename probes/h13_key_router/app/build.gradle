@@ -1,0 +1,19 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace 'net.elfradio.h13keyrouter'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'net.elfradio.h13keyrouter'
+        minSdk 21
+        targetSdk 27
+        versionCode 3
+        versionName '0.3-zello-route'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}

@@ -1,0 +1,18 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace 'com.h13.btscoprobe'
+    compileSdk 34
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    defaultConfig {
+        applicationId 'com.h13.btscoprobe'
+        minSdk 23
+        targetSdk 27
+        versionCode 4
+        versionName '2.2-sco-route-service'
+    }
+}

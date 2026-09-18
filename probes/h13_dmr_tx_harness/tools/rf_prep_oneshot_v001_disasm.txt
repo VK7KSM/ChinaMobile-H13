@@ -1,0 +1,53 @@
+地址=0x20003200
+长度=72
+SHA-256=4D64784ADF30CD7BCB91E8BCF8E83030424326FC880E6D1096BAB4F7B7B1CF40
+
+
+C:\Users\x\AppData\Local\Temp\h13_rf_prep_oneshot_zdukblp5\stub.o:	file format elf32-littlearm
+
+Disassembly of section .text:
+
+20003200 <_start>:
+20003200: b510         	push	{r4, lr}
+20003202: 480a         	ldr	r0, [pc, #0x28]         @ 0x2c <pe_brr>
+20003204: 2140         	movs	r1, #0x40
+20003206: 6001         	str	r1, [r0]
+20003208: 4809         	ldr	r0, [pc, #0x24]         @ 0x30 <pf_brr>
+2000320a: 2108         	movs	r1, #0x8
+2000320c: 6001         	str	r1, [r0]
+2000320e: 4809         	ldr	r0, [pc, #0x24]         @ 0x34 <active_gate>
+20003210: 2101         	movs	r1, #0x1
+20003212: 6001         	str	r1, [r0]
+20003214: 4808         	ldr	r0, [pc, #0x20]         @ 0x38 <marker_address>
+20003216: 4909         	ldr	r1, [pc, #0x24]         @ 0x3c <marker_value>
+20003218: 6001         	str	r1, [r0]
+2000321a: bc0c         	pop	{r2, r3}
+2000321c: 4614         	mov	r4, r2
+2000321e: 469e         	mov	lr, r3
+20003220: 4807         	ldr	r0, [pc, #0x1c]         @ 0x40 <vector>
+20003222: 4908         	ldr	r1, [pc, #0x20]         @ 0x44 <stock_systick>
+20003224: 6001         	str	r1, [r0]
+20003226: 4b07         	ldr	r3, [pc, #0x1c]         @ 0x44 <stock_systick>
+20003228: 4718         	bx	r3
+2000322a: bf00         	nop
+
+2000322c <pe_brr>:
+      2c: 28 10 00 48  	.word	0x48001028
+
+20003230 <pf_brr>:
+      30: 28 14 00 48  	.word	0x48001428
+
+20003234 <active_gate>:
+      34: 38 01 00 20  	.word	0x20000138
+
+20003238 <marker_address>:
+      38: c0 31 00 20  	.word	0x200031c0
+
+2000323c <marker_value>:
+      3c: 21 52 46 50  	.word	0x50465221
+
+20003240 <vector>:
+      40: 3c 00 00 20  	.word	0x2000003c
+
+20003244 <stock_systick>:
+      44: dd 1d 02 08  	.word	0x08021ddd

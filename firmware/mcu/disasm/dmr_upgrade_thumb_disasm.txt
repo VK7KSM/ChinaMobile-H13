@@ -1,0 +1,1130 @@
+﻿File: research\dmr_upgrade
+ELF32 type=3 machine=0x28 entry=0x1ca8 flags=0x5000200 sections=28
+
+Sections:
+  [ 0]                    addr=0x00000000 off=0x000000 size=0x0 type=0
+  [ 1] .interp            addr=0x00000154 off=0x000154 size=0x13 type=1
+  [ 2] .note.android.ident addr=0x00000168 off=0x000168 size=0x18 type=7
+  [ 3] .note.gnu.build-id addr=0x00000180 off=0x000180 size=0x20 type=7
+  [ 4] .dynsym            addr=0x000001a0 off=0x0001a0 size=0x5e0 type=11
+  [ 5] .dynstr            addr=0x00000780 off=0x000780 size=0xc8a type=3
+  [ 6] .gnu.hash          addr=0x0000140c off=0x00140c size=0xd4 type=1879048182
+  [ 7] .gnu.version       addr=0x000014e0 off=0x0014e0 size=0xbc type=1879048191
+  [ 8] .gnu.version_r     addr=0x0000159c off=0x00159c size=0x50 type=1879048190
+  [ 9] .rel.dyn           addr=0x000015ec off=0x0015ec size=0x188 type=9
+  [10] .rel.plt           addr=0x00001774 off=0x001774 size=0x1e0 type=9
+  [11] .plt               addr=0x00001954 off=0x001954 size=0x2e4 type=1
+  [12] .text              addr=0x00001c38 off=0x001c38 size=0x2ec8 type=1
+  [13] .ARM.exidx         addr=0x00004b00 off=0x004b00 size=0x1e0 type=1879048193
+  [14] .ARM.extab         addr=0x00004ce0 off=0x004ce0 size=0x24 type=1
+  [15] .rodata            addr=0x00004d10 off=0x004d10 size=0x3cc type=1
+  [16] .preinit_array     addr=0x00006cac off=0x005cac size=0x8 type=16
+  [17] .init_array        addr=0x00006cb4 off=0x005cb4 size=0x8 type=14
+  [18] .fini_array        addr=0x00006cbc off=0x005cbc size=0x8 type=15
+  [19] .data.rel.ro       addr=0x00006cc4 off=0x005cc4 size=0xd0 type=1
+  [20] .dynamic           addr=0x00006d94 off=0x005d94 size=0x130 type=6
+  [21] .got               addr=0x00006ec4 off=0x005ec4 size=0x13c type=1
+  [22] .data              addr=0x00007000 off=0x006000 size=0x408 type=1
+  [23] .bss               addr=0x00007408 off=0x006408 size=0x23 type=8
+  [24] .note.gnu.gold-version addr=0x00000000 off=0x006408 size=0x1c type=7
+  [25] .ARM.attributes    addr=0x00000000 off=0x006424 size=0x45 type=1879048195
+  [26] .gnu_debugdata     addr=0x00000000 off=0x006469 size=0xb40 type=1
+  [27] .shstrtab          addr=0x00000000 off=0x006fa9 size=0x129 type=3
+
+Thumb disassembly from 0x00001d70:
+0x00001d70: 2d e9 f0 4f  push.w   {r4, r5, r6, r7, r8, sb, sl, fp, lr}
+0x00001d74: ad f5 5f 7d  sub.w    sp, sp, #0x37c
+0x00001d78: 05 46        mov      r5, r0
+0x00001d7a: df f8 cc 09  ldr.w    r0, [pc, #0x9cc] ; literal@0x2748=0x0000514e
+0x00001d7e: 0f 46        mov      r7, r1
+0x00001d80: 01 21        movs     r1, #1
+0x00001d82: 78 44        add      r0, pc ; =>0x6ed2
+0x00001d84: 00 68        ldr      r0, [r0]
+0x00001d86: 00 68        ldr      r0, [r0]
+0x00001d88: de 90        str      r0, [sp, #0x378]
+0x00001d8a: 2c a8        add      r0, sp, #0xb0
+0x00001d8c: ff f7 fe ed  blx      #0x198c ; PLT _ZN7android4base10LogdLoggerC1ENS0_5LogIdE
+0x00001d90: df f8 b8 09  ldr.w    r0, [pc, #0x9b8] ; literal@0x274c=0x00005138
+0x00001d94: 9e ae        add      r6, sp, #0x278
+0x00001d96: df f8 b8 19  ldr.w    r1, [pc, #0x9b8] ; literal@0x2750=0x00004f5e
+0x00001d9a: 6c ac        add      r4, sp, #0x1b0
+0x00001d9c: 78 44        add      r0, pc ; =>0x6ed8; GOT _ZN7android4base14DefaultAborterEPKc
+0x00001d9e: df f8 b4 29  ldr.w    r2, [pc, #0x9b4] ; literal@0x2754=0x00004f7c
+0x00001da2: 79 44        add      r1, pc ; =>0x6d02
+0x00001da4: 2c 9b        ldr      r3, [sp, #0xb0]
+0x00001da6: 00 68        ldr      r0, [r0]
+0x00001da8: 7a 44        add      r2, pc ; =>0x6d28
+0x00001daa: 6d 90        str      r0, [sp, #0x1b4]
+0x00001dac: 02 f1 08 00  add.w    r0, r2, #8
+0x00001db0: 08 31        adds     r1, #8
+0x00001db2: 6c 90        str      r0, [sp, #0x1b0]
+0x00001db4: a2 96        str      r6, [sp, #0x288]
+0x00001db6: 38 46        mov      r0, r7
+0x00001db8: 9f 93        str      r3, [sp, #0x27c]
+0x00001dba: 22 46        mov      r2, r4
+0x00001dbc: 9e 91        str      r1, [sp, #0x278]
+0x00001dbe: 31 46        mov      r1, r6
+0x00001dc0: 70 94        str      r4, [sp, #0x1c0]
+0x00001dc2: 1b 97        str      r7, [sp, #0x6c]
+0x00001dc4: ff f7 e8 ed  blx      #0x1998 ; PLT _ZN7android4base11InitLoggingEPPcONSt3__18functionIFvNS0_5LogIdENS0_11LogSeverityEPKcS8_jS8_EEEONS4_IFvS8_EEE
+0x00001dc8: 70 98        ldr      r0, [sp, #0x1c0]
+0x00001dca: 84 42        cmp      r4, r0
+0x00001dcc: 03 d0        beq      #0x1dd6
+0x00001dce: 28 b1        cbz      r0, #0x1ddc
+0x00001dd0: 01 68        ldr      r1, [r0]
+0x00001dd2: 49 69        ldr      r1, [r1, #0x14]
+0x00001dd4: 01 e0        b        #0x1dda
+0x00001dd6: 01 68        ldr      r1, [r0]
+0x00001dd8: 09 69        ldr      r1, [r1, #0x10]
+0x00001dda: 88 47        blx      r1
+0x00001ddc: a2 98        ldr      r0, [sp, #0x288]
+0x00001dde: 86 42        cmp      r6, r0
+0x00001de0: 03 d0        beq      #0x1dea
+0x00001de2: 28 b1        cbz      r0, #0x1df0
+0x00001de4: 01 68        ldr      r1, [r0]
+0x00001de6: 49 69        ldr      r1, [r1, #0x14]
+0x00001de8: 01 e0        b        #0x1dee
+0x00001dea: 01 68        ldr      r1, [r0]
+0x00001dec: 09 69        ldr      r1, [r1, #0x10]
+0x00001dee: 88 47        blx      r1
+0x00001df0: 00 20        movs     r0, #0
+0x00001df2: 01 2d        cmp      r5, #1
+0x00001df4: cd e9 28 00  strd     r0, r0, [sp, #0xa0]
+0x00001df8: 2a 90        str      r0, [sp, #0xa8]
+0x00001dfa: 1a 95        str      r5, [sp, #0x68]
+0x00001dfc: 15 db        blt      #0x1e2a
+0x00001dfe: dd e9 1a 67  ldrd     r6, r7, [sp, #0x68]
+0x00001e02: 28 ac        add      r4, sp, #0xa0
+0x00001e04: 0f f6 50 18  addw     r8, pc, #0x950 ; =>0x2758
+0x00001e08: 57 f8 04 5b  ldr      r5, [r7], #4
+0x00001e0c: 28 46        mov      r0, r5
+0x00001e0e: ff f7 ca ed  blx      #0x19a4 ; PLT strlen
+0x00001e12: 02 46        mov      r2, r0
+0x00001e14: 20 46        mov      r0, r4
+0x00001e16: 29 46        mov      r1, r5
+0x00001e18: 01 f0 84 f8  bl       #0x2f24
+0x00001e1c: 20 46        mov      r0, r4
+0x00001e1e: 41 46        mov      r1, r8
+0x00001e20: 01 22        movs     r2, #1
+0x00001e22: 01 f0 7f f8  bl       #0x2f24
+0x00001e26: 01 3e        subs     r6, #1
+0x00001e28: ee d1        bne      #0x1e08
+0x00001e2a: ff f7 c2 ed  blx      #0x19b0 ; PLT _ZN7android4base21GetMinimumLogSeverityEv
+0x00001e2e: 02 28        cmp      r0, #2
+0x00001e30: 40 f3 15 84  ble.w    #0x265e
+0x00001e34: df f8 64 09  ldr.w    r0, [pc, #0x964] ; literal@0x279c=0x000055ca
+0x00001e38: 00 22        movs     r2, #0
+0x00001e3a: df f8 64 19  ldr.w    r1, [pc, #0x964] ; literal@0x27a0=0x000055ce
+0x00001e3e: 78 44        add      r0, pc ; =>0x740a
+0x00001e40: 27 92        str      r2, [sp, #0x9c]
+0x00001e42: 79 44        add      r1, pc ; =>0x7412
+0x00001e44: 22 91        str      r1, [sp, #0x88]
+0x00001e46: 00 21        movs     r1, #0
+0x00001e48: 00 22        movs     r2, #0
+0x00001e4a: ff f7 b8 ed  blx      #0x19bc ; PLT sem_init
+0x00001e4e: 0f f6 54 10  addw     r0, pc, #0x954 ; =>0x27a4; '/sys/boptt/ptt_d'
+0x00001e52: 40 f6 02 11  movw     r1, #0x902
+0x00001e56: ff f7 b8 ed  blx      #0x19c8 ; PLT __open_2
+0x00001e5a: 04 46        mov      r4, r0
+0x00001e5c: 0f f6 58 10  addw     r0, pc, #0x958 ; =>0x27b8; '/sys/boptt/dmr_switch'
+0x00001e60: 40 f6 02 11  movw     r1, #0x902
+0x00001e64: ff f7 b0 ed  blx      #0x19c8 ; PLT __open_2
+0x00001e68: 05 46        mov      r5, r0
+0x00001e6a: 60 1c        adds     r0, r4, #1
+0x00001e6c: 0d f5 1e 7b  add.w    fp, sp, #0x278
+0x00001e70: 18 bf        it       ne
+0x00001e72: 15 f1 01 00  addsne.w r0, r5, #1
+0x00001e76: 00 f0 d4 83  beq.w    #0x2622
+0x00001e7a: 0f f6 54 11  addw     r1, pc, #0x954 ; =>0x27d0; 'out0'
+0x00001e7e: 20 46        mov      r0, r4
+0x00001e80: 04 22        movs     r2, #4
+0x00001e82: 05 23        movs     r3, #5
+0x00001e84: 13 94        str      r4, [sp, #0x4c]
+0x00001e86: ff f7 a6 ed  blx      #0x19d4 ; PLT __write_chk
+0x00001e8a: b0 f1 ff 3f  cmp.w    r0, #-1
+0x00001e8e: dc bf        itt      le
+0x00001e90: 0f f6 44 10  addwle   r0, pc, #0x944
+0x00001e94: ff f7 a4 ed  blxle    #0x19e0
+0x00001e98: 0f f6 58 11  addw     r1, pc, #0x958 ; =>0x27f4
+0x00001e9c: 28 46        mov      r0, r5
+0x00001e9e: 01 22        movs     r2, #1
+0x00001ea0: 02 23        movs     r3, #2
+0x00001ea2: ff f7 98 ed  blx      #0x19d4 ; PLT __write_chk
+0x00001ea6: 01 20        movs     r0, #1
+0x00001ea8: ff f7 a0 ed  blx      #0x19ec ; PLT sleep
+0x00001eac: 0f f6 48 11  addw     r1, pc, #0x948 ; =>0x27f8
+0x00001eb0: 28 46        mov      r0, r5
+0x00001eb2: 01 22        movs     r2, #1
+0x00001eb4: 02 23        movs     r3, #2
+0x00001eb6: 0e 95        str      r5, [sp, #0x38]
+0x00001eb8: ff f7 8c ed  blx      #0x19d4 ; PLT __write_chk
+0x00001ebc: 1a 9f        ldr      r7, [sp, #0x68]
+0x00001ebe: b0 f1 ff 3f  cmp.w    r0, #-1
+0x00001ec2: 04 dc        bgt      #0x1ece
+0x00001ec4: df f8 34 09  ldr.w    r0, [pc, #0x934] ; literal@0x27fc=0x000031f4
+0x00001ec8: 78 44        add      r0, pc ; =>0x50c0; 'write 1 to dmr_switch error'
+0x00001eca: ff f7 8a ed  blx      #0x19e0 ; PLT puts
+0x00001ece: 4b f0 01 00  orr      r0, fp, #1
+0x00001ed2: 18 90        str      r0, [sp, #0x60]
+0x00001ed4: 2e a8        add      r0, sp, #0xb8
+0x00001ed6: df f8 28 59  ldr.w    r5, [pc, #0x928] ; literal@0x2800=0x00004de0
+0x00001eda: 30 30        adds     r0, #0x30
+0x00001edc: 12 90        str      r0, [sp, #0x48]
+0x00001ede: 00 20        movs     r0, #0
+0x00001ee0: 7d 44        add      r5, pc ; =>0x6cc4; GOT 
+0x00001ee2: 03 90        str      r0, [sp, #0xc]
+0x00001ee4: 0d f1 9c 0a  add.w    sl, sp, #0x9c
+0x00001ee8: df f8 90 09  ldr.w    r0, [pc, #0x990] ; literal@0x287c=0x00004fe2
+0x00001eec: 0f f6 14 14  addw     r4, pc, #0x914 ; =>0x2804; 'hu:s'
+0x00001ef0: 0f f6 1c 19  addw     sb, pc, #0x91c
+0x00001ef4: 00 26        movs     r6, #0
+0x00001ef6: 78 44        add      r0, pc ; =>0x6eda
+0x00001ef8: 00 68        ldr      r0, [r0]
+0x00001efa: 17 90        str      r0, [sp, #0x5c]
+0x00001efc: df f8 0c 09  ldr.w    r0, [pc, #0x90c] ; literal@0x280c=0x00004fd8
+0x00001f00: 78 44        add      r0, pc ; =>0x6edc; GOT stderr
+0x00001f02: 00 68        ldr      r0, [r0]
+0x00001f04: 16 90        str      r0, [sp, #0x58]
+0x00001f06: df f8 10 09  ldr.w    r0, [pc, #0x910] ; literal@0x2818=0x00004fce
+0x00001f0a: 78 44        add      r0, pc ; =>0x6eda
+0x00001f0c: 00 68        ldr      r0, [r0]
+0x00001f0e: 15 90        str      r0, [sp, #0x54]
+0x00001f10: df f8 10 09  ldr.w    r0, [pc, #0x910] ; literal@0x2824=0x00004fc8
+0x00001f14: 78 44        add      r0, pc ; =>0x6ee0; GOT optarg
+0x00001f16: 00 68        ldr      r0, [r0]
+0x00001f18: 14 90        str      r0, [sp, #0x50]
+0x00001f1a: df f8 5c 09  ldr.w    r0, [pc, #0x95c] ; literal@0x2878=0x00004fba
+0x00001f1e: 78 44        add      r0, pc ; =>0x6eda
+0x00001f20: 00 68        ldr      r0, [r0]
+0x00001f22: 11 90        str      r0, [sp, #0x44]
+0x00001f24: df f8 00 09  ldr.w    r0, [pc, #0x900] ; literal@0x2828=0x00004fb0
+0x00001f28: 78 44        add      r0, pc ; =>0x6edc; GOT stderr
+0x00001f2a: 00 68        ldr      r0, [r0]
+0x00001f2c: 10 90        str      r0, [sp, #0x40]
+0x00001f2e: df f8 00 09  ldr.w    r0, [pc, #0x900] ; literal@0x2830=0x000050cb
+0x00001f32: 78 44        add      r0, pc ; =>0x6fff
+0x00001f34: 11 30        adds     r0, #0x11
+0x00001f36: 0f 90        str      r0, [sp, #0x3c]
+0x00001f38: df f8 00 09  ldr.w    r0, [pc, #0x900] ; literal@0x283c=0x00004f9c
+0x00001f3c: 78 44        add      r0, pc ; =>0x6edc; GOT stderr
+0x00001f3e: 00 68        ldr      r0, [r0]
+0x00001f40: 06 90        str      r0, [sp, #0x18]
+0x00001f42: df f8 f0 08  ldr.w    r0, [pc, #0x8f0] ; literal@0x2834=0x00004f92
+0x00001f46: 78 44        add      r0, pc ; =>0x6eda
+0x00001f48: 00 68        ldr      r0, [r0]
+0x00001f4a: 05 90        str      r0, [sp, #0x14]
+0x00001f4c: df f8 e8 08  ldr.w    r0, [pc, #0x8e8] ; literal@0x2838=0x00004f88
+0x00001f50: 78 44        add      r0, pc ; =>0x6edc; GOT stderr
+0x00001f52: 00 68        ldr      r0, [r0]
+0x00001f54: 04 90        str      r0, [sp, #0x10]
+0x00001f56: df f8 f0 08  ldr.w    r0, [pc, #0x8f0] ; literal@0x2848=0x00004f7e
+0x00001f5a: 78 44        add      r0, pc ; =>0x6eda
+0x00001f5c: 00 68        ldr      r0, [r0]
+0x00001f5e: 09 90        str      r0, [sp, #0x24]
+0x00001f60: df f8 e8 08  ldr.w    r0, [pc, #0x8e8] ; literal@0x284c=0x00004f7c
+0x00001f64: 78 44        add      r0, pc ; =>0x6ee4; GOT _ZNSt3__14coutE
+0x00001f66: 00 68        ldr      r0, [r0]
+0x00001f68: 0d 90        str      r0, [sp, #0x34]
+0x00001f6a: df f8 e4 08  ldr.w    r0, [pc, #0x8e4] ; literal@0x2850=0x00004f72
+0x00001f6e: 78 44        add      r0, pc ; =>0x6ee2
+0x00001f70: 00 68        ldr      r0, [r0]
+0x00001f72: 0c 90        str      r0, [sp, #0x30]
+0x00001f74: df f8 dc 08  ldr.w    r0, [pc, #0x8dc] ; literal@0x2854=0x00004f6c
+0x00001f78: 78 44        add      r0, pc ; =>0x6ee8; GOT _ZNSt3__15ctypeIcE2idE
+0x00001f7a: 00 68        ldr      r0, [r0]
+0x00001f7c: 0b 90        str      r0, [sp, #0x2c]
+0x00001f7e: df f8 d8 08  ldr.w    r0, [pc, #0x8d8] ; literal@0x2858=0x00004f56
+0x00001f82: 78 44        add      r0, pc ; =>0x6eda
+0x00001f84: 00 68        ldr      r0, [r0]
+0x00001f86: 07 90        str      r0, [sp, #0x1c]
+0x00001f88: df f8 b8 08  ldr.w    r0, [pc, #0x8b8] ; literal@0x2844=0x00004f4c
+0x00001f8c: 78 44        add      r0, pc ; =>0x6edc; GOT stderr
+0x00001f8e: 00 68        ldr      r0, [r0]
+0x00001f90: 0a 90        str      r0, [sp, #0x28]
+0x00001f92: df f8 98 08  ldr.w    r0, [pc, #0x898] ; literal@0x282c=0x00004f42
+0x00001f96: 78 44        add      r0, pc ; =>0x6eda
+0x00001f98: 00 68        ldr      r0, [r0]
+0x00001f9a: 08 90        str      r0, [sp, #0x20]
+0x00001f9c: 1d e3        b        #0x25da
+0x00001f9e: 67 28        cmp      r0, #0x67
+0x00001fa0: 19 96        str      r6, [sp, #0x64]
+0x00001fa2: 5e dc        bgt      #0x2062
+0x00001fa4: 00 28        cmp      r0, #0
+0x00001fa6: 40 f0 43 83  bne.w    #0x2630
+0x00001faa: 27 98        ldr      r0, [sp, #0x9c]
+0x00001fac: c8 46        mov      r8, sb
+0x00001fae: df f8 f0 18  ldr.w    r1, [pc, #0x8f0] ; literal@0x28a0=0x00004d0c
+0x00001fb2: a1 46        mov      sb, r4
+0x00001fb4: 79 44        add      r1, pc ; =>0x6cc4; GOT 
+0x00001fb6: 00 01        lsls     r0, r0, #4
+0x00001fb8: 0c 58        ldr      r4, [r1, r0]
+0x00001fba: 00 20        movs     r0, #0
+0x00001fbc: a0 90        str      r0, [sp, #0x280]
+0x00001fbe: cd e9 9e 00  strd     r0, r0, [sp, #0x278]
+0x00001fc2: 20 46        mov      r0, r4
+0x00001fc4: ff f7 ee ec  blx      #0x19a4 ; PLT strlen
+0x00001fc8: 06 46        mov      r6, r0
+0x00001fca: 16 f1 10 0f  cmn.w    r6, #0x10
+0x00001fce: 80 f0 a2 83  bhs.w    #0x2716
+0x00001fd2: 0b 2e        cmp      r6, #0xb
+0x00001fd4: 06 d2        bhs      #0x1fe4
+0x00001fd6: 18 9d        ldr      r5, [sp, #0x60]
+0x00001fd8: 70 00        lsls     r0, r6, #1
+0x00001fda: 00 2e        cmp      r6, #0
+0x00001fdc: 8d f8 78 02  strb.w   r0, [sp, #0x278]
+0x00001fe0: 0f d1        bne      #0x2002
+0x00001fe2: 13 e0        b        #0x200c
+0x00001fe4: 06 f1 10 00  add.w    r0, r6, #0x10
+0x00001fe8: 20 f0 0f 07  bic      r7, r0, #0xf
+0x00001fec: 38 46        mov      r0, r7
+0x00001fee: ff f7 04 ed  blx      #0x19f8 ; PLT _Znwj
+0x00001ff2: 05 46        mov      r5, r0
+0x00001ff4: 47 f0 01 00  orr      r0, r7, #1
+0x00001ff8: a0 95        str      r5, [sp, #0x280]
+0x00001ffa: 0d f5 1e 7b  add.w    fp, sp, #0x278
+0x00001ffe: cd e9 9e 06  strd     r0, r6, [sp, #0x278]
+0x00002002: 28 46        mov      r0, r5
+0x00002004: 21 46        mov      r1, r4
+0x00002006: 32 46        mov      r2, r6
+0x00002008: ff f7 fc ec  blx      #0x1a04 ; PLT __aeabi_memcpy
+0x0000200c: 00 20        movs     r0, #0
+0x0000200e: 00 24        movs     r4, #0
+0x00002010: a8 55        strb     r0, [r5, r6]
+0x00002012: 9d f8 78 12  ldrb.w   r1, [sp, #0x278]
+0x00002016: 9f 98        ldr      r0, [sp, #0x27c]
+0x00002018: 11 f0 01 0f  tst.w    r1, #1
+0x0000201c: 08 bf        it       eq
+0x0000201e: 48 08        lsreq    r0, r1, #1
+0x00002020: 58 b9        cbnz     r0, #0x203a
+0x00002022: df f8 80 38  ldr.w    r3, [pc, #0x880] ; literal@0x28a4=0x00002d05
+0x00002026: 58 46        mov      r0, fp
+0x00002028: 00 21        movs     r1, #0
+0x0000202a: 4f f0 ff 32  mov.w    r2, #-1
+0x0000202e: 7b 44        add      r3, pc ; =>0x4d35
+0x00002030: 00 94        str      r4, [sp]
+0x00002032: 01 f0 c5 f9  bl       #0x33c0
+0x00002036: 00 28        cmp      r0, #0
+0x00002038: 04 d0        beq      #0x2044
+0x0000203a: ff f7 ba ec  blx      #0x19b0 ; PLT _ZN7android4base21GetMinimumLogSeverityEv
+0x0000203e: 04 28        cmp      r0, #4
+0x00002040: 40 f3 93 82  ble.w    #0x256a
+0x00002044: 9d f8 78 02  ldrb.w   r0, [sp, #0x278]
+0x00002048: c0 07        lsls     r0, r0, #0x1f
+0x0000204a: 1c bf        itt      ne
+0x0000204c: a0 98        ldrne    r0, [sp, #0x280]
+0x0000204e: ff f7 e0 ec  blxne    #0x1a10
+0x00002052: df f8 64 58  ldr.w    r5, [pc, #0x864] ; literal@0x28b8=0x00004c62
+0x00002056: 4c 46        mov      r4, sb
+0x00002058: c1 46        mov      sb, r8
+0x0000205a: dd e9 19 67  ldrd     r6, r7, [sp, #0x64]
+0x0000205e: 7d 44        add      r5, pc ; =>0x6cc2
+0x00002060: bb e2        b        #0x25da
+0x00002062: 68 28        cmp      r0, #0x68
+0x00002064: 18 d0        beq      #0x2098
+0x00002066: 73 28        cmp      r0, #0x73
+0x00002068: 2b d0        beq      #0x20c2
+0x0000206a: 75 28        cmp      r0, #0x75
+0x0000206c: 40 f0 e0 82  bne.w    #0x2630
+0x00002070: 14 98        ldr      r0, [sp, #0x50]
+0x00002072: 00 21        movs     r1, #0
+0x00002074: 4f f4 d2 72  mov.w    r2, #0x1a4
+0x00002078: 00 68        ldr      r0, [r0]
+0x0000207a: ff f7 d0 ec  blx      #0x1a1c ; PLT open
+0x0000207e: 80 46        mov      r8, r0
+0x00002080: b8 f1 ff 3f  cmp.w    r8, #-1
+0x00002084: 42 dc        bgt      #0x210c
+0x00002086: 11 98        ldr      r0, [sp, #0x44]
+0x00002088: 49 46        mov      r1, sb
+0x0000208a: df f8 38 28  ldr.w    r2, [pc, #0x838] ; literal@0x28c4=0x00002cb5
+0x0000208e: 00 68        ldr      r0, [r0]
+0x00002090: 7a 44        add      r2, pc ; =>0x4d49; 'open download package error!'
+0x00002092: ff f7 ca ec  blx      #0x1a28 ; PLT fprintf
+0x00002096: a0 e2        b        #0x25da
+0x00002098: 1b 98        ldr      r0, [sp, #0x6c]
+0x0000209a: dd f8 5c 80  ldr.w    r8, [sp, #0x5c]
+0x0000209e: df f8 0c 18  ldr.w    r1, [pc, #0x80c] ; literal@0x28ac=0x00002dd4
+0x000020a2: 02 68        ldr      r2, [r0]
+0x000020a4: d8 f8 00 00  ldr.w    r0, [r8]
+0x000020a8: 79 44        add      r1, pc ; =>0x4e80; 'Usage: %s [options] [file]'
+0x000020aa: ff f7 be ec  blx      #0x1a28 ; PLT fprintf
+0x000020ae: df f8 00 08  ldr.w    r0, [pc, #0x800] ; literal@0x28b0=0x00002dde
+0x000020b2: ba 21        movs     r1, #0xba
+0x000020b4: d8 f8 00 30  ldr.w    r3, [r8]
+0x000020b8: 01 22        movs     r2, #1
+0x000020ba: 78 44        add      r0, pc ; =>0x4e9a
+0x000020bc: ff f7 ba ec  blx      #0x1a34 ; PLT fwrite
+0x000020c0: 8b e2        b        #0x25da
+0x000020c2: 16 98        ldr      r0, [sp, #0x58]
+0x000020c4: 49 46        mov      r1, sb
+0x000020c6: df f8 ec 27  ldr.w    r2, [pc, #0x7ec] ; literal@0x28b4=0x00002d89
+0x000020ca: 00 68        ldr      r0, [r0]
+0x000020cc: 7a 44        add      r2, pc ; =>0x4e59; 'test uart'
+0x000020ce: ff f7 ac ec  blx      #0x1a28 ; PLT fprintf
+0x000020d2: df f8 e8 07  ldr.w    r0, [pc, #0x7e8] ; literal@0x28bc=0x00002d89
+0x000020d6: 78 44        add      r0, pc ; =>0x4e61
+0x000020d8: 00 f0 60 fc  bl       #0x299c
+0x000020dc: 80 46        mov      r8, r0
+0x000020de: 18 f1 01 00  adds.w   r0, r8, #1
+0x000020e2: 00 f0 1a 83  beq.w    #0x271a
+0x000020e6: 0f f2 2c 71  addw     r1, pc, #0x72c ; =>0x2814
+0x000020ea: 40 46        mov      r0, r8
+0x000020ec: 01 22        movs     r2, #1
+0x000020ee: 02 23        movs     r3, #2
+0x000020f0: ff f7 70 ec  blx      #0x19d4 ; PLT __write_chk
+0x000020f4: 15 98        ldr      r0, [sp, #0x54]
+0x000020f6: 49 46        mov      r1, sb
+0x000020f8: df f8 c4 27  ldr.w    r2, [pc, #0x7c4] ; literal@0x28c0=0x00002d6e
+0x000020fc: 00 68        ldr      r0, [r0]
+0x000020fe: 7a 44        add      r2, pc ; =>0x4e6e
+0x00002100: ff f7 92 ec  blx      #0x1a28 ; PLT fprintf
+0x00002104: 40 46        mov      r0, r8
+0x00002106: 00 f0 41 fe  bl       #0x2d8c
+0x0000210a: 66 e2        b        #0x25da
+0x0000210c: 58 46        mov      r0, fp
+0x0000210e: ff 21        movs     r1, #0xff
+0x00002110: ff f7 96 ec  blx      #0x1a40 ; PLT __aeabi_memclr8
+0x00002114: 2e a9        add      r1, sp, #0xb8
+0x00002116: 40 46        mov      r0, r8
+0x00002118: ff f7 98 ec  blx      #0x1a4c ; PLT fstat
+0x0000211c: 12 98        ldr      r0, [sp, #0x48]
+0x0000211e: 01 21        movs     r1, #1
+0x00002120: 45 46        mov      r5, r8
+0x00002122: 04 68        ldr      r4, [r0]
+0x00002124: e0 17        asrs     r0, r4, #0x1f
+0x00002126: 04 eb 90 50  add.w    r0, r4, r0, lsr #22
+0x0000212a: 01 eb a0 28  add.w    r8, r1, r0, asr #10
+0x0000212e: df f8 98 07  ldr.w    r0, [pc, #0x798] ; literal@0x28c8=0x00002c30
+0x00002132: 78 44        add      r0, pc ; =>0x4d64
+0x00002134: 41 46        mov      r1, r8
+0x00002136: ff f7 90 ec  blx      #0x1a58 ; PLT printf
+0x0000213a: df f8 90 27  ldr.w    r2, [pc, #0x790] ; literal@0x28cc=0x00002c28
+0x0000213e: 6c ae        add      r6, sp, #0x1b0
+0x00002140: c8 21        movs     r1, #0xc8
+0x00002142: 23 46        mov      r3, r4
+0x00002144: 7a 44        add      r2, pc ; =>0x4d70; 'file size +%d'
+0x00002146: 30 46        mov      r0, r6
+0x00002148: 00 f0 04 fc  bl       #0x2954
+0x0000214c: 10 98        ldr      r0, [sp, #0x40]
+0x0000214e: 49 46        mov      r1, sb
+0x00002150: 32 46        mov      r2, r6
+0x00002152: 00 68        ldr      r0, [r0]
+0x00002154: ff f7 68 ec  blx      #0x1a28 ; PLT fprintf
+0x00002158: df f8 74 07  ldr.w    r0, [pc, #0x774] ; literal@0x28d0=0x00004ea1
+0x0000215c: 78 44        add      r0, pc ; =>0x7001
+0x0000215e: 23 90        str      r0, [sp, #0x8c]
+0x00002160: df f8 70 07  ldr.w    r0, [pc, #0x770] ; literal@0x28d4=0x00002c18
+0x00002164: 78 44        add      r0, pc ; =>0x4d80; '/dev/ttyHS0'
+0x00002166: 00 f0 19 fc  bl       #0x299c
+0x0000216a: 07 46        mov      r7, r0
+0x0000216c: 17 f1 01 09  adds.w   sb, r7, #1
+0x00002170: 00 f0 da 82  beq.w    #0x2728
+0x00002174: df f8 60 27  ldr.w    r2, [pc, #0x760] ; literal@0x28d8=0x000009cb
+0x00002178: 21 a8        add      r0, sp, #0x84
+0x0000217a: 22 ab        add      r3, sp, #0x88
+0x0000217c: 00 21        movs     r1, #0
+0x0000217e: 7a 44        add      r2, pc ; =>0x2b4b
+0x00002180: 02 95        str      r5, [sp, #8]
+0x00002182: cd e9 24 75  strd     r7, r5, [sp, #0x90]
+0x00002186: ff f7 6e ec  blx      #0x1a64 ; PLT pthread_create
+0x0000218a: 00 28        cmp      r0, #0
+0x0000218c: 40 f0 d1 81  bne.w    #0x2532
+0x00002190: 1e ae        add      r6, sp, #0x78
+0x00002192: 21 46        mov      r1, r4
+0x00002194: 30 46        mov      r0, r6
+0x00002196: ff f7 6c ec  blx      #0x1a70 ; PLT _ZNSt3__19to_stringEi
+0x0000219a: 9d f8 78 00  ldrb.w   r0, [sp, #0x78]
+0x0000219e: 40 f2 f5 32  movw     r2, #0x3f5
+0x000021a2: 20 99        ldr      r1, [sp, #0x80]
+0x000021a4: 10 f0 01 0f  tst.w    r0, #1
+0x000021a8: 08 bf        it       eq
+0x000021aa: 46 f0 01 01  orreq    r1, r6, #1
+0x000021ae: 0f 98        ldr      r0, [sp, #0x3c]
+0x000021b0: ff f7 64 ec  blx      #0x1a7c ; PLT __strcpy_chk
+0x000021b4: df f8 24 47  ldr.w    r4, [pc, #0x724] ; literal@0x28dc=0x00004e3f
+0x000021b8: 00 20        movs     r0, #0
+0x000021ba: 00 21        movs     r1, #0
+0x000021bc: 00 26        movs     r6, #0
+0x000021be: 7c 44        add      r4, pc ; =>0x6fff
+0x000021c0: 41 f2 21 05  movw     r5, #0x1021
+0x000021c4: 22 18        adds     r2, r4, r0
+0x000021c6: d2 78        ldrb     r2, [r2, #3]
+0x000021c8: 81 ea 02 23  eor.w    r3, r1, r2, lsl #8
+0x000021cc: 08 22        movs     r2, #8
+0x000021ce: 85 ea 43 01  eor.w    r1, r5, r3, lsl #1
+0x000021d2: 13 f4 00 4f  tst.w    r3, #0x8000
+0x000021d6: 08 bf        it       eq
+0x000021d8: 59 00        lsleq    r1, r3, #1
+0x000021da: 01 3a        subs     r2, #1
+0x000021dc: 0b 46        mov      r3, r1
+0x000021de: f6 d1        bne      #0x21ce
+0x000021e0: 01 30        adds     r0, #1
+0x000021e2: 80 28        cmp      r0, #0x80
+0x000021e4: ee d1        bne      #0x21c4
+0x000021e6: df f8 f8 06  ldr.w    r0, [pc, #0x6f8] ; literal@0x28e0=0x00004e13
+0x000021ea: 78 44        add      r0, pc ; =>0x6fff
+0x000021ec: 02 46        mov      r2, r0
+0x000021ee: 08 0a        lsrs     r0, r1, #8
+0x000021f0: 82 f8 84 10  strb.w   r1, [r2, #0x84]
+0x000021f4: 82 f8 83 00  strb.w   r0, [r2, #0x83]
+0x000021f8: 01 20        movs     r0, #1
+0x000021fa: ff f7 f8 eb  blx      #0x19ec ; PLT sleep
+0x000021fe: 0f f2 14 61  addw     r1, pc, #0x614 ; =>0x2814
+0x00002202: 38 46        mov      r0, r7
+0x00002204: 01 22        movs     r2, #1
+0x00002206: 02 23        movs     r3, #2
+0x00002208: ff f7 e4 eb  blx      #0x19d4 ; PLT __write_chk
+0x0000220c: 4c ac        add      r4, sp, #0x130
+0x0000220e: 80 21        movs     r1, #0x80
+0x00002210: cd e9 48 66  strd     r6, r6, [sp, #0x120]
+0x00002214: 20 46        mov      r0, r4
+0x00002216: 8d f8 28 61  strb.w   r6, [sp, #0x128]
+0x0000221a: ff f7 12 ec  blx      #0x1a40 ; PLT __aeabi_memclr8
+0x0000221e: 38 46        mov      r0, r7
+0x00002220: 21 46        mov      r1, r4
+0x00002222: 80 22        movs     r2, #0x80
+0x00002224: ff f7 30 ec  blx      #0x1a88 ; PLT __FD_SET_chk
+0x00002228: 0a 20        movs     r0, #0xa
+0x0000222a: 1d 96        str      r6, [sp, #0x74]
+0x0000222c: 1c 90        str      r0, [sp, #0x70]
+0x0000222e: df f8 b4 06  ldr.w    r0, [pc, #0x6b4] ; literal@0x28e4=0x000051d6
+0x00002232: 78 44        add      r0, pc ; =>0x740a
+0x00002234: ff f7 2e ec  blx      #0x1a94 ; PLT sem_post
+0x00002238: 1c a8        add      r0, sp, #0x70
+0x0000223a: 00 90        str      r0, [sp]
+0x0000223c: 48 46        mov      r0, sb
+0x0000223e: 21 46        mov      r1, r4
+0x00002240: 00 22        movs     r2, #0
+0x00002242: 00 23        movs     r3, #0
+0x00002244: ff f7 2c ec  blx      #0x1aa0 ; PLT select
+0x00002248: 41 1c        adds     r1, r0, #1
+0x0000224a: 00 f0 85 81  beq.w    #0x2558
+0x0000224e: df f8 ac 56  ldr.w    r5, [pc, #0x6ac] ; literal@0x28fc=0x000051b8
+0x00002252: 00 28        cmp      r0, #0
+0x00002254: 7d 44        add      r5, pc ; =>0x7410
+0x00002256: 2d d1        bne      #0x22b4
+0x00002258: 05 98        ldr      r0, [sp, #0x14]
+0x0000225a: 0b 21        movs     r1, #0xb
+0x0000225c: 01 22        movs     r2, #1
+0x0000225e: 03 68        ldr      r3, [r0]
+0x00002260: df f8 88 06  ldr.w    r0, [pc, #0x688] ; literal@0x28ec=0x00002b59
+0x00002264: 78 44        add      r0, pc ; =>0x4dc1; 'time over!'
+0x00002266: ff f7 e6 eb  blx      #0x1a34 ; PLT fwrite
+0x0000226a: df f8 84 06  ldr.w    r0, [pc, #0x684] ; literal@0x28f0=0x0000519c
+0x0000226e: 26 96        str      r6, [sp, #0x98]
+0x00002270: 78 44        add      r0, pc ; =>0x7410
+0x00002272: 06 60        str      r6, [r0]
+0x00002274: 38 46        mov      r0, r7
+0x00002276: 00 f0 89 fd  bl       #0x2d8c
+0x0000227a: 13 98        ldr      r0, [sp, #0x4c]
+0x0000227c: ff f7 16 ec  blx      #0x1aac ; PLT close
+0x00002280: 0e 98        ldr      r0, [sp, #0x38]
+0x00002282: ff f7 14 ec  blx      #0x1aac ; PLT close
+0x00002286: 01 30        adds     r0, #1
+0x00002288: 00 f0 9e 81  beq.w    #0x25c8
+0x0000228c: df f8 68 06  ldr.w    r0, [pc, #0x668] ; literal@0x28f8=0x00005178
+0x00002290: 78 44        add      r0, pc ; =>0x740c
+0x00002292: 37 e1        b        #0x2504
+0x00002294: df f8 80 06  ldr.w    r0, [pc, #0x680] ; literal@0x2918=0x00005170
+0x00002298: 78 44        add      r0, pc ; =>0x740c
+0x0000229a: ff f7 fc eb  blx      #0x1a94 ; PLT sem_post
+0x0000229e: 09 e0        b        #0x22b4
+0x000022a0: 15 29        cmp      r1, #0x15
+0x000022a2: 08 bf        it       eq
+0x000022a4: 04 28        cmpeq    r0, #4
+0x000022a6: 40 f0 e2 80  bne.w    #0x246e
+0x000022aa: df f8 7c 06  ldr.w    r0, [pc, #0x67c] ; literal@0x2928=0x0000515a
+0x000022ae: 78 44        add      r0, pc ; =>0x740a
+0x000022b0: ff f7 f0 eb  blx      #0x1a94 ; PLT sem_post
+0x000022b4: 38 46        mov      r0, r7
+0x000022b6: 59 46        mov      r1, fp
+0x000022b8: 02 22        movs     r2, #2
+0x000022ba: ff 23        movs     r3, #0xff
+0x000022bc: ff f7 fc eb  blx      #0x1ab8 ; PLT __read_chk
+0x000022c0: 04 46        mov      r4, r0
+0x000022c2: 28 68        ldr      r0, [r5]
+0x000022c4: 26 9b        ldr      r3, [sp, #0x98]
+0x000022c6: 40 45        cmp      r0, r8
+0x000022c8: 06 dc        bgt      #0x22d8
+0x000022ca: 63 2b        cmp      r3, #0x63
+0x000022cc: df bf        itttt    le
+0x000022ce: 64 21        movle    r1, #0x64
+0x000022d0: 48 43        mulle    r0, r1, r0
+0x000022d2: 90 fb f8 f3  sdivle   r3, r0, r8
+0x000022d6: 26 93        strle    r3, [sp, #0x98]
+0x000022d8: 0d f5 90 79  add.w    sb, sp, #0x120
+0x000022dc: 0f f2 60 52  addw     r2, pc, #0x560 ; =>0x2840
+0x000022e0: 09 21        movs     r1, #9
+0x000022e2: 48 46        mov      r0, sb
+0x000022e4: 00 f0 36 fb  bl       #0x2954
+0x000022e8: df f8 14 06  ldr.w    r0, [pc, #0x614] ; literal@0x2900=0x00002aed
+0x000022ec: 49 46        mov      r1, sb
+0x000022ee: 78 44        add      r0, pc ; =>0x4ddd
+0x000022f0: ff f7 b2 eb  blx      #0x1a58 ; PLT printf
+0x000022f4: df f8 0c 06  ldr.w    r0, [pc, #0x60c] ; literal@0x2904=0x00002aef
+0x000022f8: 49 46        mov      r1, sb
+0x000022fa: 78 44        add      r0, pc ; =>0x4deb
+0x000022fc: ff f7 e2 eb  blx      #0x1ac4 ; PLT property_set
+0x00002300: 60 1c        adds     r0, r4, #1
+0x00002302: 00 f0 fb 81  beq.w    #0x26fc
+0x00002306: 9d f8 78 12  ldrb.w   r1, [sp, #0x278]
+0x0000230a: 18 29        cmp      r1, #0x18
+0x0000230c: 0a d1        bne      #0x2324
+0x0000230e: 9d f8 79 02  ldrb.w   r0, [sp, #0x279]
+0x00002312: 18 28        cmp      r0, #0x18
+0x00002314: 33 d1        bne      #0x237e
+0x00002316: df f8 f0 05  ldr.w    r0, [pc, #0x5f0] ; literal@0x2908=0x00002af6
+0x0000231a: 18 22        movs     r2, #0x18
+0x0000231c: 78 44        add      r0, pc ; =>0x4e16; 'dmr_recv[0]=0x%x, dmr_recv[1]=0x%x'
+0x0000231e: ff f7 9c eb  blx      #0x1a58 ; PLT printf
+0x00002322: c7 e7        b        #0x22b4
+0x00002324: df f8 14 06  ldr.w    r0, [pc, #0x614] ; literal@0x293c=0x000050e6
+0x00002328: 43 29        cmp      r1, #0x43
+0x0000232a: 78 44        add      r0, pc ; =>0x7412
+0x0000232c: 00 68        ldr      r0, [r0]
+0x0000232e: 0c d1        bne      #0x234a
+0x00002330: 01 28        cmp      r0, #1
+0x00002332: 0a d0        beq      #0x234a
+0x00002334: df f8 08 16  ldr.w    r1, [pc, #0x608] ; literal@0x2940=0x000050d6
+0x00002338: 01 20        movs     r0, #1
+0x0000233a: 79 44        add      r1, pc ; =>0x7412
+0x0000233c: 08 60        str      r0, [r1]
+0x0000233e: df f8 04 06  ldr.w    r0, [pc, #0x604] ; literal@0x2944=0x000050c6
+0x00002342: 78 44        add      r0, pc ; =>0x740a
+0x00002344: ff f7 a6 eb  blx      #0x1a94 ; PLT sem_post
+0x00002348: b4 e7        b        #0x22b4
+0x0000234a: 06 29        cmp      r1, #6
+0x0000234c: 4f f0 00 02  mov.w    r2, #0
+0x00002350: 08 bf        it       eq
+0x00002352: 01 22        moveq    r2, #1
+0x00002354: 02 2c        cmp      r4, #2
+0x00002356: 08 bf        it       eq
+0x00002358: 06 29        cmpeq    r1, #6
+0x0000235a: 15 d1        bne      #0x2388
+0x0000235c: 02 28        cmp      r0, #2
+0x0000235e: 13 d0        beq      #0x2388
+0x00002360: 9d f8 79 32  ldrb.w   r3, [sp, #0x279]
+0x00002364: 43 2b        cmp      r3, #0x43
+0x00002366: 0f d1        bne      #0x2388
+0x00002368: df f8 dc 15  ldr.w    r1, [pc, #0x5dc] ; literal@0x2948=0x000050a2
+0x0000236c: 02 20        movs     r0, #2
+0x0000236e: 79 44        add      r1, pc ; =>0x7412
+0x00002370: 08 60        str      r0, [r1]
+0x00002372: df f8 d8 05  ldr.w    r0, [pc, #0x5d8] ; literal@0x294c=0x00005092
+0x00002376: 78 44        add      r0, pc ; =>0x740a
+0x00002378: ff f7 8c eb  blx      #0x1a94 ; PLT sem_post
+0x0000237c: 9a e7        b        #0x22b4
+0x0000237e: df f8 8c 05  ldr.w    r0, [pc, #0x58c] ; literal@0x290c=0x0000508c
+0x00002382: 00 22        movs     r2, #0
+0x00002384: 78 44        add      r0, pc ; =>0x7414
+0x00002386: 00 68        ldr      r0, [r0]
+0x00002388: 01 2a        cmp      r2, #1
+0x0000238a: 08 bf        it       eq
+0x0000238c: 02 28        cmpeq    r0, #2
+0x0000238e: 05 d1        bne      #0x239c
+0x00002390: df f8 7c 05  ldr.w    r0, [pc, #0x57c] ; literal@0x2910=0x00005074
+0x00002394: 78 44        add      r0, pc ; =>0x740c
+0x00002396: ff f7 7e eb  blx      #0x1a94 ; PLT sem_post
+0x0000239a: 8b e7        b        #0x22b4
+0x0000239c: 00 23        movs     r3, #0
+0x0000239e: 03 28        cmp      r0, #3
+0x000023a0: 08 bf        it       eq
+0x000023a2: 01 23        moveq    r3, #1
+0x000023a4: 13 40        ands     r3, r2
+0x000023a6: 01 2b        cmp      r3, #1
+0x000023a8: 05 d1        bne      #0x23b6
+0x000023aa: df f8 68 05  ldr.w    r0, [pc, #0x568] ; literal@0x2914=0x0000505a
+0x000023ae: 78 44        add      r0, pc ; =>0x740a
+0x000023b0: ff f7 70 eb  blx      #0x1a94 ; PLT sem_post
+0x000023b4: 7e e7        b        #0x22b4
+0x000023b6: 00 2a        cmp      r2, #0
+0x000023b8: 3f f4 72 af  beq.w    #0x22a0
+0x000023bc: 04 28        cmp      r0, #4
+0x000023be: 3f f4 74 af  beq.w    #0x22aa
+0x000023c2: 00 21        movs     r1, #0
+0x000023c4: 05 28        cmp      r0, #5
+0x000023c6: 08 bf        it       eq
+0x000023c8: 01 21        moveq    r1, #1
+0x000023ca: 11 40        ands     r1, r2
+0x000023cc: 01 29        cmp      r1, #1
+0x000023ce: 3f f4 61 af  beq.w    #0x2294
+0x000023d2: 06 28        cmp      r0, #6
+0x000023d4: 4f f0 00 00  mov.w    r0, #0
+0x000023d8: 08 bf        it       eq
+0x000023da: 01 20        moveq    r0, #1
+0x000023dc: 09 99        ldr      r1, [sp, #0x24]
+0x000023de: dd f8 34 80  ldr.w    r8, [sp, #0x34]
+0x000023e2: 10 40        ands     r0, r2
+0x000023e4: dc a5        adr      r5, #0x370
+0x000023e6: 01 28        cmp      r0, #1
+0x000023e8: 0b 68        ldr      r3, [r1]
+0x000023ea: 45 d1        bne      #0x2478
+0x000023ec: df f8 2c 05  ldr.w    r0, [pc, #0x52c] ; literal@0x291c=0x00002a42
+0x000023f0: 0d 21        movs     r1, #0xd
+0x000023f2: 01 22        movs     r2, #1
+0x000023f4: 78 44        add      r0, pc ; =>0x4e3a; 'download OK!'
+0x000023f6: ff f7 1e eb  blx      #0x1a34 ; PLT fwrite
+0x000023fa: df f8 24 05  ldr.w    r0, [pc, #0x524] ; literal@0x2920=0x00005006
+0x000023fe: 0f f2 5c 41  addw     r1, pc, #0x45c ; =>0x285c
+0x00002402: 02 22        movs     r2, #2
+0x00002404: 03 23        movs     r3, #3
+0x00002406: 78 44        add      r0, pc ; =>0x740e
+0x00002408: 26 96        str      r6, [sp, #0x98]
+0x0000240a: 06 60        str      r6, [r0]
+0x0000240c: 13 98        ldr      r0, [sp, #0x4c]
+0x0000240e: ff f7 e2 ea  blx      #0x19d4 ; PLT __write_chk
+0x00002412: b0 f1 ff 3f  cmp.w    r0, #-1
+0x00002416: dc bf        itt      le
+0x00002418: 0f f2 bc 30  addwle   r0, pc, #0x3bc
+0x0000241c: ff f7 e0 ea  blxle    #0x19e0
+0x00002420: 0e 9c        ldr      r4, [sp, #0x38]
+0x00002422: 0f f2 d0 31  addw     r1, pc, #0x3d0 ; =>0x27f4
+0x00002426: 01 22        movs     r2, #1
+0x00002428: 02 23        movs     r3, #2
+0x0000242a: 20 46        mov      r0, r4
+0x0000242c: ff f7 d2 ea  blx      #0x19d4 ; PLT __write_chk
+0x00002430: 02 9d        ldr      r5, [sp, #8]
+0x00002432: b0 f1 ff 3f  cmp.w    r0, #-1
+0x00002436: 04 dc        bgt      #0x2442
+0x00002438: df f8 e8 04  ldr.w    r0, [pc, #0x4e8] ; literal@0x2924=0x00002c80
+0x0000243c: 78 44        add      r0, pc ; =>0x50c0; 'write 1 to dmr_switch error'
+0x0000243e: ff f7 d0 ea  blx      #0x19e0 ; PLT puts
+0x00002442: 38 46        mov      r0, r7
+0x00002444: 00 f0 a2 fc  bl       #0x2d8c
+0x00002448: 13 98        ldr      r0, [sp, #0x4c]
+0x0000244a: ff f7 30 eb  blx      #0x1aac ; PLT close
+0x0000244e: 20 46        mov      r0, r4
+0x00002450: ff f7 2c eb  blx      #0x1aac ; PLT close
+0x00002454: 01 30        adds     r0, #1
+0x00002456: 00 f0 6e 81  beq.w    #0x2736
+0x0000245a: 28 46        mov      r0, r5
+0x0000245c: ff f7 26 eb  blx      #0x1aac ; PLT close
+0x00002460: 19 9e        ldr      r6, [sp, #0x64]
+0x00002462: e8 a4        adr      r4, #0x3a0
+0x00002464: 0f f2 a8 39  addw     sb, pc, #0x3a8
+0x00002468: 4f f0 01 08  mov.w    r8, #1
+0x0000246c: 53 e0        b        #0x2516
+0x0000246e: 0a 98        ldr      r0, [sp, #0x28]
+0x00002470: b9 a5        adr      r5, #0x2e4
+0x00002472: dd f8 34 80  ldr.w    r8, [sp, #0x34]
+0x00002476: 03 68        ldr      r3, [r0]
+0x00002478: df f8 b0 04  ldr.w    r0, [pc, #0x4b0] ; literal@0x292c=0x000029c4
+0x0000247c: 10 21        movs     r1, #0x10
+0x0000247e: 01 22        movs     r2, #1
+0x00002480: 78 44        add      r0, pc ; =>0x4e48; 'download error!'
+0x00002482: ff f7 d8 ea  blx      #0x1a34 ; PLT fwrite
+0x00002486: 00 24        movs     r4, #0
+0x00002488: 1b f8 04 10  ldrb.w   r1, [fp, r4]
+0x0000248c: 40 46        mov      r0, r8
+0x0000248e: 00 f0 d1 fc  bl       #0x2e34
+0x00002492: 29 46        mov      r1, r5
+0x00002494: 01 22        movs     r2, #1
+0x00002496: 00 f0 2b fe  bl       #0x30f0
+0x0000249a: 0b f8 04 60  strb.w   r6, [fp, r4]
+0x0000249e: 01 34        adds     r4, #1
+0x000024a0: 03 2c        cmp      r4, #3
+0x000024a2: f1 d1        bne      #0x2488
+0x000024a4: 0c 9d        ldr      r5, [sp, #0x30]
+0x000024a6: 0d f1 b4 08  add.w    r8, sp, #0xb4
+0x000024aa: 28 68        ldr      r0, [r5]
+0x000024ac: 50 f8 0c 0c  ldr      r0, [r0, #-0xc]
+0x000024b0: 29 18        adds     r1, r5, r0
+0x000024b2: 40 46        mov      r0, r8
+0x000024b4: ff f7 0c eb  blx      #0x1ad0 ; PLT _ZNKSt3__18ios_base6getlocEv
+0x000024b8: 0b 99        ldr      r1, [sp, #0x2c]
+0x000024ba: 40 46        mov      r0, r8
+0x000024bc: ff f7 0e eb  blx      #0x1adc ; PLT _ZNKSt3__16locale9use_facetERNS0_2idE
+0x000024c0: 01 68        ldr      r1, [r0]
+0x000024c2: ca 69        ldr      r2, [r1, #0x1c]
+0x000024c4: 0a 21        movs     r1, #0xa
+0x000024c6: 90 47        blx      r2
+0x000024c8: 04 46        mov      r4, r0
+0x000024ca: 40 46        mov      r0, r8
+0x000024cc: ff f7 0c eb  blx      #0x1ae8 ; PLT _ZNSt3__16localeD1Ev
+0x000024d0: 28 46        mov      r0, r5
+0x000024d2: 21 46        mov      r1, r4
+0x000024d4: 00 f0 a0 ff  bl       #0x3418
+0x000024d8: 28 46        mov      r0, r5
+0x000024da: 00 f0 35 ff  bl       #0x3348
+0x000024de: df f8 50 04  ldr.w    r0, [pc, #0x450] ; literal@0x2930=0x00004f28
+0x000024e2: 26 96        str      r6, [sp, #0x98]
+0x000024e4: 78 44        add      r0, pc ; =>0x7410
+0x000024e6: 06 60        str      r6, [r0]
+0x000024e8: 38 46        mov      r0, r7
+0x000024ea: 00 f0 4f fc  bl       #0x2d8c
+0x000024ee: 13 98        ldr      r0, [sp, #0x4c]
+0x000024f0: ff f7 dc ea  blx      #0x1aac ; PLT close
+0x000024f4: 0e 98        ldr      r0, [sp, #0x38]
+0x000024f6: ff f7 da ea  blx      #0x1aac ; PLT close
+0x000024fa: 01 30        adds     r0, #1
+0x000024fc: 22 d0        beq      #0x2544
+0x000024fe: df f8 38 04  ldr.w    r0, [pc, #0x438] ; literal@0x2938=0x00004f06
+0x00002502: 78 44        add      r0, pc ; =>0x740a
+0x00002504: ff f7 f6 ea  blx      #0x1af4 ; PLT sem_destroy
+0x00002508: 4f f0 ff 36  mov.w    r6, #-1
+0x0000250c: 4f f0 00 08  mov.w    r8, #0
+0x00002510: bc a4        adr      r4, #0x2f0
+0x00002512: 0f f2 fc 29  addw     sb, pc, #0x2fc
+0x00002516: 9d f8 78 00  ldrb.w   r0, [sp, #0x78]
+0x0000251a: e0 4d        ldr      r5, [pc, #0x380] ; literal@0x289c=0x000047a2
+0x0000251c: c0 07        lsls     r0, r0, #0x1f
+0x0000251e: 7d 44        add      r5, pc ; =>0x6cc2
+0x00002520: 1c bf        itt      ne
+0x00002522: 20 98        ldrne    r0, [sp, #0x80]
+0x00002524: ff f7 74 ea  blxne    #0x1a10
+0x00002528: 1a 9f        ldr      r7, [sp, #0x68]
+0x0000252a: b8 f1 00 0f  cmp.w    r8, #0
+0x0000252e: 54 d1        bne      #0x25da
+0x00002530: 62 e0        b        #0x25f8
+0x00002532: 08 98        ldr      r0, [sp, #0x20]
+0x00002534: b6 a1        adr      r1, #0x2d8
+0x00002536: df f8 18 24  ldr.w    r2, [pc, #0x418] ; literal@0x2950=0x0000285d
+0x0000253a: 00 68        ldr      r0, [r0]
+0x0000253c: 7a 44        add      r2, pc ; =>0x4d9d; 'create thread error'
+0x0000253e: ff f7 74 ea  blx      #0x1a28 ; PLT fprintf
+0x00002542: 25 e6        b        #0x2190
+0x00002544: 07 98        ldr      r0, [sp, #0x1c]
+0x00002546: 11 21        movs     r1, #0x11
+0x00002548: 01 22        movs     r2, #1
+0x0000254a: 03 68        ldr      r3, [r0]
+0x0000254c: df f8 e4 03  ldr.w    r0, [pc, #0x3e4] ; literal@0x2934=0x00002879
+0x00002550: 78 44        add      r0, pc ; =>0x4dcd; 'uart_close error'
+0x00002552: ff f7 70 ea  blx      #0x1a34 ; PLT fwrite
+0x00002556: d2 e7        b        #0x24fe
+0x00002558: 06 98        ldr      r0, [sp, #0x18]
+0x0000255a: 0e 21        movs     r1, #0xe
+0x0000255c: 01 22        movs     r2, #1
+0x0000255e: 03 68        ldr      r3, [r0]
+0x00002560: e1 48        ldr      r0, [pc, #0x384] ; literal@0x28e8=0x0000284c
+0x00002562: 78 44        add      r0, pc ; =>0x4db0
+0x00002564: ff f7 66 ea  blx      #0x1a34 ; PLT fwrite
+0x00002568: ce e7        b        #0x2508
+0x0000256a: ff f7 ca ea  blx      #0x1b00 ; PLT __errno
+0x0000256e: 04 46        mov      r4, r0
+0x00002570: 6c ad        add      r5, sp, #0x1b0
+0x00002572: 20 68        ldr      r0, [r4]
+0x00002574: 79 a1        adr      r1, #0x1e4
+0x00002576: 02 90        str      r0, [sp, #8]
+0x00002578: 04 20        movs     r0, #4
+0x0000257a: 00 90        str      r0, [sp]
+0x0000257c: 4f f0 ff 30  mov.w    r0, #-1
+0x00002580: 01 90        str      r0, [sp, #4]
+0x00002582: 28 46        mov      r0, r5
+0x00002584: 40 f2 19 22  movw     r2, #0x219
+0x00002588: 00 23        movs     r3, #0
+0x0000258a: ff f7 c0 ea  blx      #0x1b0c ; PLT _ZN7android4base10LogMessageC1EPKcjNS0_5LogIdENS0_11LogSeverityEi
+0x0000258e: ff f7 c4 ea  blx      #0x1b18 ; PLT _ZN7android4base10LogMessage6streamEv
+0x00002592: c5 49        ldr      r1, [pc, #0x314] ; literal@0x28a8=0x0000279e
+0x00002594: 10 22        movs     r2, #0x10
+0x00002596: 79 44        add      r1, pc ; =>0x4d36
+0x00002598: 00 f0 aa fd  bl       #0x30f0
+0x0000259c: 9d f8 78 32  ldrb.w   r3, [sp, #0x278]
+0x000025a0: 0d f5 1e 7b  add.w    fp, sp, #0x278
+0x000025a4: 18 9e        ldr      r6, [sp, #0x60]
+0x000025a6: a0 99        ldr      r1, [sp, #0x280]
+0x000025a8: 13 f0 01 07  ands     r7, r3, #1
+0x000025ac: 9f 9a        ldr      r2, [sp, #0x27c]
+0x000025ae: 08 bf        it       eq
+0x000025b0: 31 46        moveq    r1, r6
+0x000025b2: 08 bf        it       eq
+0x000025b4: 5a 08        lsreq    r2, r3, #1
+0x000025b6: 00 26        movs     r6, #0
+0x000025b8: 00 f0 9a fd  bl       #0x30f0
+0x000025bc: 28 46        mov      r0, r5
+0x000025be: ff f7 b2 ea  blx      #0x1b24 ; PLT _ZN7android4base10LogMessageD1Ev
+0x000025c2: 02 98        ldr      r0, [sp, #8]
+0x000025c4: 20 60        str      r0, [r4]
+0x000025c6: 3d e5        b        #0x2044
+0x000025c8: 04 98        ldr      r0, [sp, #0x10]
+0x000025ca: 11 21        movs     r1, #0x11
+0x000025cc: 01 22        movs     r2, #1
+0x000025ce: 03 68        ldr      r3, [r0]
+0x000025d0: c8 48        ldr      r0, [pc, #0x320] ; literal@0x28f4=0x000027f7
+0x000025d2: 78 44        add      r0, pc ; =>0x4dcb
+0x000025d4: ff f7 2e ea  blx      #0x1a34 ; PLT fwrite
+0x000025d8: 58 e6        b        #0x228c
+0x000025da: 1b 99        ldr      r1, [sp, #0x6c]
+0x000025dc: 38 46        mov      r0, r7
+0x000025de: 22 46        mov      r2, r4
+0x000025e0: 2b 46        mov      r3, r5
+0x000025e2: cd f8 00 a0  str.w    sl, [sp]
+0x000025e6: ff f7 a4 ea  blx      #0x1b30 ; PLT getopt_long
+0x000025ea: b0 f1 ff 3f  cmp.w    r0, #-1
+0x000025ee: 3f f7 d6 ac  bgt.w    #0x1f9e
+0x000025f2: 01 30        adds     r0, #1
+0x000025f4: 1c d1        bne      #0x2630
+0x000025f6: 00 26        movs     r6, #0
+0x000025f8: 9d f8 a0 00  ldrb.w   r0, [sp, #0xa0]
+0x000025fc: c0 07        lsls     r0, r0, #0x1f
+0x000025fe: 1c bf        itt      ne
+0x00002600: 2a 98        ldrne    r0, [sp, #0xa8]
+0x00002602: ff f7 06 ea  blxne    #0x1a10
+0x00002606: a4 48        ldr      r0, [pc, #0x290] ; literal@0x2898=0x000048c6
+0x00002608: de 99        ldr      r1, [sp, #0x378]
+0x0000260a: 78 44        add      r0, pc ; =>0x6ed2
+0x0000260c: 00 68        ldr      r0, [r0]
+0x0000260e: 00 68        ldr      r0, [r0]
+0x00002610: 40 1a        subs     r0, r0, r1
+0x00002612: 02 bf        ittt     eq
+0x00002614: 30 46        moveq    r0, r6
+0x00002616: 0d f5 5f 7d  addeq.w  sp, sp, #0x37c
+0x0000261a: bd e8 f0 8f  popeq.w  {r4, r5, r6, r7, r8, sb, sl, fp, pc}
+0x0000261e: ff f7 8e ea  blx      #0x1b3c ; PLT __stack_chk_fail
+0x00002622: 9c 48        ldr      r0, [pc, #0x270] ; literal@0x2894=0x000026fc
+0x00002624: 78 44        add      r0, pc ; =>0x4d24; 'Open boptt failed!'
+0x00002626: ff f7 90 ea  blx      #0x1b48 ; PLT perror
+0x0000262a: 4f f0 ff 36  mov.w    r6, #-1
+0x0000262e: e3 e7        b        #0x25f8
+0x00002630: ff f7 be e9  blx      #0x19b0 ; PLT _ZN7android4base21GetMinimumLogSeverityEv
+0x00002634: 04 28        cmp      r0, #4
+0x00002636: 3e dd        ble      #0x26b6
+0x00002638: 93 48        ldr      r0, [pc, #0x24c] ; literal@0x2888=0x0000489c
+0x0000263a: 94 49        ldr      r1, [pc, #0x250] ; literal@0x288c=0x0000283e
+0x0000263c: 78 44        add      r0, pc ; =>0x6edc; GOT stderr
+0x0000263e: 79 44        add      r1, pc ; =>0x4e7e
+0x00002640: 04 68        ldr      r4, [r0]
+0x00002642: 1b 98        ldr      r0, [sp, #0x6c]
+0x00002644: 02 68        ldr      r2, [r0]
+0x00002646: 20 68        ldr      r0, [r4]
+0x00002648: ff f7 ee e9  blx      #0x1a28 ; PLT fprintf
+0x0000264c: 90 48        ldr      r0, [pc, #0x240] ; literal@0x2890=0x00002844
+0x0000264e: ba 21        movs     r1, #0xba
+0x00002650: 23 68        ldr      r3, [r4]
+0x00002652: 01 22        movs     r2, #1
+0x00002654: 78 44        add      r0, pc ; =>0x4e9c; 'options include:'
+0x00002656: 01 26        movs     r6, #1
+0x00002658: ff f7 ec e9  blx      #0x1a34 ; PLT fwrite
+0x0000265c: cc e7        b        #0x25f8
+0x0000265e: ff f7 50 ea  blx      #0x1b00 ; PLT __errno
+0x00002662: 04 46        mov      r4, r0
+0x00002664: 4f f0 ff 30  mov.w    r0, #-1
+0x00002668: 02 21        movs     r1, #2
+0x0000266a: 9e ae        add      r6, sp, #0x278
+0x0000266c: d4 f8 00 80  ldr.w    r8, [r4]
+0x00002670: 40 f2 ef 12  movw     r2, #0x1ef
+0x00002674: cd e9 00 10  strd     r1, r0, [sp]
+0x00002678: 38 a1        adr      r1, #0xe0
+0x0000267a: 30 46        mov      r0, r6
+0x0000267c: 00 23        movs     r3, #0
+0x0000267e: ff f7 46 ea  blx      #0x1b0c ; PLT _ZN7android4base10LogMessageC1EPKcjNS0_5LogIdENS0_11LogSeverityEi
+0x00002682: ff f7 4a ea  blx      #0x1b18 ; PLT _ZN7android4base10LogMessage6streamEv
+0x00002686: 40 a1        adr      r1, #0x100
+0x00002688: 11 22        movs     r2, #0x11
+0x0000268a: 00 f0 31 fd  bl       #0x30f0
+0x0000268e: 9d f8 a0 30  ldrb.w   r3, [sp, #0xa0]
+0x00002692: 28 af        add      r7, sp, #0xa0
+0x00002694: 2a 99        ldr      r1, [sp, #0xa8]
+0x00002696: 29 9a        ldr      r2, [sp, #0xa4]
+0x00002698: 13 f0 01 05  ands     r5, r3, #1
+0x0000269c: 04 bf        itt      eq
+0x0000269e: 47 f0 01 01  orreq    r1, r7, #1
+0x000026a2: 5a 08        lsreq    r2, r3, #1
+0x000026a4: 00 f0 24 fd  bl       #0x30f0
+0x000026a8: 30 46        mov      r0, r6
+0x000026aa: ff f7 3c ea  blx      #0x1b24 ; PLT _ZN7android4base10LogMessageD1Ev
+0x000026ae: c4 f8 00 80  str.w    r8, [r4]
+0x000026b2: ff f7 bf bb  b.w      #0x1e34
+0x000026b6: ff f7 24 ea  blx      #0x1b00 ; PLT __errno
+0x000026ba: 04 46        mov      r4, r0
+0x000026bc: 4f f0 ff 30  mov.w    r0, #-1
+0x000026c0: 04 21        movs     r1, #4
+0x000026c2: 9e ad        add      r5, sp, #0x278
+0x000026c4: 26 68        ldr      r6, [r4]
+0x000026c6: 40 f2 c2 32  movw     r2, #0x3c2
+0x000026ca: cd e9 00 10  strd     r1, r0, [sp]
+0x000026ce: 23 a1        adr      r1, #0x8c
+0x000026d0: 28 46        mov      r0, r5
+0x000026d2: 00 23        movs     r3, #0
+0x000026d4: ff f7 1a ea  blx      #0x1b0c ; PLT _ZN7android4base10LogMessageC1EPKcjNS0_5LogIdENS0_11LogSeverityEi
+0x000026d8: ff f7 1e ea  blx      #0x1b18 ; PLT _ZN7android4base10LogMessage6streamEv
+0x000026dc: 68 49        ldr      r1, [pc, #0x1a0] ; literal@0x2880=0x00002654
+0x000026de: 10 22        movs     r2, #0x10
+0x000026e0: 79 44        add      r1, pc ; =>0x4d38; 'Invalid option: '
+0x000026e2: 00 f0 05 fd  bl       #0x30f0
+0x000026e6: 67 49        ldr      r1, [pc, #0x19c] ; literal@0x2884=0x00004800
+0x000026e8: 79 44        add      r1, pc ; =>0x6eec; GOT optopt
+0x000026ea: 09 68        ldr      r1, [r1]
+0x000026ec: 09 68        ldr      r1, [r1]
+0x000026ee: 00 f0 a1 fb  bl       #0x2e34
+0x000026f2: 28 46        mov      r0, r5
+0x000026f4: ff f7 16 ea  blx      #0x1b24 ; PLT _ZN7android4base10LogMessageD1Ev
+0x000026f8: 26 60        str      r6, [r4]
+0x000026fa: 9d e7        b        #0x2638
+0x000026fc: 5a 48        ldr      r0, [pc, #0x168] ; literal@0x2868=0x000047da
+0x000026fe: 78 44        add      r0, pc ; =>0x6eda
+0x00002700: 00 68        ldr      r0, [r0]
+0x00002702: 03 68        ldr      r3, [r0]
+0x00002704: 59 48        ldr      r0, [pc, #0x164] ; literal@0x286c=0x000026fb
+0x00002706: 78 44        add      r0, pc ; =>0x4e03
+0x00002708: 10 21        movs     r1, #0x10
+0x0000270a: 01 22        movs     r2, #1
+0x0000270c: ff f7 92 e9  blx      #0x1a34 ; PLT fwrite
+0x00002710: 01 20        movs     r0, #1
+0x00002712: ff f7 20 ea  blx      #0x1b54 ; PLT exit
+0x00002716: ff f7 24 ea  blx      #0x1b60 ; PLT abort
+0x0000271a: 40 48        ldr      r0, [pc, #0x100] ; literal@0x281c=0x000047bc
+0x0000271c: 78 44        add      r0, pc ; =>0x6edc; GOT stderr
+0x0000271e: 00 68        ldr      r0, [r0]
+0x00002720: 03 68        ldr      r3, [r0]
+0x00002722: 3f 48        ldr      r0, [pc, #0xfc] ; literal@0x2820=0x00002664
+0x00002724: 78 44        add      r0, pc ; =>0x4d8c; 'uart_open error'
+0x00002726: ef e7        b        #0x2708
+0x00002728: 51 48        ldr      r0, [pc, #0x144] ; literal@0x2870=0x000047ae
+0x0000272a: 78 44        add      r0, pc ; =>0x6eda
+0x0000272c: 00 68        ldr      r0, [r0]
+0x0000272e: 03 68        ldr      r3, [r0]
+0x00002730: 50 48        ldr      r0, [pc, #0x140] ; literal@0x2874=0x00002656
+0x00002732: 78 44        add      r0, pc ; =>0x4d8a
+0x00002734: e8 e7        b        #0x2708
+0x00002736: 4a 48        ldr      r0, [pc, #0x128] ; literal@0x2860=0x0000479e
+0x00002738: 11 21        movs     r1, #0x11
+0x0000273a: 78 44        add      r0, pc ; =>0x6eda
+0x0000273c: 00 68        ldr      r0, [r0]
+0x0000273e: 03 68        ldr      r3, [r0]
+0x00002740: 48 48        ldr      r0, [pc, #0x120] ; literal@0x2864=0x00002687
+0x00002742: 78 44        add      r0, pc ; =>0x4dcb
+0x00002744: e1 e7        b        #0x270a
+0x00002746: 00 bf        nop      
+0x00002748: 4e 51        str      r6, [r1, r5]
+0x0000274a: 00 00        movs     r0, r0
+0x0000274c: 38 51        str      r0, [r7, r4]
+0x0000274e: 00 00        movs     r0, r0
+0x00002750: 5e 4f        ldr      r7, [pc, #0x178] ; literal@0x28cc=0x00002c28
+0x00002752: 00 00        movs     r0, r0
+0x00002754: 7c 4f        ldr      r7, [pc, #0x1f0] ; literal@0x2948=0x000050a2
+0x00002756: 00 00        movs     r0, r0
+0x00002758: 20 00        movs     r0, r4
+0x0000275a: 00 00        movs     r0, r0
+0x0000275c: 76 65        str      r6, [r6, #0x54]
+0x0000275e: 6e 64        str      r6, [r5, #0x44]
+0x00002760: 6f 72        strb     r7, [r5, #9]
+0x00002762: 2f 71        strb     r7, [r5, #4]
+0x00002764: 63 6f        ldr      r3, [r4, #0x74]
+0x00002766: 6d 2f        cmp      r7, #0x6d
+0x00002768: 62 6f        ldr      r2, [r4, #0x74]
+0x0000276a: 70 74        strb     r0, [r6, #0x11]
+0x0000276c: 74 2f        cmp      r7, #0x74
+0x0000276e: 64 6d        ldr      r4, [r4, #0x54]
+0x00002770: 72 5f        ldrsh    r2, [r6, r5]
+0x00002772: 75 70        strb     r5, [r6, #1]
+0x00002774: 67 72        strb     r7, [r4, #9]
+0x00002776: 61 64        str      r1, [r4, #0x44]
+0x00002778: 65 2f        cmp      r7, #0x65
+0x0000277a: 64 6d        ldr      r4, [r4, #0x54]
+0x0000277c: 72 5f        ldrsh    r2, [r6, r5]
+0x0000277e: 68 73        strb     r0, [r5, #0xd]
+0x00002780: 2e 63        str      r6, [r5, #0x30]
+0x00002782: 70 70        strb     r0, [r6, #1]
+0x00002784: 00 00        movs     r0, r0
+0x00002786: 00 00        movs     r0, r0
+0x00002788: 53 65        str      r3, [r2, #0x54]
+0x0000278a: 72 76        strb     r2, [r6, #0x19]
+0x0000278c: 69 63        str      r1, [r5, #0x34]
+0x0000278e: 65 20        movs     r0, #0x65
+0x00002790: 73 74        strb     r3, [r6, #0x11]
+0x00002792: 61 72        strb     r1, [r4, #9]
+0x00002794: 74 65        str      r4, [r6, #0x54]
+0x00002796: 64 3a        subs     r2, #0x64
+0x00002798: 20 00        movs     r0, r4
+0x0000279a: 00 00        movs     r0, r0
+0x0000279c: ca 55        strb     r2, [r1, r7]
+0x0000279e: 00 00        movs     r0, r0
+0x000027a0: ce 55        strb     r6, [r1, r7]
+0x000027a2: 00 00        movs     r0, r0
+0x000027a4: 2f 73        strb     r7, [r5, #0xc]
+0x000027a6: 79 73        strb     r1, [r7, #0xd]
+0x000027a8: 2f 62        str      r7, [r5, #0x20]
+0x000027aa: 6f 70        strb     r7, [r5, #1]
+0x000027ac: 74 74        strb     r4, [r6, #0x11]
+0x000027ae: 2f 70        strb     r7, [r5]
+0x000027b0: 74 74        strb     r4, [r6, #0x11]
+0x000027b2: 5f 64        str      r7, [r3, #0x44]
+0x000027b4: 00 00        movs     r0, r0
+0x000027b6: 00 00        movs     r0, r0
+0x000027b8: 2f 73        strb     r7, [r5, #0xc]
+0x000027ba: 79 73        strb     r1, [r7, #0xd]
+0x000027bc: 2f 62        str      r7, [r5, #0x20]
+0x000027be: 6f 70        strb     r7, [r5, #1]
+0x000027c0: 74 74        strb     r4, [r6, #0x11]
+0x000027c2: 2f 64        str      r7, [r5, #0x40]
+0x000027c4: 6d 72        strb     r5, [r5, #9]
+0x000027c6: 5f 73        strb     r7, [r3, #0xd]
+0x000027c8: 77 69        ldr      r7, [r6, #0x14]
+0x000027ca: 74 63        str      r4, [r6, #0x34]
+0x000027cc: 68 00        lsls     r0, r5, #1
+0x000027ce: 00 00        movs     r0, r0
+0x000027d0: 6f 75        strb     r7, [r5, #0x15]
+0x000027d2: 74 30        adds     r0, #0x74
+0x000027d4: 00 00        movs     r0, r0
+0x000027d6: 00 00        movs     r0, r0
+0x000027d8: 77 72        strb     r7, [r6, #9]
+0x000027da: 69 74        strb     r1, [r5, #0x11]
+0x000027dc: 65 20        movs     r0, #0x65
+0x000027de: 6f 75        strb     r7, [r5, #0x15]
+0x000027e0: 74 30        adds     r0, #0x74
+0x000027e2: 20 74        strb     r0, [r4, #0x10]
+0x000027e4: 6f 20        movs     r0, #0x6f
+0x000027e6: 70 74        strb     r0, [r6, #0x11]
+0x000027e8: 74 5f        ldrsh    r4, [r6, r5]
+0x000027ea: 64 20        movs     r0, #0x64
+0x000027ec: 65 72        strb     r5, [r4, #9]
+0x000027ee: 72 6f        ldr      r2, [r6, #0x74]
+0x000027f0: 72 00        lsls     r2, r6, #1
+0x000027f2: 00 00        movs     r0, r0
+0x000027f4: 30 00        movs     r0, r6
+0x000027f6: 00 00        movs     r0, r0
+0x000027f8: 31 00        movs     r1, r6
+0x000027fa: 00 00        movs     r0, r0
+0x000027fc: f4 31        adds     r1, #0xf4
+0x000027fe: 00 00        movs     r0, r0
+0x00002800: e0 4d        ldr      r5, [pc, #0x380] ; literal@0x2b84=0xf001e8df
+0x00002802: 00 00        movs     r0, r0
+0x00002804: 68 75        strb     r0, [r5, #0x15]
+0x00002806: 3a 73        strb     r2, [r7, #0xc]
+0x00002808: 00 00        movs     r0, r0
+0x0000280a: 00 00        movs     r0, r0
+0x0000280c: d8 4f        ldr      r7, [pc, #0x360] ; literal@0x2b70=0x90000921
+0x0000280e: 00 00        movs     r0, r0
+0x00002810: 25 73        strb     r5, [r4, #0xc]
+0x00002812: 0a 00        movs     r2, r1
+0x00002814: 41 00        lsls     r1, r0, #1
+0x00002816: 00 00        movs     r0, r0
+0x00002818: ce 4f        ldr      r7, [pc, #0x338] ; literal@0x2b54=0x4d7a487b
+0x0000281a: 00 00        movs     r0, r0
+0x0000281c: bc 47        blxns    r7
+0x0000281e: 00 00        movs     r0, r0
+0x00002820: 64 26        movs     r6, #0x64
+0x00002822: 00 00        movs     r0, r0
+0x00002824: c8 4f        ldr      r7, [pc, #0x320] ; literal@0x2b48=0x00004464
+0x00002826: 00 00        movs     r0, r0
+0x00002828: b0 4f        ldr      r7, [pc, #0x2c0] ; literal@0x2aec=0x656c6261
+0x0000282a: 00 00        movs     r0, r0
+0x0000282c: 42 4f        ldr      r7, [pc, #0x108] ; literal@0x2938=0x00004f06
+0x0000282e: 00 00        movs     r0, r0
+0x00002830: cb 50        str      r3, [r1, r3]
+0x00002832: 00 00        movs     r0, r0
+0x00002834: 92 4f        ldr      r7, [pc, #0x248] ; literal@0x2a80=0x44784825
+0x00002836: 00 00        movs     r0, r0
+0x00002838: 88 4f        ldr      r7, [pc, #0x220] ; literal@0x2a5c=0xf7ff2200
+0x0000283a: 00 00        movs     r0, r0
+0x0000283c: 9c 4f        ldr      r7, [pc, #0x270] ; literal@0x2ab0=0x2201210e
+0x0000283e: 00 00        movs     r0, r0
+0x00002840: 25 64        str      r5, [r4, #0x40]
+0x00002842: 00 00        movs     r0, r0
+0x00002844: 4c 4f        ldr      r7, [pc, #0x130] ; literal@0x2978=0x99024807
+0x00002846: 00 00        movs     r0, r0
+0x00002848: 7e 4f        ldr      r7, [pc, #0x1f8] ; literal@0x2a44=0x4620dd1c
+0x0000284a: 00 00        movs     r0, r0
+0x0000284c: 7c 4f        ldr      r7, [pc, #0x1f0] ; literal@0x2a40=0x3ffff1b0
+0x0000284e: 00 00        movs     r0, r0
+0x00002850: 72 4f        ldr      r7, [pc, #0x1c8] ; literal@0x2a1c=0x000df023
+0x00002852: 00 00        movs     r0, r0
+0x00002854: 6c 4f        ldr      r7, [pc, #0x1b0] ; literal@0x2a08=0x463a5006
+0x00002856: 00 00        movs     r0, r0
+0x00002858: 56 4f        ldr      r7, [pc, #0x158] ; literal@0x29b4=0xd0761c60
+0x0000285a: 00 00        movs     r0, r0
+0x0000285c: 69 6e        ldr      r1, [r5, #0x64]
+0x0000285e: 00 00        movs     r0, r0
+0x00002860: 9e 47        blxns    r3
+0x00002862: 00 00        movs     r0, r0
+0x00002864: 87 26        movs     r6, #0x87
+0x00002866: 00 00        movs     r0, r0

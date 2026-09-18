@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="net.elfradio.h13.launcher.overlay"
+    android:versionCode="2"
+    android:versionName="1.1">
+
+    <uses-sdk
+        android:minSdkVersion="27"
+        android:targetSdkVersion="27" />
+
+    <overlay
+        android:priority="1"
+        android:targetPackage="com.bozhou.launcher" />
+
+    <application
+        android:allowBackup="false"
+        android:hasCode="false"
+        android:label="H13 launcher cleanup" />
+</manifest>
