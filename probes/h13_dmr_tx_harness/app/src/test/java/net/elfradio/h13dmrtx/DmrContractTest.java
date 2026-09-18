@@ -61,6 +61,15 @@ public final class DmrContractTest {
         assertTrue(DmrTxController.rfHoldWindowWellFormed());
         assertTrue(DmrTxController.ackPacedActiveRfBudgetWellFormed());
         assertTrue(DmrTxController.secondBridgeBudgetWellFormed());
+        // speech_az09素材：480个27字节单元，每单元60毫秒（1440帧AMBE÷3）。
+        // v0.85之前FIRST_BRIDGE_EXIT_MS=33500，下面这条断言会失败——
+        // 这正是2026-09-19定位到的"供数中途第一桥被设备侧自己的绝对退出
+        // 计数器摘除、模块回到文本命令模式"的根因。修复后必须为真。
+        assertTrue(DmrTxController.firstBridgeBudgetWellFormedFor(480, 60L));
+        // 旧的三遍SOS素材（78个36字节/104个27字节单元）换算后的通用版本
+        // 结果要和historical写死版本一致，确认新旧算式没有分叉。
+        assertTrue(DmrTxController.firstBridgeBudgetWellFormedFor(
+                RealtimeRelay.TRIPLE_SOS_UNITS, TxPlan.UNIT_INTERVAL_MS));
         assertArrayEquals(new byte[] {
                 0x01, 0x01, 0x01, 0x00, 0x00,
                 0x12, 0x34, 0x56, 0x78, (byte) 0x90,
@@ -1925,7 +1934,11 @@ public final class DmrContractTest {
     @Test
     public void relayHotPathReadEvidenceRejectsOverflow() throws Exception {
         RelayHotPathEvidence buffer = new RelayHotPathEvidence();
-        assertEquals(512, RelayHotPathEvidence.MAX_READ_SAMPLES);
+        // 480包speech_az09素材投产时容量从512提到2048（同一批修复把
+        // MAX_EVENTS从256提到1024），这条断言当时没跟着改，一直静默过着
+        // 陈旧值——和本文件里刚补的第一桥预算断言是同一类问题：容量/时限
+        // 常量换了，核对它们的断言没跟着换。
+        assertEquals(2048, RelayHotPathEvidence.MAX_READ_SAMPLES);
         byte[] raw = new byte[] { 0x01, 0x02, 0x03 };
         for (int index = 0;
                 index < RelayHotPathEvidence.MAX_READ_SAMPLES; index++) {

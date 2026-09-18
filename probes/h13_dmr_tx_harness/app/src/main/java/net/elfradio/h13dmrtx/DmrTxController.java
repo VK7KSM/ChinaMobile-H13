@@ -264,13 +264,23 @@ final class DmrTxController {
             + "slot1,slot1,on,low,8,2,2,99";
     private static final long FULLPREP_DELAY_MS = 10000;
     static final long POST_BRIDGE_SETTLE_MS = 500;
-    private static final long FIRST_BRIDGE_EXIT_MS = 33500;
+    // v0.85之前固定为33500毫秒，按旧的6.24秒三遍SOS素材算够用；换成28.8秒
+    // 的speech_az09素材后，实测供数在到达这个硬边界前就被设备侧第一桥的
+    // 绝对退出计数器摘除，模块退回文本命令模式。按下面新增的
+    // speechAz09BudgetWellFormed()重新核算得44580毫秒为下限，这里取50000
+    // 留出安全余量。此常量只影响第一桥（无射频接口桥）停留多久，不触及
+    // 射频保持时间——射频保持由独立的SECOND_BRIDGE_EXIT_MS/RF_HOLD_MS控制。
+    private static final long FIRST_BRIDGE_EXIT_MS = 50000;
     private static final long FIRST_BRIDGE_MARGIN_MS = 2000;
     static final long RF_HOLD_MS = 16000;
     static final long RELAY_PRE_VLC2_WAIT_MS = 1000;
     static final long RELAY_CREDIT_TIMEOUT_MS = 1500;
     static final long RELAY_VLC_ACK_DURATION_MS = 500;
     static final long ACTIVE_PACED_TAIL_MS = 500;
+    // 尾窗结束后若仍有半截帧，再给一个有界的延长排空窗。
+    // 模块上报的语音单元为 36 字节线上帧，在 57600 波特率下约 6 毫秒，
+    // 500 毫秒足以收完任何一个被边界截断的帧。
+    static final long ACTIVE_PACED_TAIL_DRAIN_MS = 500;
     static final long POST_VLC_TRIGGER_TIMEOUT_MS = 1500;
     static final long POST_VLC_OBSERVATION_MS = 1500;
     static final long TRIPLE_SOS_PLAYOUT_MS = RealtimeRelay.TRIPLE_SOS_UNITS
@@ -886,6 +896,30 @@ final class DmrTxController {
                     software49BitSource = RELAY_SOURCE_SOFTWARE_49BIT;
                 }
 
+                if (software49Bit36 != null) {
+                    // 运行时前置条件：按本次会话实际正文长度和格式算出的
+                    // 单元数与节拍，核对第一桥能否在硬性退出前收尾完成。
+                    // v0.85之前只有单元测试里对旧78包三遍SOS素材的静态检查，
+                    // 换新素材（如28.8秒speech_az09、480个27字节单元）时
+                    // 没有任何东西会拦下来，桥在供数中途被设备侧自己的
+                    // 绝对退出计数器摘除，模块回到文本命令模式。
+                    DmrProtocol.VoiceFormat guardFormat = voiceFormatForMode(
+                            mode);
+                    int guardUnits = expectedUnitsFor(
+                            software49Bit36.length, guardFormat);
+                    long guardIntervalMs = TxPlan.unitIntervalMs(
+                            guardFormat);
+                    if (!firstBridgeBudgetWellFormedFor(guardUnits,
+                            guardIntervalMs)) {
+                        throw new IOException("本次会话正文"
+                                + software49Bit36.length + "字节、格式"
+                                + guardFormat + "算出" + guardUnits
+                                + "个单元、每单元" + guardIntervalMs
+                                + "毫秒，最坏情况撑不到第一桥硬性退出("
+                                + FIRST_BRIDGE_EXIT_MS + "毫秒)前收尾，"
+                                + "拒绝武装第一桥");
+                    }
+                }
                 status("保存全部SRAM真实原像");
                 backupAllTouchedSram();
                 disablePowerSaveAndVerify();
@@ -1084,6 +1118,34 @@ final class DmrTxController {
                 * DmrProtocol.VLC_COUNT;
         long bodyWorstMs = (RealtimeRelay.TRIPLE_SOS_UNITS - 1L)
                 * TxPlan.UNIT_INTERVAL_MS + TxPlan.MAX_LATE_MS;
+        long terminationWorstMs = 300L + 500L;
+        long worstEndMs = FULLPREP_DELAY_MS + ackPacedVlcWorstMs
+                + bodyWorstMs + ACTIVE_PACED_TAIL_MS + terminationWorstMs;
+        return firstBridgeBudgetWellFormed()
+                && ACTIVE_PACED_TAIL_MS == 500L
+                && worstEndMs <= FIRST_BRIDGE_EXIT_MS
+                - FIRST_BRIDGE_MARGIN_MS;
+    }
+
+    /**
+     * ackPacedActiveBudgetWellFormed()的通用版本：三遍SOS素材固定用
+     * RealtimeRelay.TRIPLE_SOS_UNITS/TxPlan.UNIT_INTERVAL_MS，新素材（如
+     * speech_az09，480个27字节单元、每单元60毫秒）不满足那组硬编码常量，
+     * 过去因此从未被任何预算自检覆盖到。这里按实际单元数和单元间隔重算，
+     * 供武装第一桥之前的运行时前置条件调用，而不只是单元测试里的静态检查。
+     *
+     * @param unitCount 本次会话要写出的语音单元总数（不含首包，握手包不计入）
+     * @param unitIntervalMs 每个语音单元的节拍间隔（毫秒）
+     */
+    static boolean firstBridgeBudgetWellFormedFor(int unitCount,
+            long unitIntervalMs) {
+        if (unitCount <= 0 || unitIntervalMs <= 0) {
+            throw new IllegalArgumentException("单元数或节拍间隔无效");
+        }
+        long ackPacedVlcWorstMs = RELAY_VLC_ACK_DURATION_MS
+                * DmrProtocol.VLC_COUNT;
+        long bodyWorstMs = (unitCount - 1L) * unitIntervalMs
+                + TxPlan.MAX_LATE_MS;
         long terminationWorstMs = 300L + 500L;
         long worstEndMs = FULLPREP_DELAY_MS + ackPacedVlcWorstMs
                 + bodyWorstMs + ACTIVE_PACED_TAIL_MS + terminationWorstMs;
@@ -2390,10 +2452,46 @@ final class DmrTxController {
                         readReturn, chunk);
             }
         }
+        // 残留通常是模块上报帧正好被读取边界截断。给一个有界的延长排空窗，
+        // 让半截帧有机会收完，而不是立即判失败。延长窗有上限，
+        // 收不完仍然失败，不会无限等待。
         if (activeRelay.carrySnapshot().length != 0) {
-            throw new IOException("主动正文尾窗结束时存在不完整HPI帧，禁止切换终止解析器");
+            long drainDeadline = SystemClock.elapsedRealtime()
+                    + ACTIVE_PACED_TAIL_DRAIN_MS;
+            while (activeRelay.carrySnapshot().length != 0
+                    && SystemClock.elapsedRealtime() < drainDeadline) {
+                long readBegin = SystemClock.elapsedRealtime();
+                byte[] chunk = transport.readAvailable(20L);
+                long readReturn = SystemClock.elapsedRealtime();
+                try {
+                    if (chunk.length > 0) {
+                        tailRaw.write(chunk);
+                        activeRelay.acceptRaw(chunk);
+                    }
+                } finally {
+                    recordRelayRead("active_tail_drain_" + readIndex++,
+                            activeRelay.unitsWritten(),
+                            activeRelay.creditsConsumed(), readBegin, 20L,
+                            readReturn, chunk);
+                }
+            }
         }
+
+        // 尾窗原始字节与残留必须先落盘再判定。此前在抛异常前不保存，
+        // 导致失败后无法判断残留内容，违反失败时优先保存原始证据的要求。
         saveHotPathAwareEvent("relay", "active_tail_raw", tailRaw.toByteArray());
+        byte[] tailCarry = activeRelay.carrySnapshot();
+        if (tailCarry.length != 0) {
+            saveHotPathAwareEvent("relay", "active_tail_carry", tailCarry);
+            saveHotPathAwareText("relay", "active_tail_carry_summary",
+                    "carry_bytes=" + tailCarry.length + "\n"
+                    + "tail_raw_bytes=" + tailRaw.size() + "\n"
+                    + "units_written=" + activeRelay.unitsWritten() + "\n"
+                    + "hex=" + Bytes.hex(tailCarry) + "\n");
+            throw new IOException("主动正文尾窗结束时存在不完整HPI帧，禁止切换终止解析器"
+                    + "（残留" + tailCarry.length + "字节="
+                    + Bytes.hex(tailCarry) + "）");
+        }
         saveHotPathAwareText("relay", "active_paced_complete",
                 "fifth_ack_complete_ms=" + fifthAckCompleteAt + "\n"
                 + "first_flush_ms=" + firstFlushAt + "\n"

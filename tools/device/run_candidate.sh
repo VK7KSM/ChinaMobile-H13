@@ -13,7 +13,7 @@ STEP_TIMEOUT=${2:-420}
 
 TOOLS=/c/Dev/H13_D22/research/h13_dmr_tx_harness/tools
 CAPDIR=/c/Dev/H13_D22/research/h13_radio/captures/$(date +%Y-%m-%d)
-SCRIPT=run_h13_dmr_tx_harness_v085_usb.ps1
+SCRIPT=run_h13_dmr_tx_harness_v086_usb.ps1
 ADB=/c/Dev/android-sdk/platform-tools/adb.exe
 PKG=net.elfradio.h13interphone
 ENTRY=$PKG/com.bozhou.interphone.ui.talk.MainActivity
@@ -80,7 +80,7 @@ cd "$TOOLS" || exit 1
 echo "=== 开跑前基线确认 ==="
 wait_production || exit 1
 
-if ! run_step "新鲜预检" -Mode clear_only -AllowDisableInterphone; then
+if ! run_step "新鲜预检" -Mode clear_only -AllowDisableInterphone -AllowInstall; then
     restore_production
     exit 1
 fi
