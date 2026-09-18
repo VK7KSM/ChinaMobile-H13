@@ -38,6 +38,83 @@ final class DmrProtocol {
         return result;
     }
 
+    // ==================== 语音注入格式候选 ====================
+    // 历史实现（上面的 data36）使用字段 0x01、36 字节载荷、包类型 3。
+    // 2026-09-18 的分析发现该格式与模块自身的行为不一致：
+    // 模块上报接收语音时用的是字段 0x01、长度 27、包类型 0x20（读方向、
+    // 控制包），27 字节即三个 9 字节语音帧、约 60 毫秒，正是 DMR 一个
+    // 语音突发；36 字节是四帧、80 毫秒，属 dPMR 的单位。
+    //
+    // 下列候选各自只改变一个维度，供逐个验证。任一时刻只允许启用一个，
+    // 由 VoiceFormat 选择。历史实现保留且为默认，不改变既有基线。
+
+    static final int VOICE_BURST_BYTES = 27;
+
+    enum VoiceFormat {
+        /** 历史实现：字段 0x01、36 字节、包类型 3。保持既有基线。 */
+        LEGACY_CHAN_D36,
+        /** 候选一：只把载荷改为 27 字节语音突发，包类型仍为 3。 */
+        CHAN_D27_TYPE3,
+        /** 候选二：27 字节，且包类型改为 0，与接收方向对称。 */
+        CHAN_D27_TYPE0,
+        /** 候选三：按手册 DMR 规定改用数据帧字段，帧属性位 4 置 1。 */
+        DIGC_VOICE_BURST
+    }
+
+    /**
+     * 按选定格式构造一个语音单元的线上帧。
+     *
+     * @param payload 语音载荷。历史格式为 36 字节，其余候选为 27 字节。
+     */
+    static byte[] voiceUnit(VoiceFormat format, byte[] payload) {
+        if (format == null || payload == null) {
+            throw new IllegalArgumentException("语音单元参数为空");
+        }
+        switch (format) {
+        case LEGACY_CHAN_D36:
+            return data36(payload);
+        case CHAN_D27_TYPE3:
+            return chanD27(payload, 3);
+        case CHAN_D27_TYPE0:
+            return chanD27(payload, 0);
+        case DIGC_VOICE_BURST:
+            return digcVoiceBurst(payload);
+        default:
+            throw new IllegalArgumentException("未知语音格式");
+        }
+    }
+
+    /** 字段 0x01 加 27 字节载荷，包类型由调用方给出。 */
+    private static byte[] chanD27(byte[] payload, int packetType) {
+        requireBurst(payload);
+        byte[] body = new byte[2 + VOICE_BURST_BYTES];
+        body[0] = 0x01;
+        body[1] = (byte) VOICE_BURST_BYTES;
+        System.arraycopy(payload, 0, body, 2, VOICE_BURST_BYTES);
+        return HpiCodec.paddedFrame(packetType, body);
+    }
+
+    /**
+     * 字段 0x43 数据帧，帧属性位 4 置 1 表示语音突发，包类型 5。
+     * 帧属性的低四位按手册仅对数据突发有效，此处保持为零。
+     */
+    private static byte[] digcVoiceBurst(byte[] payload) {
+        requireBurst(payload);
+        byte[] body = new byte[3 + VOICE_BURST_BYTES];
+        body[0] = 0x43;
+        body[1] = 0x10;
+        body[2] = (byte) VOICE_BURST_BYTES;
+        System.arraycopy(payload, 0, body, 3, VOICE_BURST_BYTES);
+        return HpiCodec.paddedFrame(5, body);
+    }
+
+    private static void requireBurst(byte[] payload) {
+        if (payload.length != VOICE_BURST_BYTES) {
+            throw new IllegalArgumentException(
+                    "语音突发载荷必须为27字节，实际" + payload.length);
+        }
+    }
+
     static boolean exactStatusAck(byte[] raw, int packetType, int field) {
         List<HpiCodec.WireFrame> frames = HpiCodec.parseComplete(raw);
         if (frames == null || frames.size() != 1) {
