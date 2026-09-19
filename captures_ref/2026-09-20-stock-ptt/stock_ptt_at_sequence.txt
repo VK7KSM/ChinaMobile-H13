@@ -1,0 +1,26 @@
+09-20 00:27:30.115  3756  3756 I SerialPortManager: 准备发送Request --> AT+DMOSETDIGITALCH=433550000,433550000,13,99,12345678,directmode,group,slot1,slot1,off,low,8,1,2,99
+09-20 00:27:30.116  3756  3784 I SerialPortManager: 向串口发送Request --> AT+DMOSETDIGITALCH=433550000,433550000,13,99,12345678,directmode,group,slot1,slot1,off,low,8,1,2,99
+09-20 00:27:30.123  3756  3756 I SerialPortManager: 准备发送Request --> AT+DMOPTT=1
+09-20 00:27:30.124  3756  3756 I H13Route: PTT down route=1 channel=CH 1
+09-20 00:27:30.187  3756  3824 I SerialPortManager: 接收串口 <-- +DMOSETDIGITALCH:0
+09-20 00:27:30.188  3756  3784 I SerialPortManager: 向串口发送Request --> AT+DMOPTT=1
+09-20 00:27:30.189  3756  3756 I InterphoneService: 收到AT <-- [text=+DMOSETDIGITALCH:0]
+09-20 00:27:30.509  3756  3824 I SerialPortManager: 接收串口 <-- +DMOPTT:0
+09-20 00:27:30.509  3756  3756 I InterphoneService: 收到AT <-- [text=+DMOPTT:0]
+09-20 00:27:30.510  3756  3824 I SerialPortManager: 接收串口 <-- +DMOSENDMOUDULESTA:TxStart
+09-20 00:27:30.511  3756  3756 I InterphoneService: 收到AT <-- [text=+DMOSENDMOUDULESTA:TxStart]
+09-20 00:27:30.886  3756  3756 I CallbackHandler: type=1400 audit(0.0:3803): avc: denied { read } for name="audio_switch" dev="sysfs" ino=21856 scontext=u:r:untrusted_app_25:s0:c512,c768 tcontext=u:object_r:sysfs:s0 tclass=file permissive=1
+09-20 00:27:30.886  3756  3756 I CallbackHandler: type=1400 audit(0.0:3804): avc: denied { open } for path="/sys/boptt/audio_switch" dev="sysfs" ino=21856 scontext=u:r:untrusted_app_25:s0:c512,c768 tcontext=u:object_r:sysfs:s0 tclass=file permissive=1
+09-20 00:27:30.886  3756  3756 I CallbackHandler: type=1400 audit(0.0:3805): avc: denied { getattr } for path="/sys/boptt/audio_switch" dev="sysfs" ino=21856 scontext=u:r:untrusted_app_25:s0:c512,c768 tcontext=u:object_r:sysfs:s0 tclass=file permissive=1
+09-20 00:27:30.886  3756  3756 I CallbackHandler: type=1400 audit(0.0:3806): avc: denied { write } for name="audio_switch" dev="sysfs" ino=21856 scontext=u:r:untrusted_app_25:s0:c512,c768 tcontext=u:object_r:sysfs:s0 tclass=file permissive=1
+09-20 00:27:34.882  3756  3824 I SerialPortManager: 接收串口 <-- +DMOAUTOUPDATARECORDINFO:group,99,13,89,72,2,16
+09-20 00:27:34.883  3756  3756 I InterphoneService: 收到AT <-- [text=+DMOAUTOUPDATARECORDINFO:group,99,13,89,72,2,16]
+09-20 00:27:38.584  3756  3756 I SerialPortManager: 准备发送Request --> AT+DMOPTT=0
+09-20 00:27:38.584  3756  3756 I H13Route: PTT up route=1
+09-20 00:27:38.585  3756  3784 I SerialPortManager: 向串口发送Request --> AT+DMOPTT=0
+09-20 00:27:38.923  3756  3824 I SerialPortManager: 接收串口 <-- +DMOPTT:0
+09-20 00:27:38.924  3756  3756 I InterphoneService: 收到AT <-- [text=+DMOPTT:0]
+09-20 00:27:38.984  3756  3824 I SerialPortManager: 接收串口 <-- +DMOAUTOUPDATARECORDINFO:group,99,13,90,64,2,17
+09-20 00:27:38.985  3756  3756 I InterphoneService: 收到AT <-- [text=+DMOAUTOUPDATARECORDINFO:group,99,13,90,64,2,17]
+09-20 00:27:38.992  3756  3824 I SerialPortManager: 接收串口 <-- +DMOSENDMOUDULESTA:TxEnd
+09-20 00:27:39.006  3756  3756 I InterphoneService: 收到AT <-- [text=+DMOSENDMOUDULESTA:TxEnd]
