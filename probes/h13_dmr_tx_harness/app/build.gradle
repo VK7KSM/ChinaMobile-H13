@@ -8,8 +8,8 @@ android {
         applicationId 'net.elfradio.h13dmrtx'
         minSdk 21
         targetSdk 27
-        versionCode 87
-        versionName '0.87-speech-short-abc-first-rf-candidate'
+        versionCode 88
+        versionName '0.88-post-vlc-listen-window'
         testInstrumentationRunner 'android.support.test.runner.AndroidJUnitRunner'
         ndk {
             abiFilters 'armeabi-v7a'

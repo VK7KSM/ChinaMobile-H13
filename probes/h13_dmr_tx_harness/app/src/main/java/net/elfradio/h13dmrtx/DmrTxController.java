@@ -336,6 +336,9 @@ final class DmrTxController {
     static final long RELAY_CREDIT_TIMEOUT_MS = 1500;
     static final long RELAY_VLC_ACK_DURATION_MS = 500;
     static final long ACTIVE_PACED_TAIL_MS = 500;
+    // VLC 之后的静听窗。带参数的两个预算函数一律计入这一段，
+    // 不静听的模式因此只会更宽松，不会更紧。
+    static final long POST_VLC_LISTEN_MS = 3000;
     // 尾窗结束后若仍有半截帧，再给一个有界的延长排空窗。
     // 模块上报的语音单元为 36 字节线上帧，在 57600 波特率下约 6 毫秒，
     // 500 毫秒足以收完任何一个被边界截断的帧。
@@ -469,6 +472,9 @@ final class DmrTxController {
         boolean speechAz09 = isSpeechAz09Mode(mode);
         boolean speechShortAbc = isSpeechShortAbcMode(mode);
         boolean dmrReplayCaptured = isDmrReplayCapturedMode(mode);
+        // 重放模式在两条 VLC 之后先静听三秒，量模块自发交帧的数量与间隔。
+        // 静听窗只读不写，不改任何计数，随后照常推送。
+        postVlcListenMs = dmrReplayCaptured ? 3000L : 0L;
         boolean softwarePrivacyTripleSos =
                 MODE_RELAY_SOFTWARE_PRIVACY_TRIPLE_SOS_NO_RF.equals(mode)
                 || MODE_RELAY_SOFTWARE_PRIVACY_TRIPLE_SOS_LOW_POWER_RF
@@ -1361,6 +1367,7 @@ final class DmrTxController {
                 + TxPlan.MAX_LATE_MS;
         long terminationWorstMs = 300L + 500L;
         long worstEndMs = FULLPREP_DELAY_MS + ackPacedVlcWorstMs
+                + POST_VLC_LISTEN_MS
                 + bodyWorstMs + ACTIVE_PACED_TAIL_MS + terminationWorstMs;
         return firstBridgeBudgetWellFormed()
                 && ACTIVE_PACED_TAIL_MS == 500L
@@ -1403,9 +1410,11 @@ final class DmrTxController {
                 + TxPlan.MAX_LATE_MS;
         long terminationWorstMs = 300L + 500L;
         long worstEndMs = FULLPREP_DELAY_MS + ackPacedVlcWorstMs
+                + POST_VLC_LISTEN_MS
                 + bodyWorstMs + ACTIVE_PACED_TAIL_MS
                 + terminationWorstMs + cleanupMs;
-        long actualRfOnMs = unitCount * unitIntervalMs;
+        long actualRfOnMs = unitCount * unitIntervalMs
+                + POST_VLC_LISTEN_MS;
         return firstBridgeBudgetWellFormedFor(unitCount, unitIntervalMs)
                 && DmrProtocol.CLEANUP_COUNT == 2
                 && worstEndMs <= FIRST_BRIDGE_EXIT_MS - FIRST_BRIDGE_MARGIN_MS
@@ -2289,6 +2298,11 @@ final class DmrTxController {
 
     private long firstDataOrigin;
     private long relayLastWriteAt = -1L;
+    // 厂商 0x60 外部编码发射的契约是：模块把自己编码的语音帧交给宿主，
+    // 宿主改写后逐帧回送，宿主从不原创语音。我们此前是开环主动推送，
+    // 写完全部单元才开始读上行。静听窗用来量出：VLC 之后我们保持安静时，
+    // 模块到底交出多少帧、间隔多少。0 表示不静听。
+    private long postVlcListenMs;
     private final List<byte[]> bufferedRelayPlain = new ArrayList<>();
     private final List<byte[]> bufferedRelayWirePayload = new ArrayList<>();
     private final List<byte[]> bufferedRelayRequests = new ArrayList<>();
@@ -2336,6 +2350,90 @@ final class DmrTxController {
             long returnMs, byte[] value) throws IOException {
         relayHotPathEvidence.addRead(point, unitBefore, creditBefore,
                 beginMs, requestedMs, returnMs, value);
+    }
+
+    /**
+     * VLC 之后先保持安静，只读上行，把模块主动交出来的帧原样记下来。
+     * 只观察不回应：这一窗的目的就是分清模块是自由连续交帧，
+     * 还是交一帧就等宿主回送。窗内不写任何字节，不改任何计数。
+     */
+    private void runPostVlcListenWindow() throws Exception {
+        long startedAt = SystemClock.elapsedRealtime();
+        long deadline = startedAt + postVlcListenMs;
+        ByteArrayOutputStream raw = new ByteArrayOutputStream();
+        int readIndex = 0;
+        while (SystemClock.elapsedRealtime() < deadline) {
+            long remain = deadline - SystemClock.elapsedRealtime();
+            long requested = Math.max(1L, Math.min(20L, remain));
+            long readBegin = SystemClock.elapsedRealtime();
+            byte[] chunk = transport.readAvailable(requested);
+            long readReturn = SystemClock.elapsedRealtime();
+            try {
+                if (chunk.length > 0) {
+                    raw.write(chunk);
+                }
+            } finally {
+                recordRelayRead("post_vlc_listen_" + readIndex++,
+                        activeRelay.unitsWritten(),
+                        activeRelay.creditsConsumed(), readBegin,
+                        requested, readReturn, chunk);
+            }
+        }
+        byte[] listened = raw.toByteArray();
+        saveHotPathAwareEvent("relay", "post_vlc_listen_raw", listened);
+        int offers = 0;
+        int shortAcks = 0;
+        StringBuilder detail = new StringBuilder();
+        // 静听得到的原始流几乎必然首尾半截，不能用严格整流解析。
+        // 这里按同步头容错扫描：找到 84 a9 61 就按长度切一帧，
+        // 切不动就前移一个字节继续找。
+        int scan = 0;
+        while (scan + 6 <= listened.length) {
+            if ((listened[scan] & 0xff) != HpiCodec.SYNC0
+                    || (listened[scan + 1] & 0xff) != HpiCodec.SYNC1
+                    || (listened[scan + 2] & 0xff) != HpiCodec.COMMAND) {
+                scan++;
+                continue;
+            }
+            int bodyLength = ((listened[scan + 3] & 0xff) << 8)
+                    | (listened[scan + 4] & 0xff);
+            int packetType = listened[scan + 5] & 0xff;
+            if (scan + 6 + bodyLength > listened.length) {
+                detail.append("offset=").append(scan)
+                        .append(" truncated body_len=").append(bodyLength)
+                        .append("\n");
+                break;
+            }
+            byte[] body = Arrays.copyOfRange(listened, scan + 6,
+                    scan + 6 + bodyLength);
+            boolean offer = packetType == 0x20 && body.length >= 3
+                    && (body[0] & 0xff) <= 1
+                    && (body[1] & 0xff) == body.length - 2;
+            boolean shortAck = body.length >= 1 && body.length <= 2
+                    && (body[0] & 0xff) <= 1;
+            if (offer) {
+                offers++;
+            }
+            if (shortAck) {
+                shortAcks++;
+            }
+            detail.append("offset=").append(scan)
+                    .append(" type=0x").append(Integer.toHexString(packetType))
+                    .append(" body_len=").append(body.length)
+                    .append(offer ? " offer=true" : "")
+                    .append(shortAck ? " short_ack=true" : "")
+                    .append(" body=").append(Bytes.hex(body))
+                    .append("\n");
+            int wireLength = 6 + bodyLength;
+            scan += wireLength + (wireLength & 1);
+        }
+        saveHotPathAwareText("relay", "post_vlc_listen_summary",
+                "listen_ms=" + postVlcListenMs + "\n"
+                + "started_ms=" + startedAt + "\n"
+                + "raw_bytes=" + listened.length + "\n"
+                + "module_voice_offers=" + offers + "\n"
+                + "module_short_acks=" + shortAcks + "\n"
+                + detail);
     }
 
     private void executeRfOff(TxStateMachine machine) throws Exception {
@@ -2664,6 +2762,9 @@ final class DmrTxController {
                             : "（格式一致性：" + formatError + "）"));
         }
         beginRelayHotPath();
+        if (postVlcListenMs > 0L) {
+            runPostVlcListenWindow();
+        }
         long fifthAckCompleteAt = SystemClock.elapsedRealtime();
         long firstFlushAt = -1L;
         for (int index = 0; index < activeRelay.maximumUnits(); index++) {
