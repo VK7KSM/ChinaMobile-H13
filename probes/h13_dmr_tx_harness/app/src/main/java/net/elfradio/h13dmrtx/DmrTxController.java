@@ -106,6 +106,15 @@ final class DmrTxController {
     static final String MODE_SPEECH_SHORT_ABC_LOW_POWER_RF =
             "speech_short_abc_low_power_rf";
 
+    // 诊断模式（2026-09-19）：重放 2026-08-06 从真实 TYT 发射中捕获的
+    // 27 字节 CHAN_D 单元。载荷是真电台产生的、已知正确的 DMR 语音数据，
+    // 原样发出，不经过我们的软件编码器与隐私流水线。
+    // 目的：把"我们的编码器"和"发射通路/封装"两个变量彻底分开。
+    static final String MODE_DMR_REPLAY_CAPTURED_NO_RF =
+            "dmr_replay_captured_no_rf";
+    static final String MODE_DMR_REPLAY_CAPTURED_LOW_POWER_RF =
+            "dmr_replay_captured_low_power_rf";
+
     static final String RF_PERMISSION = "authorized_low_power_once";
     /**
      * 会话所用的语音注入格式。除三个语音突发验证模式外一律为历史实现，
@@ -129,6 +138,14 @@ final class DmrTxController {
         }
         if (MODE_SPEECH_AZ09_DIGC_NO_RF.equals(mode)) {
             return DmrProtocol.VoiceFormat.DIGC_VOICE_BURST;
+        }
+        // 短素材两个模式改用 27 字节 DMR 格式。36 字节/80 毫秒是接口文档
+        // 里 dPMR 的 CHAN_D 定义；DMR 每个突发是 3 帧 AMBE、27 字节、
+        // 60 毫秒，H13 接收真实 DMR 信号时模块交出来的也正是 27 字节单元。
+        // 2026-09-19 两次发射用 36 字节格式，射频、时序、呼叫参数全对但
+        // 语音是噪音，正是把 dPMR 格式的包发在 DMR 信道上的表现。
+        if (isSpeechShortAbcMode(mode) || isDmrReplayCapturedMode(mode)) {
+            return DmrProtocol.VoiceFormat.CHAN_D27_TYPE3;
         }
         return DmrProtocol.VoiceFormat.LEGACY_CHAN_D36;
     }
@@ -225,8 +242,15 @@ final class DmrTxController {
                 || MODE_SPEECH_SHORT_ABC_LOW_POWER_RF.equals(mode);
     }
 
+    static boolean isDmrReplayCapturedMode(String mode) {
+        return MODE_DMR_REPLAY_CAPTURED_NO_RF.equals(mode)
+                || MODE_DMR_REPLAY_CAPTURED_LOW_POWER_RF.equals(mode);
+    }
+
     static final String RELAY_SOURCE_SPEECH_AZ09 = "speech_az09";
     static final String RELAY_SOURCE_SPEECH_SHORT_ABC = "speech_short_abc";
+    static final String RELAY_SOURCE_DMR_REPLAY_CAPTURED =
+            "dmr_replay_captured";
     static final String RELAY_SOURCE_ENCODE_DMR_SILENCE =
             "encode_dmr_silence";
     static final String RELAY_SOURCE_ENCODE_DMR_TONE800 =
@@ -280,7 +304,11 @@ final class DmrTxController {
     private static final String CHANNEL_ON =
             "433550000,433550000,13,99,12345678,directmode,group,"
             + "slot1,slot1,on,low,8,2,2,99";
-    private static final long FULLPREP_DELAY_MS = 10000;
+    // 补入五条发射调制链 codec 写之后，setup 窗口需要容纳 10 次守卫往返
+    // 加一次 setup0 重试；按每次最坏 1300 毫秒算需要 14800 毫秒，原 10000
+    // 毫秒不够。放宽到 18000 毫秒，仍满足 rfHoldWindowWellFormed 的
+    // FULLPREP_DELAY_MS + RF_HOLD_MS <= FIRST_BRIDGE_EXIT_MS - 1000。
+    private static final long FULLPREP_DELAY_MS = 18000;
     static final long POST_BRIDGE_SETTLE_MS = 500;
     // v0.85之前固定为33500毫秒，按旧的6.24秒三遍SOS素材算够用；换成28.8秒
     // 的speech_az09素材后，实测供数在到达这个硬边界前就被设备侧第一桥的
@@ -288,7 +316,9 @@ final class DmrTxController {
     // speechAz09BudgetWellFormed()重新核算得44580毫秒为下限，这里取50000
     // 留出安全余量。此常量只影响第一桥（无射频接口桥）停留多久，不触及
     // 射频保持时间——射频保持由独立的SECOND_BRIDGE_EXIT_MS/RF_HOLD_MS控制。
-    private static final long FIRST_BRIDGE_EXIT_MS = 50000;
+    // 2026-09-19 再次放大：准备窗为容纳五条 codec 写从 10000 提到 18000，
+    // 28.8 秒 speech_az09 的最坏收尾随之推到约 50580 毫秒，原 50000 不够。
+    private static final long FIRST_BRIDGE_EXIT_MS = 60000;
     private static final long FIRST_BRIDGE_MARGIN_MS = 2000;
     static final long RF_HOLD_MS = 16000;
     static final long RELAY_PRE_VLC2_WAIT_MS = 1000;
@@ -422,6 +452,7 @@ final class DmrTxController {
                 || ackPacedVlcSoftwareTripleSos;
         boolean speechAz09 = isSpeechAz09Mode(mode);
         boolean speechShortAbc = isSpeechShortAbcMode(mode);
+        boolean dmrReplayCaptured = isDmrReplayCapturedMode(mode);
         boolean softwarePrivacyTripleSos =
                 MODE_RELAY_SOFTWARE_PRIVACY_TRIPLE_SOS_NO_RF.equals(mode)
                 || MODE_RELAY_SOFTWARE_PRIVACY_TRIPLE_SOS_LOW_POWER_RF
@@ -535,11 +566,47 @@ final class DmrTxController {
                             TxPlan.create(encoded));
                 }
                 activeMachine = machine;
+                if (speechShortAbc || dmrReplayCaptured) {
+                    // 发射调制链配置。增益取自设备自己的档位表，不写死：
+                    // 原厂链把 CODEC_GAIN_TABLE 传给信道与功率寄存器组写
+                    // 函数，第五条写的就是其中一档。
+                    byte[] gainTable = read("codec_gain_table",
+                            McuAssets.CODEC_GAIN_TABLE,
+                            McuAssets.CODEC_GAIN_PRESETS);
+                    int micPreset = DmrProtocol.micGainPreset(CHANNEL_ON);
+                    int codecGain = gainTable[micPreset] & 0xff;
+                    evidence.saveText("codec", "gain_selection",
+                            "table=" + Bytes.hex(gainTable) + "\n"
+                            + "mic_preset=" + micPreset + "\n"
+                            + "gain=" + codecGain + "\n");
+                    machine.enableCodecConfig(codecGain);
+                }
 
                 byte[] software49Bit36 = null;
                 String software49BitSource = null;
                 boolean softwareFinalWirePayload = false;
-                if (speechAz09) {
+                if (dmrReplayCaptured) {
+                    // 重放真实电台产生的 DMR 语音单元：原样发出，不经过
+                    // 软件 AMBE 编码器，也不经过隐私流水线。载荷已经是
+                    // 模块接收时交出来的 27 字节 CHAN_D 单元本身。
+                    status("重放2026-08-06捕获的真实DMR语音单元");
+                    byte[] replay = readAll(assets.open(
+                            "software_ambe_vectors/"
+                            + "dmr_replay_captured.chan_d27.bin"));
+                    if (replay.length != RealtimeRelay.DMR_REPLAY_BYTES) {
+                        throw new IOException("重放载荷长度错误："
+                                + replay.length);
+                    }
+                    software49Bit36 = replay;
+                    software49BitSource = RELAY_SOURCE_DMR_REPLAY_CAPTURED;
+                    softwareFinalWirePayload = true;
+                    evidence.saveEvent("replay", "captured_chan_d27", replay);
+                    evidence.saveText("replay", "captured_summary",
+                            "bytes=" + replay.length + "\n"
+                            + "units=" + (replay.length / 27) + "\n"
+                            + "seconds=" + (replay.length / 27 * 0.06) + "\n"
+                            + "source=2026-08-06_live-chan-d-v12_tape\n");
+                } else if (speechAz09) {
                     // 人声素材：26 字母加 10 数字逐个朗读，28.80 秒、1440 帧。
                     // 与摩尔斯分支并列，不复用其帧数与单元数的固定判定。
                     status("人声字母数字素材经软件AMBE编解码闭环");
@@ -606,15 +673,22 @@ final class DmrTxController {
                     if (!Arrays.equals(actualChannel72, goldenChannel72)) {
                         throw new IOException("短素材软件AMBE输出不匹配冻结向量");
                     }
-                    if (actualChannel72.length != 1800) {
+                    if (actualChannel72.length
+                            != RealtimeRelay.SPEECH_SHORT_ABC_BYTES) {
                         throw new IOException("短素材帧流长度错误："
                                 + actualChannel72.length);
                     }
+                    // 明文通路：信道配置 encryptOnOff=off，固件不建立密钥
+                    // 记录，主机送什么比特就发什么。送加扰比特会让对端按
+                    // 明文解出噪音（2026-09-19 首次发射实测）。
                     SoftwareDmrPrivacyPipeline.Result pipeline =
-                            SoftwareDmrPrivacyPipeline.buildFromClearChannel72(
-                                    runtime14, actualChannel72);
-                    if (pipeline.frames() != 200
-                            || pipeline.channel72.length != 1800) {
+                            SoftwareDmrPrivacyPipeline
+                                    .buildClearFromClearChannel72(
+                                            runtime14, actualChannel72);
+                    if (pipeline.frames()
+                            != RealtimeRelay.SPEECH_SHORT_ABC_FRAMES
+                            || pipeline.channel72.length
+                            != RealtimeRelay.SPEECH_SHORT_ABC_BYTES) {
                         throw new IOException("短素材发送向量帧数错误");
                     }
                     software49Bit36 = pipeline.channel72;
@@ -1173,7 +1247,9 @@ final class DmrTxController {
         // 每次交换包含300毫秒静默门、500毫秒确认窗、400毫秒迟到窗，
         // 再为原始证据同步落盘预留100毫秒；setup0最多额外重试一次。
         long guardedExchangeMs = 1300;
-        long setupWorstMs = POST_BRIDGE_SETTLE_MS + guardedExchangeMs * 6;
+        // setup 五条 + codec 五条 + setup0 最多一次重试
+        long setupWorstMs = POST_BRIDGE_SETTLE_MS + guardedExchangeMs
+                * (DmrProtocol.SETUP_COUNT + DmrProtocol.CODEC_COUNT + 1);
         long vlcWorstEndMs = FULLPREP_DELAY_MS
                 + guardedExchangeMs * DmrProtocol.VLC_COUNT;
         return setupWorstMs <= FULLPREP_DELAY_MS - 1000
@@ -1296,13 +1372,15 @@ final class DmrTxController {
                         .equals(mode)
                 || isVoiceBurstMode(mode)
                 || isSpeechAz09Mode(mode)
-                || isSpeechShortAbcMode(mode);
+                || isSpeechShortAbcMode(mode)
+                || isDmrReplayCapturedMode(mode);
     }
 
     static boolean requestsLowPowerRf(String mode) {
         return MODE_RELAY_SOFTWARE_PRIVACY_TRIPLE_SOS_LOW_POWER_RF
                 .equals(mode)
-                || MODE_SPEECH_SHORT_ABC_LOW_POWER_RF.equals(mode);
+                || MODE_SPEECH_SHORT_ABC_LOW_POWER_RF.equals(mode)
+                || MODE_DMR_REPLAY_CAPTURED_LOW_POWER_RF.equals(mode);
     }
 
     static long activePacedTargetAt(long firstFlushAt, int unitIndex) {
@@ -1842,6 +1920,13 @@ final class DmrTxController {
         int setupCount = setup0Only ? 1 : DmrProtocol.SETUP_COUNT;
         for (int index = 0; index < setupCount; index++) {
             exchangeControl("setup_" + index, machine);
+        }
+        if (machine.codecEnabled() && !setup0Only) {
+            // 发射调制链配置：原厂链在工作模式（setup4）之后写这五个
+            // 页/寄存器，探针历史上整段缺失。见 H13_new.md 2.8.34/2.8.35。
+            for (int index = 0; index < DmrProtocol.CODEC_COUNT; index++) {
+                exchangeControl("codec_" + index, machine);
+            }
         }
         long latestSetup = armedAt + FULLPREP_DELAY_MS - 200;
         if (SystemClock.elapsedRealtime() > latestSetup) {
@@ -2496,6 +2581,8 @@ final class DmrTxController {
                         || RELAY_SOURCE_SPEECH_AZ09.equals(
                                 activeRelay.payloadSource())
                         || RELAY_SOURCE_SPEECH_SHORT_ABC.equals(
+                                activeRelay.payloadSource())
+                        || RELAY_SOURCE_DMR_REPLAY_CAPTURED.equals(
                                 activeRelay.payloadSource()))
                 || activeRelay.unitsWritten() != 0
                 || activeRelay.creditsConsumed() != 0

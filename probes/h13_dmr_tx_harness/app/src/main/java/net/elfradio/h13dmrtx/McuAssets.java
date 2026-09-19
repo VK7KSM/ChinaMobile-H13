@@ -8,6 +8,10 @@ import java.util.Arrays;
 final class McuAssets {
     static final int VECTOR = 0x2000003c;
     static final int BRIDGE_FLAG = 0x2000015c;
+    // 发射 codec 增益档位表：3 字节，按信道的麦克风增益档位取值。
+    // 原厂外部DMR配置链把该地址传给信道与功率寄存器组写函数。
+    static final int CODEC_GAIN_TABLE = 0x20002e25;
+    static final int CODEC_GAIN_PRESETS = 3;
     static final int RF_EDGE_COUNTER = 0x20000134;
     static final int RF_EDGE_COUNTER_LENGTH = 4;
     static final int RF_TIMING_CONTROL = 0x20000138;

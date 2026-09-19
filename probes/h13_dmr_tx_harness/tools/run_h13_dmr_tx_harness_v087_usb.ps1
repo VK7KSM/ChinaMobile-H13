@@ -27,7 +27,9 @@ param(
         'speech_az09_chan_d27_type0_no_rf',
         'speech_az09_digc_frame_no_rf',
         'speech_short_abc_no_rf',
-        'speech_short_abc_low_power_rf')]
+        'speech_short_abc_low_power_rf',
+        'dmr_replay_captured_no_rf',
+        'dmr_replay_captured_low_power_rf')]
     [string]$Mode = 'no_rf',
     [switch]$AllowInstall,
     [switch]$AllowDisableInterphone,
@@ -49,7 +51,7 @@ $Activity = 'net.elfradio.h13dmrtx/.MainActivity'
 $ExpectedFingerprint = 'CMCC/msm8909/msm8909:8.1.0/OPM1.171019.026/build11020953:user/test-keys'
 $ExpectedVersionCode = 87
 $ExpectedVersionName = '0.87-speech-short-abc-first-rf-candidate'
-$ExpectedApkSha256 = '1293EEB0B935ED74A7D589040DFF5828CE9512DAFF4CBA9053EA8CC4DF6F10AA'
+$ExpectedApkSha256 = '5826BDBAB23147DFF0ED3946543D0EAD9FFBD72259651888A7B28DACF295F2F3'
 $Apk = Join-Path $PSScriptRoot '..\dist\H13_DMR_TX_Harness_v0.87_SpeechShortAbcFirstRfCandidate.apk'
 $DeadlineHelper = Join-Path $PSScriptRoot '..\..\h13_radio\tools\h13_external_dmr_rf_deadline_device.sh'
 $RemoteDeadlineHelper = '/data/local/tmp/h13_dmr_tx_deadline.sh'
@@ -259,11 +261,17 @@ function Assert-ModeResult {
             Mode='speech_az09_chan_d27_type0_no_rf'; Setup=5; Vlc=5; Data=480 } }
         'speech_az09_digc_frame_no_rf' { @{
             Mode='speech_az09_digc_frame_no_rf'; Setup=5; Vlc=5; Data=480 } }
-        # short first-RF material: 4.00 s, 200 frames, 4 frames/unit = 50 units
+        # short first-RF material: 4.08 s, 204 frames, 27-byte DMR format
+        # = 3 frames/unit = 68 units x 60 ms
         'speech_short_abc_no_rf' { @{
-            Mode='speech_short_abc_no_rf'; Setup=5; Vlc=5; Data=50 } }
+            Mode='speech_short_abc_no_rf'; Setup=5; Vlc=5; Data=68 } }
         'speech_short_abc_low_power_rf' { @{
-            Mode='speech_short_abc_low_power_rf'; Setup=5; Vlc=5; Data=50 } }
+            Mode='speech_short_abc_low_power_rf'; Setup=5; Vlc=5; Data=68 } }
+        # replay of real captured DMR units: 66 units x 60 ms = 3.96 s
+        'dmr_replay_captured_no_rf' { @{
+            Mode='dmr_replay_captured_no_rf'; Setup=5; Vlc=5; Data=66 } }
+        'dmr_replay_captured_low_power_rf' { @{
+            Mode='dmr_replay_captured_low_power_rf'; Setup=5; Vlc=5; Data=66 } }
         'realtime_relay_software_privacy_triple_sos_low_power_rf' { @{
             Mode='realtime_relay_software_privacy_triple_sos_low_power_rf'; Setup=5; Vlc=5; Data=78 } }
         'realtime_relay_encode_dmr_morse_unique_five_low_power_rf' { @{
@@ -271,12 +279,19 @@ function Assert-ModeResult {
         'low_power_rf' { @{ Mode='morse_low_power_rf'; Setup=5; Vlc=5; Data=26 } }
     }
     $RetryCount = if ($ResultText -match '(?m)^setup0_retry_used=true\r?$') { 1 } else { 0 }
+    # 发射调制链 codec 五写只在新模式启用，计入控制写次数。
+    $CodecCount = if ($Mode -in @(
+            'speech_short_abc_no_rf',
+            'speech_short_abc_low_power_rf',
+            'dmr_replay_captured_no_rf',
+            'dmr_replay_captured_low_power_rf')) { 5 } else { 0 }
     $CleanupCount = if ($Mode -in @(
             'realtime_relay_encode_dmr_morse_unique_five_low_power_rf',
             'realtime_relay_software_privacy_triple_sos_low_power_rf',
-            'speech_short_abc_low_power_rf')) { 2 } else { 0 }
+            'speech_short_abc_low_power_rf',
+            'dmr_replay_captured_low_power_rf')) { 2 } else { 0 }
     $TerminationCount = if ($Expected.Data -gt 0) { 1 } else { 0 }
-    $ExpectedControlWrites = $Expected.Setup + $Expected.Vlc + $TerminationCount + $CleanupCount + $RetryCount
+    $ExpectedControlWrites = $Expected.Setup + $CodecCount + $Expected.Vlc + $TerminationCount + $CleanupCount + $RetryCount
     foreach ($Pair in @(
         @{ Name='mode'; Value=$Expected.Mode },
         @{ Name='setup_acks'; Value=[string]$Expected.Setup },
@@ -571,6 +586,16 @@ function Assert-ModeResult {
             device_deadline_arm_requested='false';
             device_deadline_armed='false'; sram_transaction_started='true' } }
         'speech_short_abc_low_power_rf' { @{
+            first_bridge_exit_confirmed='true'; second_bridge_exit_confirmed='false';
+            rf_prepare_executed='true'; rf_off_confirmed='true';
+            device_deadline_arm_requested='true';
+            device_deadline_armed='true'; sram_transaction_started='true' } }
+        'dmr_replay_captured_no_rf' { @{
+            first_bridge_exit_confirmed='true'; second_bridge_exit_confirmed='false';
+            rf_prepare_executed='false'; rf_off_confirmed='false';
+            device_deadline_arm_requested='false';
+            device_deadline_armed='false'; sram_transaction_started='true' } }
+        'dmr_replay_captured_low_power_rf' { @{
             first_bridge_exit_confirmed='true'; second_bridge_exit_confirmed='false';
             rf_prepare_executed='true'; rf_off_confirmed='true';
             device_deadline_arm_requested='true';
@@ -2567,7 +2592,9 @@ if ($Mode -in @('realtime_relay_one_data36_no_rf',
         'ack_paced_vlc_software_triple_sos_active_no_rf',
         'realtime_relay_software_privacy_triple_sos_low_power_rf',
         'speech_short_abc_no_rf',
-        'speech_short_abc_low_power_rf') -and -not $AllowPotentialRf) {
+        'speech_short_abc_low_power_rf',
+        'dmr_replay_captured_no_rf',
+        'dmr_replay_captured_low_power_rf') -and -not $AllowPotentialRf) {
     throw '实时relay一包仍属潜在发射路径，需显式传入-AllowPotentialRf。'
 }
 if ($Mode -notin @('clear_only','setup0_only') -and -not $Setup0Stable) {
@@ -2707,7 +2734,8 @@ try {
     $DeviceDeadlineStarted = $false
     if ($Mode -in @('deadline_handshake_no_rf','low_power_rf',
             'realtime_relay_software_privacy_triple_sos_low_power_rf',
-            'speech_short_abc_low_power_rf')) {
+            'speech_short_abc_low_power_rf',
+            'dmr_replay_captured_low_power_rf')) {
         if (-not (Test-Path -LiteralPath $DeadlineHelper -PathType Leaf)) {
             throw "设备侧截止器脚本缺失：$DeadlineHelper"
         }
@@ -2764,6 +2792,8 @@ try {
         'speech_az09_digc_frame_no_rf' { 'speech_az09_digc_frame_no_rf' }
         'speech_short_abc_no_rf' { 'speech_short_abc_no_rf' }
         'speech_short_abc_low_power_rf' { 'speech_short_abc_low_power_rf' }
+        'dmr_replay_captured_no_rf' { 'dmr_replay_captured_no_rf' }
+        'dmr_replay_captured_low_power_rf' { 'dmr_replay_captured_low_power_rf' }
         'setup0_only' { 'setup0_only_no_rf' }
         'clear_only' { 'clear_channel_only_no_rf' }
         default { 'session_prepare_no_rf' }
@@ -2777,7 +2807,8 @@ try {
     $StartArguments = @('shell','am','start','-W','-n',$Activity,
         '--es','mode',$DeviceMode)
     if ($Mode -in @('realtime_relay_software_privacy_triple_sos_low_power_rf',
-            'speech_short_abc_low_power_rf')) {
+            'speech_short_abc_low_power_rf',
+            'dmr_replay_captured_low_power_rf')) {
         $StartArguments += @('--es','rf_permission','authorized_low_power_once')
     }
     $StartArguments += @('--ez','auto_start','true')
@@ -2835,11 +2866,13 @@ try {
             }
             if ($Mode -in @('deadline_handshake_no_rf','low_power_rf',
                     'realtime_relay_software_privacy_triple_sos_low_power_rf',
-                    'speech_short_abc_low_power_rf') -and
+                    'speech_short_abc_low_power_rf',
+                    'dmr_replay_captured_low_power_rf') -and
                     -not $DeviceDeadlineStarted) {
                 $FirstBridgeRfMode = $Mode -in @(
                     'realtime_relay_software_privacy_triple_sos_low_power_rf',
-                    'speech_short_abc_low_power_rf')
+                    'speech_short_abc_low_power_rf',
+                    'dmr_replay_captured_low_power_rf')
                 $ArmFile = if ($FirstBridgeRfMode) {
                     'rf_first_bridge_arm_request.txt'
                 } else {
@@ -2896,7 +2929,8 @@ try {
             }
             if ($Mode -in @('low_power_rf',
                     'realtime_relay_software_privacy_triple_sos_low_power_rf',
-                    'speech_short_abc_low_power_rf') -and
+                    'speech_short_abc_low_power_rf',
+                    'dmr_replay_captured_low_power_rf') -and
                     $null -eq $RfPrepImminentAt -and
                 (Invoke-AdbOptional -Arguments @('shell','run-as',$Package,
                     'test','-f',"files/captures/$Session/rf_prep_imminent.txt")).ExitCode -eq 0) {
@@ -2905,7 +2939,8 @@ try {
             }
             if ($Mode -in @('low_power_rf',
                     'realtime_relay_software_privacy_triple_sos_low_power_rf',
-                    'speech_short_abc_low_power_rf') -and
+                    'speech_short_abc_low_power_rf',
+                    'dmr_replay_captured_low_power_rf') -and
                     $null -eq $RfStartObservedAt -and
                 (Invoke-AdbOptional -Arguments @('shell','run-as',$Package,
                     'test','-f',"files/captures/$Session/rf_actual_start.txt")).ExitCode -eq 0) {
@@ -3003,7 +3038,8 @@ try {
         'logcat','-d','-v','threadtime'))
     if ($Mode -in @('deadline_handshake_no_rf','low_power_rf',
             'realtime_relay_software_privacy_triple_sos_low_power_rf',
-            'speech_short_abc_low_power_rf') -and
+            'speech_short_abc_low_power_rf',
+            'dmr_replay_captured_low_power_rf') -and
             $Session -and $DeviceDeadlineStarted) {
         $Marker = "/sdcard/Android/data/$Package/files/deadlines/$Session.marker"
         $DeadlineFinal = ''
@@ -3027,7 +3063,8 @@ try {
             ((Invoke-AdbOptional shell su -c "cat '$Marker.monitor'").Output -join "`n")
     } elseif ($Mode -in @('low_power_rf',
             'realtime_relay_software_privacy_triple_sos_low_power_rf',
-            'speech_short_abc_low_power_rf') -and
+            'speech_short_abc_low_power_rf',
+            'dmr_replay_captured_low_power_rf') -and
             $Session) {
         $SafeBeforeArm = $Result -match '(?m)^result=FAIL\r?$' -and
             $Result -match '(?m)^device_deadline_arm_requested=false\r?$' -and

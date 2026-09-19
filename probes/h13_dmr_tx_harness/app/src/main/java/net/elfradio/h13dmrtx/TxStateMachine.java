@@ -14,6 +14,7 @@ final class TxStateMachine {
 
     enum Phase {
         FIRST_BRIDGE_SETUP,
+        FIRST_BRIDGE_CODEC,
         WAIT_FULLPREP_DEADLINE,
         FIRST_BRIDGE_VLC,
         WAIT_RELAY_COMPLETION,
@@ -35,6 +36,9 @@ final class TxStateMachine {
     private final boolean firstBridgeHpiCleanup;
     private final boolean relayAfterAllVlc;
     private Phase phase = Phase.FIRST_BRIDGE_SETUP;
+    private boolean codecEnabled;
+    private int codecGain;
+    private int codecIndex;
     private int setupIndex;
     private int vlcIndex;
     private int cleanupIndex;
@@ -86,6 +90,31 @@ final class TxStateMachine {
         this.relayAfterAllVlc = relayAfterAllVlc;
     }
 
+    /**
+     * 启用发射调制链配置。原厂外部 DMR 配置链在工作模式之后写五个 codec
+     * 页/寄存器；探针历史上没做这一步，2026-09-19 用模拟器还原后补入。
+     * 只能在任何控制往返之前启用。
+     */
+    void enableCodecConfig(int gain) {
+        if (phase != Phase.FIRST_BRIDGE_SETUP || setupIndex != 0
+                || pending != null) {
+            throw fail("codec配置只能在会话开始前启用");
+        }
+        if ((gain & ~0xff) != 0) {
+            throw new IllegalArgumentException("codec增益必须为字节");
+        }
+        this.codecEnabled = true;
+        this.codecGain = gain;
+    }
+
+    int codecAcks() {
+        return codecIndex;
+    }
+
+    boolean codecEnabled() {
+        return codecEnabled;
+    }
+
     Phase phase() {
         return phase;
     }
@@ -94,6 +123,8 @@ final class TxStateMachine {
         requireNotPending();
         if (phase == Phase.FIRST_BRIDGE_SETUP) {
             pending = session.setup(setupIndex);
+        } else if (phase == Phase.FIRST_BRIDGE_CODEC) {
+            pending = DmrProtocol.codec(codecIndex, codecGain);
         } else if (phase == Phase.FIRST_BRIDGE_VLC) {
             if (relayOneUnit && !relayAfterAllVlc && vlcIndex == 1
                     && !relayComplete) {
@@ -124,6 +155,22 @@ final class TxStateMachine {
             pending = null;
             setupIndex++;
             if (setupIndex == DmrProtocol.SETUP_COUNT) {
+                phase = codecEnabled ? Phase.FIRST_BRIDGE_CODEC
+                        : Phase.WAIT_FULLPREP_DEADLINE;
+            }
+            return;
+        }
+        if (phase == Phase.FIRST_BRIDGE_CODEC) {
+            if (!Arrays.equals(pending,
+                    DmrProtocol.codec(codecIndex, codecGain))
+                    || !DmrProtocol.exactStatusAck(response,
+                    DmrProtocol.CODEC_PACKET_TYPE,
+                    DmrProtocol.CODEC_ACK_FIELD)) {
+                throw fail("codec写严格确认失败");
+            }
+            pending = null;
+            codecIndex++;
+            if (codecIndex == DmrProtocol.CODEC_COUNT) {
                 phase = Phase.WAIT_FULLPREP_DEADLINE;
             }
             return;

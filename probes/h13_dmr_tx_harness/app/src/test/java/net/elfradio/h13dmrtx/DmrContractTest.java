@@ -62,13 +62,93 @@ public final class DmrContractTest {
                 DmrTxController.MODE_SPEECH_SHORT_ABC_NO_RF));
         assertTrue(DmrTxController.usesAckPacedTripleSos(
                 DmrTxController.MODE_SPEECH_SHORT_ABC_LOW_POWER_RF));
-        // 两个短素材模式都必须落到历史36字节格式（默认分支）。
-        assertEquals(DmrProtocol.VoiceFormat.LEGACY_CHAN_D36,
+        // 两个短素材模式必须用 27 字节 DMR 格式：DMR 每突发 3 帧 27 字节
+        // 60 毫秒；36 字节/80 毫秒是接口文档里 dPMR 的定义。2026-09-19 用
+        // 36 字节格式发射两次，射频与呼叫参数全对但对端只听到机械噪音。
+        assertEquals(DmrProtocol.VoiceFormat.CHAN_D27_TYPE3,
                 DmrTxController.voiceFormatForMode(
                         DmrTxController.MODE_SPEECH_SHORT_ABC_NO_RF));
-        assertEquals(DmrProtocol.VoiceFormat.LEGACY_CHAN_D36,
+        assertEquals(DmrProtocol.VoiceFormat.CHAN_D27_TYPE3,
                 DmrTxController.voiceFormatForMode(
                         DmrTxController.MODE_SPEECH_SHORT_ABC_LOW_POWER_RF));
+        // 素材帧数必须同时被 3 和 4 整除，两种格式都不补位。
+        assertEquals(0, RealtimeRelay.SPEECH_SHORT_ABC_FRAMES % 3);
+        assertEquals(0, RealtimeRelay.SPEECH_SHORT_ABC_FRAMES % 4);
+        assertEquals(68, DmrTxController.expectedUnitsFor(
+                RealtimeRelay.SPEECH_SHORT_ABC_BYTES,
+                DmrProtocol.VoiceFormat.CHAN_D27_TYPE3));
+    }
+
+    @Test
+    public void codecWriteFramesMatchStockChain() {
+        // 原厂外部DMR配置链在工作模式之后写的五个页/寄存器，线上字节
+        // 与旧探针 createAnalogCodecWriteFrame 逐字节相同。见 2.8.35。
+        assertEquals("84 a9 61 00 06 40 00 01 10 40 00 00",
+                Bytes.hex(DmrProtocol.codec(0, 0x14)));
+        assertEquals("84 a9 61 00 06 40 00 01 3b 11 00 00",
+                Bytes.hex(DmrProtocol.codec(1, 0x14)));
+        assertEquals("84 a9 61 00 06 40 00 00 56 f3 00 00",
+                Bytes.hex(DmrProtocol.codec(2, 0x14)));
+        assertEquals("84 a9 61 00 06 40 00 00 57 ba 00 00",
+                Bytes.hex(DmrProtocol.codec(3, 0x14)));
+        // 第五条是增益，随信道档位而变，不是常量。
+        assertEquals("84 a9 61 00 06 40 00 00 58 14 00 00",
+                Bytes.hex(DmrProtocol.codec(4, 0x14)));
+        assertEquals("84 a9 61 00 06 40 00 00 58 00 00 00",
+                Bytes.hex(DmrProtocol.codec(4, 0x00)));
+        // 确认帧：包类型 0x40、正文 {0x17, 0x00}。
+        byte[] ack = HpiCodec.frame(DmrProtocol.CODEC_PACKET_TYPE,
+                new byte[] {(byte) DmrProtocol.CODEC_ACK_FIELD, 0x00});
+        assertEquals("84 a9 61 00 02 40 17 00", Bytes.hex(ack));
+        assertTrue(DmrProtocol.exactStatusAck(ack,
+                DmrProtocol.CODEC_PACKET_TYPE,
+                DmrProtocol.CODEC_ACK_FIELD));
+        // 麦克风增益档位取自信道配置第14字段。
+        assertEquals(2, DmrProtocol.micGainPreset(
+                "433550000,433550000,13,99,12345678,directmode,group,"
+                + "slot1,slot1,on,low,8,2,2,99"));
+    }
+
+    @Test
+    public void privacyScramblingWouldGarbleAClearReceiver() {
+        // 2026-09-19 首次真机发射的根因固化：encryptOnOff=off 时固件不建立
+        // 密钥记录、不做隐私处理，主机送什么比特就发什么。若继续走加扰
+        // 通路，空口跑的是 RC4 加扰后的 49 位参数，而对端按明文解——实测
+        // 表现为功率、时序、呼叫参数全对，唯独语音是机械噪音。
+        // 这条断言证明加扰确实改变了大量比特，因此"明文接收端拿到的不是
+        // 原始语音参数"是必然而非偶然。
+        // 每帧 9 字节承载 49 位：前 6 字节全是数据，第 7 字节只有最高位
+        // 是数据，其余填充位必须为零，否则 privacy 输入校验会拒绝。
+        byte[] plain49 = new byte[9 * 20];
+        for (int frame = 0; frame < 20; frame++) {
+            int base = frame * 9;
+            for (int b = 0; b < 6; b++) {
+                plain49[base + b] = (byte) (frame * 31 + b * 37 + 11);
+            }
+            plain49[base + 6] = (byte) ((frame % 2) == 0 ? 0x80 : 0x00);
+            plain49[base + 7] = 0;
+            plain49[base + 8] = 0;
+        }
+        DmrPrivacy privacy = DmrPrivacy.fromRuntime14(RUNTIME14);
+        byte[] scrambled = privacy.encrypt49BitParameters(plain49);
+        int differing = 0;
+        int total = 0;
+        for (int frame = 0; frame < plain49.length / 9; frame++) {
+            for (int bit = 0; bit < 49; bit++) {
+                int offset = frame * 9 + bit / 8;
+                int mask = 1 << (7 - bit % 8);
+                total++;
+                if ((plain49[offset] & mask) != (scrambled[offset] & mask)) {
+                    differing++;
+                }
+            }
+        }
+        // 加扰必须改变可观比例的比特；若接近 0 则说明密钥流退化成空操作。
+        assertTrue("加扰改变的比特比例过低: " + differing + "/" + total,
+                differing > total / 5);
+        // 自己解扰必须能还原，确认差异来自加扰而不是通路本身有损。
+        DmrPrivacy again = DmrPrivacy.fromRuntime14(RUNTIME14);
+        assertArrayEquals(plain49, again.decrypt49BitParameters(scrambled));
     }
 
     @Test
@@ -97,9 +177,9 @@ public final class DmrContractTest {
         // 单元、每单元80毫秒（200帧AMBE÷4）。既要撑得到第一桥收尾，也要
         // 满足RF专用的保持窗和30秒单次发射硬上限——这是发射前必须为真的
         // 门槛，不是事后补的回归测试。
-        assertTrue(DmrTxController.firstBridgeBudgetWellFormedFor(50, 80L));
+        assertTrue(DmrTxController.firstBridgeBudgetWellFormedFor(68, 60L));
         assertTrue(DmrTxController.ackPacedActiveRfBudgetWellFormedFor(
-                50, 80L));
+                68, 60L));
         // 旧三遍SOS的RF专用通用版本同样要和写死版本一致。
         assertTrue(DmrTxController.ackPacedActiveRfBudgetWellFormedFor(
                 RealtimeRelay.TRIPLE_SOS_UNITS, TxPlan.UNIT_INTERVAL_MS));

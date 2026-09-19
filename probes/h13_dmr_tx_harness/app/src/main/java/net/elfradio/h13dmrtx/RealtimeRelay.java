@@ -32,15 +32,26 @@ final class RealtimeRelay {
     static final int SPEECH_AZ09_BYTES =
             SPEECH_AZ09_FRAMES * TxPlan.AMBE_BYTES_PER_FRAME;
 
-    // 首次真机低功率发射验证素材：只念 A、B、C，填充静音后正好 200 帧、
-    // 4.00 秒。走历史 36 字节格式，因此 200 帧必须能被 4 整除（50 个单元）。
-    // 长度要登记进下面构造函数的历史格式长度白名单，否则会被判为
-    // "替换明文或来源无效"——v0.87 首次上机就是栽在这里。
-    static final int SPEECH_SHORT_ABC_FRAMES = 200;
+    // 首次真机低功率发射验证素材：只念 A、B、C，填充静音后正好 204 帧、
+    // 4.08 秒。204 同时能被 3 和 4 整除，两种打包格式都不需要补位：
+    //   27 字节 DMR 格式 68 包 × 60 毫秒 = 4.08 秒（当前发射用这个）
+    //   36 字节 dPMR 格式 51 包 × 80 毫秒 = 4.08 秒
+    // 最初做成 200 帧只考虑了 36 字节格式；2026-09-19 两次发射证明 36 字节
+    // 是接口文档里 dPMR 的定义，DMR 每突发是 3 帧 27 字节 60 毫秒，发错格式
+    // 会让对端解出机械噪音，因此改为两种格式都整除。
+    // 长度还要登记进下面构造函数的历史格式长度白名单（仅 36 字节格式走该
+    // 白名单），否则会被判为"替换明文或来源无效"。
+    static final int SPEECH_SHORT_ABC_FRAMES = 204;
     static final int SPEECH_SHORT_ABC_BYTES =
             SPEECH_SHORT_ABC_FRAMES * TxPlan.AMBE_BYTES_PER_FRAME;
     static final int SPEECH_SHORT_ABC_UNITS =
             SPEECH_SHORT_ABC_BYTES / PLAIN_BYTES;
+    // 重放载荷：2026-08-06 从真实 TYT 发射中捕获的 81 字节（3 个 27 字节
+    // CHAN_D 单元）重复 22 遍 = 66 单元 = 3.96 秒。已是模块交出来的线上
+    // 单元本身，发射时原样送出，不再经过编码器或隐私流水线。
+    static final int DMR_REPLAY_UNITS = 66;
+    static final int DMR_REPLAY_BYTES = DMR_REPLAY_UNITS * 27;
+
     static final int MAX_ACCEPTED_RAW_BYTES = 1024 * 1024;
     static final int SPEECH_BYTE_OFFSET = 1296;
 

@@ -55,6 +55,52 @@ final class SoftwareDmrPrivacyPipeline {
                 decoded.frameErrors, channelHamming, metrics);
     }
 
+    /**
+     * 不加扰的发送通路：与 buildFromClearChannel72() 逐步对应，唯一差别是
+     * 不对 49 位参数做隐私加扰。
+     *
+     * 为什么需要这条通路：信道配置里 encryptOnOff=off，固件在该设置下不
+     * 建立 RC4 密钥记录、不做任何隐私处理，只把主机给的语音比特原样发出。
+     * 若继续沿用加扰通路，空口上跑的就是加扰后的比特，而接收端按明文解，
+     * 结果必然是机械噪音——2026-09-19 首次真机发射实测正是如此：功率表
+     * 0.279 瓦、对端接收灯正常闪烁、时序与呼叫参数全部正确，唯独语音是
+     * 噪音。加扰通路自身的往返自检是"自己加扰再自己解扰"，永远自洽，
+     * 所以这个问题在离线阶段从来不会暴露。
+     */
+    static Result buildClearFromClearChannel72(byte[] runtime14,
+            byte[] clearChannel72) {
+        if (clearChannel72 == null || clearChannel72.length == 0
+                || clearChannel72.length % 36 != 0) {
+            throw new IllegalArgumentException("明文信道AMBE必须为36字节的非零倍数");
+        }
+        byte[] raw49 = SoftwareAmbeDecoder
+                .channelDecodeTo49BitPacked9(clearChannel72);
+        // 与加扰通路的唯一差别：直接用明文 49 位参数做信道编码。
+        byte[] channel72BeforeC3 = SoftwareAmbeEncoder
+                .channelEncode49BitPacked9(raw49);
+        byte[] channel72 = DmrPrivacy.fromRuntime14(runtime14)
+                .applyLateEntryC3ToChannelFrames(channel72BeforeC3);
+
+        // 接收端视角：不解扰，直接信道解码，应当还原出同一份明文参数。
+        byte[] receiverPlain49 = SoftwareAmbeDecoder
+                .channelDecodeTo49BitPacked9(channel72);
+        requireRoundTripExceptLateEntry(raw49, receiverPlain49);
+
+        SoftwareAmbeDecoder.DecodeResult decoded;
+        try (SoftwareAmbeDecoder decoder = new SoftwareAmbeDecoder()) {
+            decoded = decoder.decodeDetailed49BitPacked9(receiverPlain49);
+        }
+        int[] channelHamming = channelHammingDistances(channel72,
+                receiverPlain49, new int[] {21, 67, 69, 71});
+        requireAllZero(channelHamming, "C3以外信道往返");
+        AudioMetrics metrics = AudioMetrics.measure(decoded.pcm, 8000, 800.0);
+        // 明文通路没有加扰参数，privacy49 位置填入明文本身以保持结构一致。
+        return new Result(clearChannel72, raw49, raw49,
+                channel72BeforeC3, channel72,
+                receiverPlain49, receiverPlain49, decoded.pcm,
+                decoded.frameErrors, channelHamming, metrics);
+    }
+
     static void requireRoundTripExceptLateEntry(byte[] expected,
             byte[] actual) {
         if (expected == null || actual == null

@@ -7,6 +7,12 @@ import java.util.Locale;
 
 final class DmrProtocol {
     static final int SETUP_COUNT = 5;
+    // 发射调制链配置：原厂外部 DMR 配置链在工作模式之后写五个 codec
+    // 页/寄存器。线上格式与旧探针 createAnalogCodecWriteFrame 逐字节相同，
+    // 确认帧为 packetType=0x40、正文 {0x17, 0x00}。
+    static final int CODEC_COUNT = 5;
+    static final int CODEC_PACKET_TYPE = 0x40;
+    static final int CODEC_ACK_FIELD = 0x17;
     static final int VLC_COUNT = 5;
     static final int VLC_COUNT_AFTER_FIRST_DATA = VLC_COUNT - 2;
     static final int TERMINATION_COUNT = 1;
@@ -21,6 +27,49 @@ final class DmrProtocol {
     static Session session(int ownId, int calledId, int outputSequence,
             byte[] runtime14) {
         return new Session(ownId, calledId, outputSequence, runtime14);
+    }
+
+    /**
+     * 从信道配置串里取麦克风增益档位。字段顺序与 AT+DMOSETDIGITALCH
+     * 一致，第 14 个字段（下标 13）为该档位，取值 0..2。
+     */
+    static int micGainPreset(String channel) {
+        if (channel == null) {
+            throw new IllegalArgumentException("信道配置为空");
+        }
+        String[] fields = channel.split(",");
+        if (fields.length < 14) {
+            throw new IllegalArgumentException("信道配置字段不足："
+                    + fields.length);
+        }
+        int preset = Integer.parseInt(fields[13].trim());
+        if (preset < 0 || preset >= 3) {
+            throw new IllegalArgumentException("麦克风增益档位越界：" + preset);
+        }
+        return preset;
+    }
+
+    /** 单条 codec 页/寄存器写。第五条的值是增益，随信道档位而变。 */
+    static byte[] codecWrite(int page, int register, int value) {
+        if ((page & ~0xff) != 0 || (register & ~0xff) != 0
+                || (value & ~0xff) != 0) {
+            throw new IllegalArgumentException("codec页/寄存器/值必须为字节");
+        }
+        return HpiCodec.frame(CODEC_PACKET_TYPE, new byte[] {
+                0x00, (byte) page, (byte) register, (byte) value, 0x00, 0x00
+        });
+    }
+
+    /** 五条发射 codec 写，顺序与原厂链一致；gain 取自设备增益表。 */
+    static byte[] codec(int index, int gain) {
+        switch (index) {
+        case 0: return codecWrite(1, 0x10, 0x40);
+        case 1: return codecWrite(1, 0x3b, 0x11);
+        case 2: return codecWrite(0, 0x56, 0xf3);
+        case 3: return codecWrite(0, 0x57, 0xba);
+        case 4: return codecWrite(0, 0x58, gain);
+        default: throw new IndexOutOfBoundsException("codec索引");
+        }
     }
 
     static byte[] data36(byte[] payload) {

@@ -76,6 +76,8 @@ public final class MainActivity extends Activity {
             } else if (DmrTxController.MODE_RELAY_SOFTWARE_PRIVACY_TRIPLE_SOS_LOW_POWER_RF
                     .equals(mode)
                     || DmrTxController.MODE_SPEECH_SHORT_ABC_LOW_POWER_RF
+                    .equals(mode)
+                    || DmrTxController.MODE_DMR_REPLAY_CAPTURED_LOW_POWER_RF
                     .equals(mode)) {
                 runDevice(mode, getIntent().getStringExtra("rf_permission"));
             } else if (DmrTxController.MODE_LOW_POWER_RF.equals(mode)) {
