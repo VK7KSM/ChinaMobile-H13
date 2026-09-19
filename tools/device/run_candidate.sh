@@ -100,9 +100,28 @@ echo "  预检目录: $(basename "$LATEST")"
 # -AllowPotentialRf 只是宿主的"潜在发射路径"门禁，本身不会让设备发射：
 # 真正发射还要求模式名在 requestsLowPowerRf() 里，并且宿主额外下发
 # rf_permission。无射频模式带上这个开关只是为了通过门禁。
-if ! run_step "主试验 $MODE" -Mode "$MODE" -AllowDisableInterphone \
-        -AllowPotentialRf \
+# MIC_PATH_ON=1：主试验全程接通 H13 麦克风通路（audio_switch=1），并每 2 秒记录
+# 实际值到捕获目录，供核对射频窗内麦克风是否真的接通。结束后无论成败都复位。
+EXTRA=()
+MICLOG=""
+if [ "${MIC_PATH_ON:-0}" = 1 ]; then
+    EXTRA=(-MicPathOn)
+    MICLOG="$CAPDIR/mic_path_log_$(date +%Y%m%d_%H%M%S).txt"
+    ( while :; do echo "$(date +%T) audio_switch=$(adb_sh "su -c 'cat /sys/boptt/audio_switch'" | tr -d '\r')"; sleep 2; done ) > "$MICLOG" 2>&1 &
+    MICLOG_PID=$!
+fi
+STEP_OK=0
+if run_step "主试验 $MODE" -Mode "$MODE" -AllowDisableInterphone \
+        -AllowPotentialRf "${EXTRA[@]}" \
         -Setup0Stable -ClearPrecheckCapture "$(cygpath -w "$LATEST")"; then
+    STEP_OK=1
+fi
+if [ "${MIC_PATH_ON:-0}" = 1 ]; then
+    kill "$MICLOG_PID" 2>/dev/null
+    adb_sh "su -c 'echo 0 > /sys/boptt/audio_switch'" >/dev/null
+    echo "  麦克风通路已复位: audio_switch=$(adb_sh "su -c 'cat /sys/boptt/audio_switch'" | tr -d '\r')  记录: $(basename "$MICLOG")"
+fi
+if [ "$STEP_OK" != 1 ]; then
     restore_production
     echo
     echo "=== 失败时的设备侧会话（供追溯）==="

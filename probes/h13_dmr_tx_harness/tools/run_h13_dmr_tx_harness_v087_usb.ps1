@@ -35,6 +35,7 @@ param(
     [switch]$AllowInstall,
     [switch]$AllowDisableInterphone,
     [switch]$AllowPotentialRf,
+    [switch]$MicPathOn,
     [switch]$Setup0Stable,
     [string]$ClearPrecheckCapture = '',
     [int]$WaitSeconds = 900,
@@ -2658,6 +2659,16 @@ if ($Mode -ne 'clear_only') {
 $GpioBefore = Get-GpioState
 Save-Text 'gpio_before.txt' $GpioBefore
 Assert-GpioBaseline $GpioBefore
+if ($MicPathOn) {
+    # 判定实验：整个主试验期间接通 H13 麦克风模拟通路（GPIO23），流程结束复位。
+    $MicWrite = Invoke-AdbOptional shell "su -c 'echo 1 > /sys/boptt/audio_switch'"
+    $MicRead = Invoke-AdbOptional shell su -c 'cat /sys/boptt/audio_switch'
+    $MicValue = ($MicRead.Output -join '').Trim()
+    Save-Text 'mic_path_on.txt' "write_exit=$($MicWrite.ExitCode)`naudio_switch=$MicValue`ntime=$(Get-Date -Format o)"
+    if ($MicValue -ne '1') {
+        throw "麦克风通路打开失败：audio_switch=$MicValue"
+    }
+}
 $WifiBefore = Get-WifiState
 Save-Text 'wifi_before.txt' $WifiBefore
 Assert-WifiBaseline $WifiBefore
@@ -3093,6 +3104,11 @@ try {
 } finally {
     $StopAttempt = Invoke-AdbOptional shell am force-stop $Package
     Save-Text 'probe_force_stop_finally.txt' ($StopAttempt.Output -join "`n")
+    if ($MicPathOn) {
+        $MicOff = Invoke-AdbOptional shell "su -c 'echo 0 > /sys/boptt/audio_switch'"
+        $MicOffRead = Invoke-AdbOptional shell su -c 'cat /sys/boptt/audio_switch'
+        Save-Text 'mic_path_off.txt' "write_exit=$($MicOff.ExitCode)`naudio_switch=$(($MicOffRead.Output -join '').Trim())`ntime=$(Get-Date -Format o)"
+    }
     $PreActivityFailure = -not $ProbeActivityStartIssued -and -not $HardStop
     if ($ProductionDisabled -and (
             ((Test-ResultAllowsProductionRestore $Result) -and -not $HardStop) -or
