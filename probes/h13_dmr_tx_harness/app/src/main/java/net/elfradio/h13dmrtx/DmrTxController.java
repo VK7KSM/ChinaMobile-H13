@@ -150,13 +150,13 @@ final class DmrTxController {
         // 60 毫秒，H13 接收真实 DMR 信号时模块交出来的也正是 27 字节单元。
         // 2026-09-19 两次发射用 36 字节格式，射频、时序、呼叫参数全对但
         // 语音是噪音，正是把 dPMR 格式的包发在 DMR 信道上的表现。
-        // 重放模式按厂商 36 字节单元原样发送资产。
-        if (isDmrReplayCapturedMode(mode)) {
-            return DmrProtocol.VoiceFormat.LEGACY_CHAN_D36;
-        }
-        // 短素材按厂商外部编码合同发：type3 [01 24 <36字节>]，即历史格式。
-        if (isSpeechShortAbcMode(mode)) {
-            return DmrProtocol.VoiceFormat.LEGACY_CHAN_D36;
+        // 2026-09-19：本机模块自己交给宿主的待改写语音帧是
+        // [01 1b <27字节>]，与我们长流采集到的空口单元同为 27 字节。
+        // 厂商示例那台用 36 字节是因为它的 vocoder_output_len 不同，
+        // 照搬 36 会把 27 字节单元序列按 36 字节切片，每个包都跨在
+        // 单元边界上，空口必然是噪音。两族短素材改用 27 字节格式。
+        if (isDmrReplayCapturedMode(mode) || isSpeechShortAbcMode(mode)) {
+            return DmrProtocol.VoiceFormat.CHAN_D27_TYPE3;
         }
         return DmrProtocol.VoiceFormat.LEGACY_CHAN_D36;
     }

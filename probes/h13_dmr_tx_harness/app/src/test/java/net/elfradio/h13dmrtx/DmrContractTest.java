@@ -65,23 +65,24 @@ public final class DmrContractTest {
         // 两个短素材模式必须用 27 字节 DMR 格式：DMR 每突发 3 帧 27 字节
         // 60 毫秒；36 字节/80 毫秒是接口文档里 dPMR 的定义。2026-09-19 用
         // 36 字节格式发射两次，射频与呼叫参数全对但对端只听到机械噪音。
-        assertEquals(DmrProtocol.VoiceFormat.LEGACY_CHAN_D36,
+        assertEquals(DmrProtocol.VoiceFormat.CHAN_D27_TYPE3,
                 DmrTxController.voiceFormatForMode(
                         DmrTxController.MODE_SPEECH_SHORT_ABC_NO_RF));
-        assertEquals(DmrProtocol.VoiceFormat.LEGACY_CHAN_D36,
+        assertEquals(DmrProtocol.VoiceFormat.CHAN_D27_TYPE3,
                 DmrTxController.voiceFormatForMode(
                         DmrTxController.MODE_SPEECH_SHORT_ABC_LOW_POWER_RF));
-        assertEquals(DmrProtocol.VoiceFormat.LEGACY_CHAN_D36,
+        assertEquals(DmrProtocol.VoiceFormat.CHAN_D27_TYPE3,
                 DmrTxController.voiceFormatForMode(
                         DmrTxController.MODE_DMR_REPLAY_CAPTURED_LOW_POWER_RF));
-        assertEquals(51, DmrTxController.expectedUnitsFor(
+        // 27 字节单元：1836 字节 = 68 单元，每单元 60 毫秒，共 4.08 秒。
+        assertEquals(68, DmrTxController.expectedUnitsFor(
                 RealtimeRelay.DMR_REPLAY_BYTES,
-                DmrProtocol.VoiceFormat.LEGACY_CHAN_D36));
-        assertEquals(51, DmrTxController.expectedUnitsFor(
+                DmrProtocol.VoiceFormat.CHAN_D27_TYPE3));
+        assertEquals(68, DmrTxController.expectedUnitsFor(
                 RealtimeRelay.SPEECH_SHORT_ABC_BYTES,
-                DmrProtocol.VoiceFormat.LEGACY_CHAN_D36));
-        assertTrue(DmrTxController.firstBridgeBudgetWellFormedFor(51, 80L));
-        assertTrue(DmrTxController.ackPacedActiveRfBudgetWellFormedFor(51, 80L));
+                DmrProtocol.VoiceFormat.CHAN_D27_TYPE3));
+        assertTrue(DmrTxController.firstBridgeBudgetWellFormedFor(68, 60L));
+        assertTrue(DmrTxController.ackPacedActiveRfBudgetWellFormedFor(68, 60L));
         // 素材帧数必须同时被 3 和 4 整除，两种格式都不补位。
         assertEquals(0, RealtimeRelay.SPEECH_SHORT_ABC_FRAMES % 3);
         assertEquals(0, RealtimeRelay.SPEECH_SHORT_ABC_FRAMES % 4);

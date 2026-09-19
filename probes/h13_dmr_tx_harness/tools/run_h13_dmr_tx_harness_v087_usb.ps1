@@ -51,10 +51,10 @@ $ProductionPackage = 'net.elfradio.h13interphone'
 $ProductionActivity = 'net.elfradio.h13interphone/com.bozhou.interphone.ui.talk.MainActivity'
 $Activity = 'net.elfradio.h13dmrtx/.MainActivity'
 $ExpectedFingerprint = 'CMCC/msm8909/msm8909:8.1.0/OPM1.171019.026/build11020953:user/test-keys'
-$ExpectedVersionCode = 88
-$ExpectedVersionName = '0.88-post-vlc-listen-window'
-$ExpectedApkSha256 = 'A67632A222395F5273EBD937FC1D50A2B05EA7439A9CC992351646122AABD0E1'
-$Apk = Join-Path $PSScriptRoot '..\dist\H13_DMR_TX_Harness_v0.88_PostVlcListenWindow.apk'
+$ExpectedVersionCode = 90
+$ExpectedVersionName = '0.90-chan-d27-onair-asset'
+$ExpectedApkSha256 = 'A26EF7238C0F48C7618140753841DCEB9320C561B6380B94A4B9FBDE6C70AFEE'
+$Apk = Join-Path $PSScriptRoot '..\dist\H13_DMR_TX_Harness_v0.90_ChanD27OnAirAsset.apk'
 $DeadlineHelper = Join-Path $PSScriptRoot '..\..\h13_radio\tools\h13_external_dmr_rf_deadline_device.sh'
 $RemoteDeadlineHelper = '/data/local/tmp/h13_dmr_tx_deadline.sh'
 $ExpectedDeadlineHelperSha256 = '522792E4E515DAAF674F56DA953178FC4E1A71812D71DFFE2D3F486BD82B2110'
@@ -266,14 +266,14 @@ function Assert-ModeResult {
         # short first-RF material: 4.08 s, 204 frames, 27-byte DMR format
         # = 3 frames/unit = 68 units x 60 ms
         'speech_short_abc_no_rf' { @{
-            Mode='speech_short_abc_no_rf'; Setup=5; Vlc=2; Data=51 } }
+            Mode='speech_short_abc_no_rf'; Setup=5; Vlc=2; Data=68 } }
         'speech_short_abc_low_power_rf' { @{
-            Mode='speech_short_abc_low_power_rf'; Setup=5; Vlc=2; Data=51 } }
+            Mode='speech_short_abc_low_power_rf'; Setup=5; Vlc=2; Data=68 } }
         # replay of real captured DMR units: 66 units x 60 ms = 3.96 s
         'dmr_replay_captured_no_rf' { @{
-            Mode='dmr_replay_captured_no_rf'; Setup=5; Vlc=2; Data=51 } }
+            Mode='dmr_replay_captured_no_rf'; Setup=5; Vlc=2; Data=68 } }
         'dmr_replay_captured_low_power_rf' { @{
-            Mode='dmr_replay_captured_low_power_rf'; Setup=5; Vlc=2; Data=51 } }
+            Mode='dmr_replay_captured_low_power_rf'; Setup=5; Vlc=2; Data=68 } }
         # receive capture: read-only, no bridge, no setup/vlc/data at all
         'dmr_rx_capture_no_rf' { @{
             Mode='dmr_rx_capture_no_rf'; Setup=0; Vlc=0; Data=0 } }

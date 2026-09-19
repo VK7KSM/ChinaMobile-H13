@@ -44,8 +44,9 @@ final class RealtimeRelay {
     static final int SPEECH_SHORT_ABC_FRAMES = 204;
     static final int SPEECH_SHORT_ABC_BYTES =
             SPEECH_SHORT_ABC_FRAMES * TxPlan.AMBE_BYTES_PER_FRAME;
+    // 单元数按 27 字节 DMR 突发算：204 帧 = 68 单元 = 4.08 秒。
     static final int SPEECH_SHORT_ABC_UNITS =
-            SPEECH_SHORT_ABC_BYTES / PLAIN_BYTES;
+            SPEECH_SHORT_ABC_BYTES / DmrProtocol.VOICE_BURST_BYTES;
     // 重放载荷：2026-09-19 用已验收的长流采集从真实 TYT 发射中取得的
     // 27 字节 CHAN_D 单元，操作者已听感确认为清晰人声。取能量最高的
     // 132 个单元 = 7.92 秒——不取全部 244 个单元（14.6 秒），因为射频
@@ -53,9 +54,9 @@ final class RealtimeRelay {
     // 200 个单元都会超预算，132 个留约 1.7 秒余量。
     // 载荷已是模块交出来的线上单元本身，发射时原样送出，不再经过
     // 编码器或隐私流水线。
-    // 当前重放资产：204 帧交织前排列，按 36 字节单元 = 51 单元 = 1836 字节。
-    static final int DMR_REPLAY_UNITS = 51;
-    static final int DMR_REPLAY_BYTES = DMR_REPLAY_UNITS * 36;
+    // 当前重放资产：204 帧，按 27 字节 DMR 突发 = 68 单元 = 1836 字节。
+    static final int DMR_REPLAY_UNITS = 68;
+    static final int DMR_REPLAY_BYTES = DMR_REPLAY_UNITS * 27;
 
     static final int MAX_ACCEPTED_RAW_BYTES = 1024 * 1024;
     static final int SPEECH_BYTE_OFFSET = 1296;
