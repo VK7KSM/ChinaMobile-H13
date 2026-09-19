@@ -380,10 +380,14 @@ final class DmrProtocol {
             switch (index) {
             case 0:
                 return HpiCodec.frame(0, new byte[] {0x19, 0x00});
+            // 厂商 button_vocoder_in_out_Click 的顺序是先 VOCODER_IO_SET
+            // （0x3e，值 0x60 = 外部编码发射），再 VOCODER_CMD_SET（0x02，
+            // 值 24），且后者只在 IO 值已是外部编码时才发。我们此前两条
+            // 是反的，等于在路由还指向内部输入时就下了 vocoder 命令。
             case 1:
-                return HpiCodec.frame(0, new byte[] {0x02, 0x18});
-            case 2:
                 return HpiCodec.frame(0, new byte[] {0x3e, 0x60});
+            case 2:
+                return HpiCodec.frame(0, new byte[] {0x02, 0x18});
             case 3:
                 return HpiCodec.frame(5,
                         new byte[] {0x6f, (byte) callSlot()});

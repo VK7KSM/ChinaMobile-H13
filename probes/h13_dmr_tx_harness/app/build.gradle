@@ -8,8 +8,8 @@ android {
         applicationId 'net.elfradio.h13dmrtx'
         minSdk 21
         targetSdk 27
-        versionCode 90
-        versionName '0.90-chan-d27-onair-asset'
+        versionCode 92
+        versionName '0.92-vocoder-io-before-cmd'
         testInstrumentationRunner 'android.support.test.runner.AndroidJUnitRunner'
         ndk {
             abiFilters 'armeabi-v7a'

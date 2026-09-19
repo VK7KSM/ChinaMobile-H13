@@ -232,9 +232,11 @@ public final class DmrContractTest {
         DmrProtocol.Session session = DmrProtocol.session(13, 99, 0, RUNTIME14);
         assertEquals("84 a9 61 00 02 00 19 00",
                 Bytes.hex(session.setup(0)));
-        assertEquals("84 a9 61 00 02 00 02 18",
-                Bytes.hex(session.setup(1)));
+        // 2026-09-19：按厂商 button_vocoder_in_out_Click 的顺序更正，
+        // 先 VOCODER_IO_SET(0x3e, 0x60) 再 VOCODER_CMD_SET(0x02, 24)。
         assertEquals("84 a9 61 00 02 00 3e 60",
+                Bytes.hex(session.setup(1)));
+        assertEquals("84 a9 61 00 02 00 02 18",
                 Bytes.hex(session.setup(2)));
         assertEquals("84 a9 61 00 02 05 6f 81",
                 Bytes.hex(session.setup(3)));

@@ -472,9 +472,10 @@ final class DmrTxController {
         boolean speechAz09 = isSpeechAz09Mode(mode);
         boolean speechShortAbc = isSpeechShortAbcMode(mode);
         boolean dmrReplayCaptured = isDmrReplayCapturedMode(mode);
-        // 重放模式在两条 VLC 之后先静听三秒，量模块自发交帧的数量与间隔。
-        // 静听窗只读不写，不改任何计数，随后照常推送。
-        postVlcListenMs = dmrReplayCaptured ? 3000L : 0L;
+        // 静听窗只用于零射频探针：射频路径里它会让载波先空发三秒无语音，
+        // 2026-09-19 第十三次发射就是这样变成约十秒噪音的。
+        postVlcListenMs = MODE_DMR_REPLAY_CAPTURED_NO_RF.equals(mode)
+                ? 3000L : 0L;
         boolean softwarePrivacyTripleSos =
                 MODE_RELAY_SOFTWARE_PRIVACY_TRIPLE_SOS_NO_RF.equals(mode)
                 || MODE_RELAY_SOFTWARE_PRIVACY_TRIPLE_SOS_LOW_POWER_RF
