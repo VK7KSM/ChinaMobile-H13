@@ -94,6 +94,18 @@ final class DmrTxController {
     static final String MODE_SPEECH_AZ09_DIGC_NO_RF =
             "speech_az09_digc_frame_no_rf";
 
+    // 首次真机低功率发射验证素材（2026-09-19）。正文只念"A、B、C"三个字母，
+    // 经填充静音固定为50个历史36字节单元（每单元80毫秒，共4.0秒），刻意
+    // 远短于28.80秒的完整人声素材——这是新语音内容第一次真正接入发射
+    // 通路，不与"新素材要不要放大第一桥/RF保持时限"这两件事一起验证。
+    // 走的是历史LEGACY_CHAN_D36格式（voiceFormatForMode默认分支），
+    // 与唯一仍启用的MODE_RELAY_SOFTWARE_PRIVACY_TRIPLE_SOS_LOW_POWER_RF
+    // 用同一套已验证的RF准备/保持/收尾机制，只换音频内容这一个变量。
+    static final String MODE_SPEECH_SHORT_ABC_NO_RF =
+            "speech_short_abc_no_rf";
+    static final String MODE_SPEECH_SHORT_ABC_LOW_POWER_RF =
+            "speech_short_abc_low_power_rf";
+
     static final String RF_PERMISSION = "authorized_low_power_once";
     /**
      * 会话所用的语音注入格式。除三个语音突发验证模式外一律为历史实现，
@@ -208,7 +220,13 @@ final class DmrTxController {
                 || MODE_VOICE_BURST_DIGC_NO_RF.equals(mode);
     }
 
+    static boolean isSpeechShortAbcMode(String mode) {
+        return MODE_SPEECH_SHORT_ABC_NO_RF.equals(mode)
+                || MODE_SPEECH_SHORT_ABC_LOW_POWER_RF.equals(mode);
+    }
+
     static final String RELAY_SOURCE_SPEECH_AZ09 = "speech_az09";
+    static final String RELAY_SOURCE_SPEECH_SHORT_ABC = "speech_short_abc";
     static final String RELAY_SOURCE_ENCODE_DMR_SILENCE =
             "encode_dmr_silence";
     static final String RELAY_SOURCE_ENCODE_DMR_TONE800 =
@@ -287,6 +305,10 @@ final class DmrTxController {
             * TxPlan.UNIT_INTERVAL_MS;
     private static final long SECOND_BRIDGE_EXIT_MS = 3000;
     private static final long SECOND_BRIDGE_MARGIN_MS = 1500;
+    // 操作安全约束，不是设备保护值：单次实际射频占空时间不得超过30秒，
+    // 用户明确要求（"射频发射最长30秒就是极限了"），与热保护/RF_HOLD_MS
+    // 无关，见ackPacedActiveRfBudgetWellFormedFor()。
+    static final long MAX_SINGLE_TRANSMISSION_MS = 30000;
     private static final int[] FIRMWARE_SLICE_ADDRESSES = {
             0x0801568c, 0x0801db08, 0x080202a0, 0x08024dc0,
             0x0802680c, 0x0801d834, 0x0802314c, 0x080235c8
@@ -399,6 +421,7 @@ final class DmrTxController {
         boolean ackPacedVlcSoftware = ackPacedVlcSoftwareOne
                 || ackPacedVlcSoftwareTripleSos;
         boolean speechAz09 = isSpeechAz09Mode(mode);
+        boolean speechShortAbc = isSpeechShortAbcMode(mode);
         boolean softwarePrivacyTripleSos =
                 MODE_RELAY_SOFTWARE_PRIVACY_TRIPLE_SOS_NO_RF.equals(mode)
                 || MODE_RELAY_SOFTWARE_PRIVACY_TRIPLE_SOS_LOW_POWER_RF
@@ -555,6 +578,53 @@ final class DmrTxController {
                     evidence.saveEvent("ambe", "speech_az09_channel72",
                             pipeline.channel72);
                     evidence.saveText("ambe", "speech_az09_summary",
+                            "frames=" + pipeline.frames() + "\n"
+                            + "channel72_bytes="
+                            + pipeline.channel72.length + "\n"
+                            + "encode_elapsed_us=" + encodeElapsedUs + "\n"
+                            + "seconds=" + (pipeline.frames() * 0.02) + "\n");
+                } else if (speechShortAbc) {
+                    // 首次真机发射验证素材：只念"A、B、C"，填充静音固定为
+                    // 200帧/50个历史36字节单元、4.0秒，与speechAz09并列，
+                    // 走历史LEGACY_CHAN_D36格式（voiceFormatForMode默认
+                    // 分支未把这两个新模式加入CHAN_D27/DIGC判定）。
+                    status("首次射频验证短素材（A/B/C）经软件AMBE编解码闭环");
+                    byte[] inputPcmRaw = readAll(assets.open(
+                            "software_ambe_vectors/speech_short_abc.pcm_s16le"));
+                    short[] inputPcm = TxPlan.decodePcmS16Le(inputPcmRaw);
+                    byte[] goldenChannel72 = readAll(assets.open(
+                            "software_ambe_vectors/speech_short_abc"
+                            + ".ambe9_sequence.bin"));
+                    long encodeStarted = System.nanoTime();
+                    byte[] actualChannel72;
+                    try (SoftwareAmbeEncoder encoder =
+                            new SoftwareAmbeEncoder()) {
+                        actualChannel72 = encoder.encode(inputPcm);
+                    }
+                    long encodeElapsedUs = (System.nanoTime() - encodeStarted)
+                            / 1000L;
+                    if (!Arrays.equals(actualChannel72, goldenChannel72)) {
+                        throw new IOException("短素材软件AMBE输出不匹配冻结向量");
+                    }
+                    if (actualChannel72.length != 1800) {
+                        throw new IOException("短素材帧流长度错误："
+                                + actualChannel72.length);
+                    }
+                    SoftwareDmrPrivacyPipeline.Result pipeline =
+                            SoftwareDmrPrivacyPipeline.buildFromClearChannel72(
+                                    runtime14, actualChannel72);
+                    if (pipeline.frames() != 200
+                            || pipeline.channel72.length != 1800) {
+                        throw new IOException("短素材发送向量帧数错误");
+                    }
+                    software49Bit36 = pipeline.channel72;
+                    software49BitSource = RELAY_SOURCE_SPEECH_SHORT_ABC;
+                    softwareFinalWirePayload = true;
+                    evidence.saveEvent("ambe", "speech_short_abc_input_pcm",
+                            inputPcmRaw);
+                    evidence.saveEvent("ambe", "speech_short_abc_channel72",
+                            pipeline.channel72);
+                    evidence.saveText("ambe", "speech_short_abc_summary",
                             "frames=" + pipeline.frames() + "\n"
                             + "channel72_bytes="
                             + pipeline.channel72.length + "\n"
@@ -919,6 +989,23 @@ final class DmrTxController {
                                 + FIRST_BRIDGE_EXIT_MS + "毫秒)前收尾，"
                                 + "拒绝武装第一桥");
                     }
+                    if (allowRf) {
+                        // 真正会发射的会话额外核对RF保持窗和用户设定的
+                        // 30秒单次发射硬上限——这两件事不是接口桥能不能
+                        // 撑到收尾，是键控之后天线上到底占空多久，必须在
+                        // 武装任何射频之前单独核对，不能指望第一桥的
+                        // 检查间接覆盖。
+                        long guardRfOnMs = guardUnits * guardIntervalMs;
+                        if (!ackPacedActiveRfBudgetWellFormedFor(guardUnits,
+                                guardIntervalMs)) {
+                            throw new IOException("本次会话按" + guardUnits
+                                    + "个单元、每单元" + guardIntervalMs
+                                    + "毫秒算出实际射频占空约" + guardRfOnMs
+                                    + "毫秒，超出RF保持窗(" + RF_HOLD_MS
+                                    + "毫秒)或30秒单次发射上限的安全余量，"
+                                    + "拒绝武装射频");
+                        }
+                    }
                 }
                 status("保存全部SRAM真实原像");
                 backupAllTouchedSram();
@@ -1172,6 +1259,35 @@ final class DmrTxController {
                 && FULLPREP_DELAY_MS + RF_HOLD_MS > worstEndMs;
     }
 
+    /**
+     * ackPacedActiveRfBudgetWellFormed()的通用版本，同firstBridgeBudgetWellFormedFor()
+     * 之于ackPacedActiveBudgetWellFormed()。真正发射前必须核对两件事：
+     * 接口桥撑得到收尾（复用firstBridgeBudgetWellFormedFor），以及实际
+     * 语音突发的空口占用时长（unitCount*unitIntervalMs，近似DMR连续
+     * 发射的真实射频占空时间）留在RF_HOLD_MS的安全保持窗内、且不超过
+     * 用户设定的单次发射30秒硬上限——后者不是设备保护，是操作安全约束，
+     * 这里显式核对，不能只指望RF_HOLD_MS间接兜底。
+     */
+    static boolean ackPacedActiveRfBudgetWellFormedFor(int unitCount,
+            long unitIntervalMs) {
+        long cleanupMs = 1300L * DmrProtocol.CLEANUP_COUNT;
+        long ackPacedVlcWorstMs = RELAY_VLC_ACK_DURATION_MS
+                * DmrProtocol.VLC_COUNT;
+        long bodyWorstMs = (unitCount - 1L) * unitIntervalMs
+                + TxPlan.MAX_LATE_MS;
+        long terminationWorstMs = 300L + 500L;
+        long worstEndMs = FULLPREP_DELAY_MS + ackPacedVlcWorstMs
+                + bodyWorstMs + ACTIVE_PACED_TAIL_MS
+                + terminationWorstMs + cleanupMs;
+        long actualRfOnMs = unitCount * unitIntervalMs;
+        return firstBridgeBudgetWellFormedFor(unitCount, unitIntervalMs)
+                && DmrProtocol.CLEANUP_COUNT == 2
+                && worstEndMs <= FIRST_BRIDGE_EXIT_MS - FIRST_BRIDGE_MARGIN_MS
+                && FULLPREP_DELAY_MS + RF_HOLD_MS > worstEndMs
+                && actualRfOnMs + 1000L <= RF_HOLD_MS
+                && actualRfOnMs + 1000L <= MAX_SINGLE_TRANSMISSION_MS;
+    }
+
     static boolean usesAckPacedTripleSos(String mode) {
         // 三个语音突发验证模式共用这条 v0.79 已验证的主动节拍供数路径，
         // 唯一差别是语音单元的线上格式，由 voiceFormatForMode 决定。
@@ -1179,12 +1295,14 @@ final class DmrTxController {
                 || MODE_RELAY_SOFTWARE_PRIVACY_TRIPLE_SOS_LOW_POWER_RF
                         .equals(mode)
                 || isVoiceBurstMode(mode)
-                || isSpeechAz09Mode(mode);
+                || isSpeechAz09Mode(mode)
+                || isSpeechShortAbcMode(mode);
     }
 
     static boolean requestsLowPowerRf(String mode) {
         return MODE_RELAY_SOFTWARE_PRIVACY_TRIPLE_SOS_LOW_POWER_RF
-                .equals(mode);
+                .equals(mode)
+                || MODE_SPEECH_SHORT_ABC_LOW_POWER_RF.equals(mode);
     }
 
     static long activePacedTargetAt(long firstFlushAt, int unitIndex) {
@@ -2376,6 +2494,8 @@ final class DmrTxController {
                 || !(RELAY_SOURCE_ACK_PACED_SOFTWARE_TRIPLE_SOS.equals(
                         activeRelay.payloadSource())
                         || RELAY_SOURCE_SPEECH_AZ09.equals(
+                                activeRelay.payloadSource())
+                        || RELAY_SOURCE_SPEECH_SHORT_ABC.equals(
                                 activeRelay.payloadSource()))
                 || activeRelay.unitsWritten() != 0
                 || activeRelay.creditsConsumed() != 0
@@ -2383,7 +2503,8 @@ final class DmrTxController {
                 || machine.phase() != TxStateMachine.Phase.WAIT_RELAY_COMPLETION) {
             String formatError = activeRelay == null ? "中继未建立"
                     : voiceFormatConsistencyError(activeRelay.voiceFormat(),
-                            activeRelay.maximumUnits());
+                            activeRelay.maximumUnits(),
+                            activeRelay.bodyBytes());
             throw new IOException("ACK节拍五VLC后主动三遍SOS准入状态错误"
                     + (formatError == null ? ""
                             : "（格式一致性：" + formatError + "）"));

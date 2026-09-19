@@ -30,7 +30,10 @@ final class DeviceModePolicy {
                 || DmrTxController.MODE_ACK_PACED_VLC_SOFTWARE_ONE_NO_RF.equals(mode)
                 || DmrTxController.MODE_ACK_PACED_VLC_SOFTWARE_TRIPLE_SOS_NO_RF.equals(mode)
                 || DmrTxController.isVoiceBurstMode(mode)
-                || DmrTxController.isSpeechAz09Mode(mode);
+                || DmrTxController.isSpeechAz09Mode(mode)
+                // 短素材的无射频变体在这里登记；低功率发射变体不登记，
+                // 与三遍SOS低功率一致，由MainActivity的射频分支带许可启动。
+                || DmrTxController.MODE_SPEECH_SHORT_ABC_NO_RF.equals(mode);
     }
 
     static boolean showsRelayStatus(String mode) {

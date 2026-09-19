@@ -46,6 +46,29 @@ public final class DmrContractTest {
         assertFalse(DmrTxController.requestsLowPowerRf(
                 DmrTxController.MODE_ACK_PACED_VLC_SOFTWARE_TRIPLE_SOS_NO_RF));
         assertFalse(DeviceModePolicy.autoStartsWithoutRf("unknown_mode"));
+        // v0.87 短素材：无射频变体必须能自动启动，低功率发射变体必须不在
+        // 这条路径上（它要走带rf_permission的射频分支）。历史上v0.75和
+        // v0.87都因为新模式没在设备侧分派登记而空等整轮再超时，这条断言
+        // 把那类问题挡在上机之前。
+        assertTrue(DeviceModePolicy.autoStartsWithoutRf(
+                DmrTxController.MODE_SPEECH_SHORT_ABC_NO_RF));
+        assertTrue(DeviceModePolicy.showsRelayStatus(
+                DmrTxController.MODE_SPEECH_SHORT_ABC_NO_RF));
+        assertFalse(DeviceModePolicy.autoStartsWithoutRf(
+                DmrTxController.MODE_SPEECH_SHORT_ABC_LOW_POWER_RF));
+        assertTrue(DmrTxController.requestsLowPowerRf(
+                DmrTxController.MODE_SPEECH_SHORT_ABC_LOW_POWER_RF));
+        assertFalse(DmrTxController.requestsLowPowerRf(
+                DmrTxController.MODE_SPEECH_SHORT_ABC_NO_RF));
+        assertTrue(DmrTxController.usesAckPacedTripleSos(
+                DmrTxController.MODE_SPEECH_SHORT_ABC_LOW_POWER_RF));
+        // 两个短素材模式都必须落到历史36字节格式（默认分支）。
+        assertEquals(DmrProtocol.VoiceFormat.LEGACY_CHAN_D36,
+                DmrTxController.voiceFormatForMode(
+                        DmrTxController.MODE_SPEECH_SHORT_ABC_NO_RF));
+        assertEquals(DmrProtocol.VoiceFormat.LEGACY_CHAN_D36,
+                DmrTxController.voiceFormatForMode(
+                        DmrTxController.MODE_SPEECH_SHORT_ABC_LOW_POWER_RF));
     }
 
     @Test
@@ -70,6 +93,20 @@ public final class DmrContractTest {
         // 结果要和historical写死版本一致，确认新旧算式没有分叉。
         assertTrue(DmrTxController.firstBridgeBudgetWellFormedFor(
                 RealtimeRelay.TRIPLE_SOS_UNITS, TxPlan.UNIT_INTERVAL_MS));
+        // speech_short_abc素材（v0.87首次真机发射验证）：50个历史36字节
+        // 单元、每单元80毫秒（200帧AMBE÷4）。既要撑得到第一桥收尾，也要
+        // 满足RF专用的保持窗和30秒单次发射硬上限——这是发射前必须为真的
+        // 门槛，不是事后补的回归测试。
+        assertTrue(DmrTxController.firstBridgeBudgetWellFormedFor(50, 80L));
+        assertTrue(DmrTxController.ackPacedActiveRfBudgetWellFormedFor(
+                50, 80L));
+        // 旧三遍SOS的RF专用通用版本同样要和写死版本一致。
+        assertTrue(DmrTxController.ackPacedActiveRfBudgetWellFormedFor(
+                RealtimeRelay.TRIPLE_SOS_UNITS, TxPlan.UNIT_INTERVAL_MS));
+        // 30秒硬上限是操作安全约束：换算成分钟级的假想单元数必须被算法
+        // 正确拒绝，防止以后有人不小心把素材做得太长又没人发现。
+        assertFalse(DmrTxController.ackPacedActiveRfBudgetWellFormedFor(
+                400, 80L));
         assertArrayEquals(new byte[] {
                 0x01, 0x01, 0x01, 0x00, 0x00,
                 0x12, 0x34, 0x56, 0x78, (byte) 0x90,

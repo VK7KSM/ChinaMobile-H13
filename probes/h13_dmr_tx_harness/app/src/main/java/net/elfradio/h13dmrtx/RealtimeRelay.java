@@ -31,6 +31,16 @@ final class RealtimeRelay {
     static final int SPEECH_AZ09_FRAMES = 1440;
     static final int SPEECH_AZ09_BYTES =
             SPEECH_AZ09_FRAMES * TxPlan.AMBE_BYTES_PER_FRAME;
+
+    // 首次真机低功率发射验证素材：只念 A、B、C，填充静音后正好 200 帧、
+    // 4.00 秒。走历史 36 字节格式，因此 200 帧必须能被 4 整除（50 个单元）。
+    // 长度要登记进下面构造函数的历史格式长度白名单，否则会被判为
+    // "替换明文或来源无效"——v0.87 首次上机就是栽在这里。
+    static final int SPEECH_SHORT_ABC_FRAMES = 200;
+    static final int SPEECH_SHORT_ABC_BYTES =
+            SPEECH_SHORT_ABC_FRAMES * TxPlan.AMBE_BYTES_PER_FRAME;
+    static final int SPEECH_SHORT_ABC_UNITS =
+            SPEECH_SHORT_ABC_BYTES / PLAIN_BYTES;
     static final int MAX_ACCEPTED_RAW_BYTES = 1024 * 1024;
     static final int SPEECH_BYTE_OFFSET = 1296;
 
@@ -280,6 +290,7 @@ final class RealtimeRelay {
                     && replacementPlain36.length != CONTINUOUS_BYTES
                     && replacementPlain36.length != SUPERFRAME_BYTES
                     && replacementPlain36.length != SPEECH_BYTES
+                    && replacementPlain36.length != SPEECH_SHORT_ABC_BYTES
                     && replacementPlain36.length != TRIPLE_SOS_BYTES)) {
                 throw new IllegalArgumentException("替换明文或来源无效");
             }
