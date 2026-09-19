@@ -2807,6 +2807,7 @@ final class DmrTxController {
         int offers = 0;
         int credits = 0;
         int creditsUsed = 0;
+        int offersUsed = 0;
         int waited = 0;
         int readIndex = 0;
         long firstFlushAt = -1L;
@@ -2829,20 +2830,19 @@ final class DmrTxController {
                     carry = countPermits(carry, counts);
                     offers += counts[0];
                     credits += counts[1];
-                    if (index == 0) {
-                        permitted = offers >= VENDOR_TX_DELAY_OFFERS;
-                    } else {
-                        permitted = credits > creditsUsed;
-                    }
+                    // 一对一：模块每交出一帧，立刻回送一帧。
+                    // 按回执逐帧（v1.00）把串口往返延迟串进了时间轴，
+                    // 68 个单元被拉到 10.4 秒、音频本身只有 4.08 秒，
+                    // 多数时隙模块手上没有有效帧，对端完全无声。
+                    // 交帧本身就是"该替换这一帧了"的信号，见 2.8.75。
+                    permitted = offers > offersUsed;
                 }
                 recordRelayRead("offer_wait_" + readIndex++,
                         activeRelay.unitsWritten(), credits, readBegin,
                         10L, readReturn, chunk);
             }
             if (permitted) {
-                if (index > 0) {
-                    creditsUsed++;
-                }
+                offersUsed++;
             } else {
                 waited++;
             }
@@ -2890,6 +2890,7 @@ final class DmrTxController {
                 + "module_credits=" + credits + "\n"
                 + "writes_without_permit=" + waited + "\n"
                 + "credits_used=" + creditsUsed + "\n"
+                + "offers_used=" + offersUsed + "\n"
                 + "tx_delay_offers=" + VENDOR_TX_DELAY_OFFERS + "\n"
                 + "first_flush_ms=" + firstFlushAt + "\n");
         if (!activeRelay.activePacedComplete()
