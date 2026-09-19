@@ -120,6 +120,10 @@ final class DmrTxController {
     // 单元原样取回。用途有二：确认 H13 接收链是否正常；取得新鲜的
     // 已知正确语音单元作为发射侧的参照。
     static final String MODE_DMR_RX_CAPTURE_NO_RF = "dmr_rx_capture_no_rf";
+    // 只发文本 AT 命令、记录回复的探针模式。不装桥、不改内存、不发射。
+    // 用来摸清录音与播放这组命令的参数与回复，为"经受支持的通路把语音
+    // 单元送进模块语音流水线"这条路线做准备。
+    static final String MODE_AT_PROBE_NO_RF = "at_probe_no_rf";
 
     static final String RF_PERMISSION = "authorized_low_power_once";
     /**
@@ -429,6 +433,7 @@ final class DmrTxController {
         boolean setup0Only = MODE_SETUP0_ONLY.equals(mode);
         boolean clearOnly = MODE_CLEAR_ONLY.equals(mode);
         boolean rxCapture = MODE_DMR_RX_CAPTURE_NO_RF.equals(mode);
+        boolean atProbe = MODE_AT_PROBE_NO_RF.equals(mode);
         boolean deadlineHandshakeOnly =
                 MODE_DEADLINE_HANDSHAKE_NO_RF.equals(mode);
         if (MODE_LOW_POWER_RF.equals(mode)) {
@@ -521,7 +526,7 @@ final class DmrTxController {
                 || encodeDmrRelay;
         boolean fixedAssetRelay = MODE_RELAY_FIXED_ASSET_NO_RF.equals(mode);
         if (!MODE_NO_RF.equals(mode) && !setup0Only && !clearOnly
-                && !rxCapture
+                && !rxCapture && !atProbe
                 && !deadlineHandshakeOnly && !allowRf && !relayOne) {
             throw new IllegalArgumentException("设备模式或低功率许可参数无效");
         }
@@ -570,8 +575,16 @@ final class DmrTxController {
             debugOutput = new McuDebugOutput(textExchange);
             verifyTextBaseline();
             verifyFirmwareSlices();
-            byte[] runtime14 = preparePrivacySessionAndMeasureRuntime();
-            if (rxCapture) {
+            byte[] runtime14 = preparePrivacySessionAndMeasureRuntime(
+                    speechShortAbc || dmrReplayCaptured);
+            if (atProbe) {
+                runAtProbe();
+                restorePrivacyOff();
+                verifyPostRestoreText();
+                disableDebugOutputAndVerify();
+                success = !privacyMutation && textRecoveryConfirmed
+                        && debugOutput.restored();
+            } else if (rxCapture) {
                 captureDmrRx();
                 restorePrivacyOff();
                 verifyPostRestoreText();
@@ -1233,7 +1246,16 @@ final class DmrTxController {
         }
     }
 
-    private byte[] preparePrivacySessionAndMeasureRuntime() throws Exception {
+    /**
+     * @param keepClearChannel 为真时整个会话停留在明文信道。
+     *     2026-09-20：此前无条件把信道切到加密打开（密钥 12345678）并
+     *     保持到会话结束，理由是早期还原控制链时的历史基线要求。后果是
+     *     十五次发射全部发在加密信道上，对端没有密钥，听到的必然是噪音——
+     *     且与我们送什么内容无关，与麦克风是否接通也无关。厂商按 PTT 时
+     *     下发的信道字段第十项是 off。语音验证一律走明文。
+     */
+    private byte[] preparePrivacySessionAndMeasureRuntime(
+            boolean keepClearChannel) throws Exception {
         byte[] channel = text("AT+DMOGETDIGITALCH", 1800);
         if (!containsLine(channel, "+DMOGETDIGITALCH:" + CHANNEL_OFF)) {
             privacyMutation = true;
@@ -1249,6 +1271,12 @@ final class DmrTxController {
         evidence.saveEvent("privacy", "clear_channel_runtime14",
                 privacyOffBaseline14);
 
+        if (keepClearChannel) {
+            evidence.saveText("privacy", "clear_channel_session",
+                    "channel=" + CHANNEL_OFF + "\n"
+                    + "reason=clear_channel_for_voice_check\n");
+            return privacyOffBaseline14;
+        }
         // External DMR控制链的历史真机基线要求privacy-on运行态。
         // AMBE正文仍由TxPlan原样发送，不在主机侧做后置异或。
         privacyMutation = true;
@@ -2055,6 +2083,13 @@ final class DmrTxController {
                 } else {
                     activeRelay = new RealtimeRelay(runtime14);
                 }
+            }
+            // 厂商 StartDMRCommand 是两条呼叫头背靠背发出，随即进入
+            // 语音交换。我们在两条头之间同步落盘若干证据文件，实测
+            // 第一条头到第一个数据包之间有 150~300 毫秒，而 DMR 一帧
+            // 只有 60 毫秒。提前进入证据缓冲热路径，把这段压掉。
+            if (ackPacedVlcSoftware) {
+                beginRelayHotPath();
             }
             for (int index = 0; index < machine.vlcCount(); index++) {
                 if (relayOne && !postVlcThreeLiveSoftwareOne
@@ -4071,6 +4106,44 @@ final class DmrTxController {
      * 数据起点精确读取 单元数×27 字节；读取前后的管理头都保留，用来证明
      * 快照来自同一块的追加过程。
      */
+    /**
+     * 逐条下发一组只读或低风险的文本 AT 命令并记录回复。
+     * 每条的命令与回复都按既有 text() 路径落盘，便于事后核对。
+     * 这里不下发任何会引起发射的命令（尤其不含 AT+DMOPTT）。
+     */
+    private void runAtProbe() throws Exception {
+        String[] probes = {
+            "AT+DMOGETDIGITALCH",
+            "AT+DMOGETRSSI",
+            "AT+DMOGETDIGITALRXINFO",
+            "AT+DMOSETRECORDSW=1",
+            "AT+DMOSETRECORDSW=0",
+            "AT+DMOSETPLAY=0",
+            "AT+DMOSETPLAY=1",
+            "AT+DMOEXITPLAY",
+            "AT+DMOSETRECORDDLYTIME=0",
+        };
+        StringBuilder log = new StringBuilder();
+        for (int index = 0; index < probes.length; index++) {
+            String command = probes[index];
+            status("AT探针 " + (index + 1) + "/" + probes.length
+                    + " " + command);
+            byte[] response;
+            String text;
+            try {
+                response = text(command, 2500);
+                text = new String(response, StandardCharsets.UTF_8)
+                        .replace("\r", " ").replace("\n", " ").trim();
+            } catch (Exception failure) {
+                text = "异常: " + failure.getMessage();
+            }
+            log.append(command).append("  ->  ").append(text)
+                    .append("\n");
+            SystemClock.sleep(250);
+        }
+        evidence.saveText("at_probe", "summary", log.toString());
+    }
+
     private void captureDmrRx() throws Exception {
         status("等待对端发射，最长" + (RX_CAPTURE_TIMEOUT_MS / 1000) + "秒");
         byte[] headerBefore = read("rx_tape_header_before",

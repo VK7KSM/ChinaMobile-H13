@@ -36,7 +36,8 @@ final class DeviceModePolicy {
                 || DmrTxController.MODE_SPEECH_SHORT_ABC_NO_RF.equals(mode)
                 || DmrTxController.MODE_DMR_REPLAY_CAPTURED_NO_RF
                         .equals(mode)
-                || DmrTxController.MODE_DMR_RX_CAPTURE_NO_RF.equals(mode);
+                || DmrTxController.MODE_DMR_RX_CAPTURE_NO_RF.equals(mode)
+                || DmrTxController.MODE_AT_PROBE_NO_RF.equals(mode);
     }
 
     static boolean showsRelayStatus(String mode) {
