@@ -83,19 +83,26 @@ public final class DmrContractTest {
     public void codecWriteFramesMatchStockChain() {
         // 原厂外部DMR配置链在工作模式之后写的五个页/寄存器，线上字节
         // 与旧探针 createAnalogCodecWriteFrame 逐字节相同。见 2.8.35。
-        assertEquals("84 a9 61 00 06 40 00 01 10 40 00 00",
+        // 第 0 条：PROCESS_MODE(2)，厂商外部编码 DMR 开呼在工作模式之后发它。
+        assertEquals("84 a9 61 00 02 00 1a 02",
                 Bytes.hex(DmrProtocol.codec(0, 0x14)));
-        assertEquals("84 a9 61 00 06 40 00 01 3b 11 00 00",
+        assertEquals(0, DmrProtocol.codecPacketType(0));
+        assertEquals(0x1a, DmrProtocol.codecAckField(0));
+        assertEquals(0x40, DmrProtocol.codecPacketType(1));
+        assertEquals(0x17, DmrProtocol.codecAckField(1));
+        assertEquals("84 a9 61 00 06 40 00 01 10 40 00 00",
                 Bytes.hex(DmrProtocol.codec(1, 0x14)));
-        assertEquals("84 a9 61 00 06 40 00 00 56 f3 00 00",
+        assertEquals("84 a9 61 00 06 40 00 01 3b 11 00 00",
                 Bytes.hex(DmrProtocol.codec(2, 0x14)));
-        assertEquals("84 a9 61 00 06 40 00 00 57 ba 00 00",
+        assertEquals("84 a9 61 00 06 40 00 00 56 f3 00 00",
                 Bytes.hex(DmrProtocol.codec(3, 0x14)));
-        // 第五条是增益，随信道档位而变，不是常量。
-        assertEquals("84 a9 61 00 06 40 00 00 58 14 00 00",
+        assertEquals("84 a9 61 00 06 40 00 00 57 ba 00 00",
                 Bytes.hex(DmrProtocol.codec(4, 0x14)));
+        // 最后一条是增益，随信道档位而变，不是常量。
+        assertEquals("84 a9 61 00 06 40 00 00 58 14 00 00",
+                Bytes.hex(DmrProtocol.codec(5, 0x14)));
         assertEquals("84 a9 61 00 06 40 00 00 58 00 00 00",
-                Bytes.hex(DmrProtocol.codec(4, 0x00)));
+                Bytes.hex(DmrProtocol.codec(5, 0x00)));
         // 确认帧：包类型 0x40、正文 {0x17, 0x00}。
         byte[] ack = HpiCodec.frame(DmrProtocol.CODEC_PACKET_TYPE,
                 new byte[] {(byte) DmrProtocol.CODEC_ACK_FIELD, 0x00});

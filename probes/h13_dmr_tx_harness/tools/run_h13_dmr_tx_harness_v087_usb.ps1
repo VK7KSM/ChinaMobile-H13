@@ -52,7 +52,7 @@ $Activity = 'net.elfradio.h13dmrtx/.MainActivity'
 $ExpectedFingerprint = 'CMCC/msm8909/msm8909:8.1.0/OPM1.171019.026/build11020953:user/test-keys'
 $ExpectedVersionCode = 87
 $ExpectedVersionName = '0.87-speech-short-abc-first-rf-candidate'
-$ExpectedApkSha256 = 'FD7D416C1F1FE45801B453CFE29BEB5732B8B20AD41EB639628DC4E6E310A779'
+$ExpectedApkSha256 = 'CCAC8A0108AE476EFAC1ED85D3FEC2D8C8C8E3E23ABF9459B6C0AAE52838A220'
 $Apk = Join-Path $PSScriptRoot '..\dist\H13_DMR_TX_Harness_v0.87_SpeechShortAbcFirstRfCandidate.apk'
 $DeadlineHelper = Join-Path $PSScriptRoot '..\..\h13_radio\tools\h13_external_dmr_rf_deadline_device.sh'
 $RemoteDeadlineHelper = '/data/local/tmp/h13_dmr_tx_deadline.sh'
@@ -288,7 +288,7 @@ function Assert-ModeResult {
             'speech_short_abc_no_rf',
             'speech_short_abc_low_power_rf',
             'dmr_replay_captured_no_rf',
-            'dmr_replay_captured_low_power_rf')) { 5 } else { 0 }
+            'dmr_replay_captured_low_power_rf')) { 6 } else { 0 }
     $CleanupCount = if ($Mode -in @(
             'realtime_relay_encode_dmr_morse_unique_five_low_power_rf',
             'realtime_relay_software_privacy_triple_sos_low_power_rf',

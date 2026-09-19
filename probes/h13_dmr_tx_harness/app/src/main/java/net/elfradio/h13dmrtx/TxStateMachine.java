@@ -164,8 +164,8 @@ final class TxStateMachine {
             if (!Arrays.equals(pending,
                     DmrProtocol.codec(codecIndex, codecGain))
                     || !DmrProtocol.exactStatusAck(response,
-                    DmrProtocol.CODEC_PACKET_TYPE,
-                    DmrProtocol.CODEC_ACK_FIELD)) {
+                    DmrProtocol.codecPacketType(codecIndex),
+                    DmrProtocol.codecAckField(codecIndex))) {
                 throw fail("codec写严格确认失败");
             }
             pending = null;

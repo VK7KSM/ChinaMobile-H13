@@ -10,7 +10,11 @@ final class DmrProtocol {
     // 发射调制链配置：原厂外部 DMR 配置链在工作模式之后写五个 codec
     // 页/寄存器。线上格式与旧探针 createAnalogCodecWriteFrame 逐字节相同，
     // 确认帧为 packetType=0x40、正文 {0x17, 0x00}。
-    static final int CODEC_COUNT = 5;
+    // 第 0 条为 PROCESS_MODE(2)，与厂商外部编码开呼顺序一致：工作模式之后、
+    // VLC 之前；其余五条为 codec 页/寄存器写。
+    static final int CODEC_COUNT = 6;
+    static final int PROCESS_MODE_FIELD = 0x1a;
+    static final int PROCESS_MODE_DMR = 0x02;
     static final int CODEC_PACKET_TYPE = 0x40;
     static final int CODEC_ACK_FIELD = 0x17;
     static final int VLC_COUNT = 5;
@@ -63,13 +67,23 @@ final class DmrProtocol {
     /** 五条发射 codec 写，顺序与原厂链一致；gain 取自设备增益表。 */
     static byte[] codec(int index, int gain) {
         switch (index) {
-        case 0: return codecWrite(1, 0x10, 0x40);
-        case 1: return codecWrite(1, 0x3b, 0x11);
-        case 2: return codecWrite(0, 0x56, 0xf3);
-        case 3: return codecWrite(0, 0x57, 0xba);
-        case 4: return codecWrite(0, 0x58, gain);
+        case 0: return HpiCodec.frame(0, new byte[] {
+                (byte) PROCESS_MODE_FIELD, (byte) PROCESS_MODE_DMR});
+        case 1: return codecWrite(1, 0x10, 0x40);
+        case 2: return codecWrite(1, 0x3b, 0x11);
+        case 3: return codecWrite(0, 0x56, 0xf3);
+        case 4: return codecWrite(0, 0x57, 0xba);
+        case 5: return codecWrite(0, 0x58, gain);
         default: throw new IndexOutOfBoundsException("codec索引");
         }
+    }
+
+    static int codecPacketType(int index) {
+        return index == 0 ? 0 : CODEC_PACKET_TYPE;
+    }
+
+    static int codecAckField(int index) {
+        return index == 0 ? PROCESS_MODE_FIELD : CODEC_ACK_FIELD;
     }
 
     static byte[] data36(byte[] payload) {
