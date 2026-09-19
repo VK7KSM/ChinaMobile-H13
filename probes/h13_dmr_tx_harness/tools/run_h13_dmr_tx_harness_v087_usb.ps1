@@ -52,7 +52,7 @@ $Activity = 'net.elfradio.h13dmrtx/.MainActivity'
 $ExpectedFingerprint = 'CMCC/msm8909/msm8909:8.1.0/OPM1.171019.026/build11020953:user/test-keys'
 $ExpectedVersionCode = 87
 $ExpectedVersionName = '0.87-speech-short-abc-first-rf-candidate'
-$ExpectedApkSha256 = 'CCAC8A0108AE476EFAC1ED85D3FEC2D8C8C8E3E23ABF9459B6C0AAE52838A220'
+$ExpectedApkSha256 = '83B63DA74C4B4DF4FE1944C0D33E75CC87F318E6876941040F10FF4137098C48'
 $Apk = Join-Path $PSScriptRoot '..\dist\H13_DMR_TX_Harness_v0.87_SpeechShortAbcFirstRfCandidate.apk'
 $DeadlineHelper = Join-Path $PSScriptRoot '..\..\h13_radio\tools\h13_external_dmr_rf_deadline_device.sh'
 $RemoteDeadlineHelper = '/data/local/tmp/h13_dmr_tx_deadline.sh'
@@ -265,14 +265,14 @@ function Assert-ModeResult {
         # short first-RF material: 4.08 s, 204 frames, 27-byte DMR format
         # = 3 frames/unit = 68 units x 60 ms
         'speech_short_abc_no_rf' { @{
-            Mode='speech_short_abc_no_rf'; Setup=5; Vlc=5; Data=68 } }
+            Mode='speech_short_abc_no_rf'; Setup=5; Vlc=2; Data=51 } }
         'speech_short_abc_low_power_rf' { @{
-            Mode='speech_short_abc_low_power_rf'; Setup=5; Vlc=5; Data=68 } }
+            Mode='speech_short_abc_low_power_rf'; Setup=5; Vlc=2; Data=51 } }
         # replay of real captured DMR units: 66 units x 60 ms = 3.96 s
         'dmr_replay_captured_no_rf' { @{
-            Mode='dmr_replay_captured_no_rf'; Setup=5; Vlc=5; Data=132 } }
+            Mode='dmr_replay_captured_no_rf'; Setup=5; Vlc=2; Data=132 } }
         'dmr_replay_captured_low_power_rf' { @{
-            Mode='dmr_replay_captured_low_power_rf'; Setup=5; Vlc=5; Data=132 } }
+            Mode='dmr_replay_captured_low_power_rf'; Setup=5; Vlc=2; Data=132 } }
         # receive capture: read-only, no bridge, no setup/vlc/data at all
         'dmr_rx_capture_no_rf' { @{
             Mode='dmr_rx_capture_no_rf'; Setup=0; Vlc=0; Data=0 } }

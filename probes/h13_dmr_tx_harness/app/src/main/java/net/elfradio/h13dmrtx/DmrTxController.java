@@ -150,8 +150,13 @@ final class DmrTxController {
         // 60 毫秒，H13 接收真实 DMR 信号时模块交出来的也正是 27 字节单元。
         // 2026-09-19 两次发射用 36 字节格式，射频、时序、呼叫参数全对但
         // 语音是噪音，正是把 dPMR 格式的包发在 DMR 信道上的表现。
-        if (isSpeechShortAbcMode(mode) || isDmrReplayCapturedMode(mode)) {
+        // 重放素材是模块交出的 27 字节单元，只能按 27 字节发。
+        if (isDmrReplayCapturedMode(mode)) {
             return DmrProtocol.VoiceFormat.CHAN_D27_TYPE3;
+        }
+        // 短素材按厂商外部编码合同发：type3 [01 24 <36字节>]，即历史格式。
+        if (isSpeechShortAbcMode(mode)) {
+            return DmrProtocol.VoiceFormat.LEGACY_CHAN_D36;
         }
         return DmrProtocol.VoiceFormat.LEGACY_CHAN_D36;
     }
@@ -575,6 +580,9 @@ final class DmrTxController {
             } else {
                 DmrProtocol.Session session = DmrProtocol.session(13, 99, 0,
                         runtime14);
+                if (speechShortAbc || dmrReplayCaptured) {
+                    session.useVendorVlc();
+                }
                 TxStateMachine machine;
                 if (relayOne) {
                     machine = new TxStateMachine(session, true, allowRf,
@@ -733,7 +741,9 @@ final class DmrTxController {
                     // 而链路控制由模块自己生成故不受影响——这能同时解释
                     // 全部现象。raw49 与 channel72 都是每帧 9 字节，长度、
                     // 包数、节拍均不变，是单变量改动。
-                    software49Bit36 = pipeline.raw49;
+                    // 厂商送的是编码后的帧（TransportChanelFileDataBase 直接
+                    // 切分文件数据，未做任何变换），此处同样送 channel72。
+                    software49Bit36 = pipeline.channel72;
                     software49BitSource = RELAY_SOURCE_SPEECH_SHORT_ABC;
                     softwareFinalWirePayload = true;
                     evidence.saveEvent("ambe", "speech_short_abc_input_pcm",
@@ -2038,7 +2048,7 @@ final class DmrTxController {
                     activeRelay = new RealtimeRelay(runtime14);
                 }
             }
-            for (int index = 0; index < DmrProtocol.VLC_COUNT; index++) {
+            for (int index = 0; index < machine.vlcCount(); index++) {
                 if (relayOne && !postVlcThreeLiveSoftwareOne
                         && !ackPacedVlcSoftware && index == 1) {
                     completeRelayBodyBeforeRemainingVlc(machine);
@@ -2609,7 +2619,7 @@ final class DmrTxController {
         if (activeRelay == null || activeRelay.requiredTriggerUnits()
                 != RealtimeRelay.EXTERNAL_SOURCE_TRIGGER_UNITS
                 || activeRelay.unitsWritten() != 0
-                || activeRelay.vlcAckCount() != DmrProtocol.VLC_COUNT
+                || activeRelay.vlcAckCount() != machine.vlcCount()
                 || machine.phase() != TxStateMachine.Phase.WAIT_RELAY_COMPLETION) {
             throw new IOException("ACK节拍五VLC后单包准入状态错误");
         }
@@ -2645,7 +2655,7 @@ final class DmrTxController {
                                 activeRelay.payloadSource()))
                 || activeRelay.unitsWritten() != 0
                 || activeRelay.creditsConsumed() != 0
-                || activeRelay.vlcAckCount() != DmrProtocol.VLC_COUNT
+                || activeRelay.vlcAckCount() != machine.vlcCount()
                 || machine.phase() != TxStateMachine.Phase.WAIT_RELAY_COMPLETION) {
             String formatError = activeRelay == null ? "中继未建立"
                     : voiceFormatConsistencyError(activeRelay.voiceFormat(),

@@ -65,18 +65,44 @@ public final class DmrContractTest {
         // 两个短素材模式必须用 27 字节 DMR 格式：DMR 每突发 3 帧 27 字节
         // 60 毫秒；36 字节/80 毫秒是接口文档里 dPMR 的定义。2026-09-19 用
         // 36 字节格式发射两次，射频与呼叫参数全对但对端只听到机械噪音。
-        assertEquals(DmrProtocol.VoiceFormat.CHAN_D27_TYPE3,
+        assertEquals(DmrProtocol.VoiceFormat.LEGACY_CHAN_D36,
                 DmrTxController.voiceFormatForMode(
                         DmrTxController.MODE_SPEECH_SHORT_ABC_NO_RF));
-        assertEquals(DmrProtocol.VoiceFormat.CHAN_D27_TYPE3,
+        assertEquals(DmrProtocol.VoiceFormat.LEGACY_CHAN_D36,
                 DmrTxController.voiceFormatForMode(
                         DmrTxController.MODE_SPEECH_SHORT_ABC_LOW_POWER_RF));
+        assertEquals(DmrProtocol.VoiceFormat.CHAN_D27_TYPE3,
+                DmrTxController.voiceFormatForMode(
+                        DmrTxController.MODE_DMR_REPLAY_CAPTURED_LOW_POWER_RF));
+        assertEquals(51, DmrTxController.expectedUnitsFor(
+                RealtimeRelay.SPEECH_SHORT_ABC_BYTES,
+                DmrProtocol.VoiceFormat.LEGACY_CHAN_D36));
+        assertTrue(DmrTxController.firstBridgeBudgetWellFormedFor(51, 80L));
+        assertTrue(DmrTxController.ackPacedActiveRfBudgetWellFormedFor(51, 80L));
         // 素材帧数必须同时被 3 和 4 整除，两种格式都不补位。
         assertEquals(0, RealtimeRelay.SPEECH_SHORT_ABC_FRAMES % 3);
         assertEquals(0, RealtimeRelay.SPEECH_SHORT_ABC_FRAMES % 4);
         assertEquals(68, DmrTxController.expectedUnitsFor(
                 RealtimeRelay.SPEECH_SHORT_ABC_BYTES,
                 DmrProtocol.VoiceFormat.CHAN_D27_TYPE3));
+    }
+
+    @Test
+    public void vendorVlcHeadersMatchStartDmrCommand() {
+        // 厂商 StartDMRCommand：DMR_SendVLcheader(callmode 0) 与 (callmode 1)，
+        // 首字节分别为 0x01 与 0x11，正文为 9 字节 LC，包类型 5、字段 0x43。
+        DmrProtocol.Session s = DmrProtocol.session(13, 99, 0, RUNTIME14);
+        assertEquals(5, s.vlcCount());
+        s.useVendorVlc();
+        assertEquals(2, s.vlcCount());
+        byte[] h0 = s.vlc(0);
+        byte[] h1 = s.vlc(1);
+        assertEquals(5, h0[5] & 0xff);
+        assertEquals(0x43, h0[6] & 0xff);
+        assertEquals(0x01, h0[7] & 0xff);
+        assertEquals(0x09, h0[8] & 0xff);
+        assertEquals(0x11, h1[7] & 0xff);
+        assertThrows(IndexOutOfBoundsException.class, () -> s.vlc(2));
     }
 
     @Test

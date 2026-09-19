@@ -111,6 +111,10 @@ final class TxStateMachine {
         return codecIndex;
     }
 
+    int vlcCount() {
+        return session.vlcCount();
+    }
+
     boolean codecEnabled() {
         return codecEnabled;
     }
@@ -182,7 +186,7 @@ final class TxStateMachine {
             }
             pending = null;
             vlcIndex++;
-            if (vlcIndex == DmrProtocol.VLC_COUNT) {
+            if (vlcIndex == session.vlcCount()) {
                 phase = relayOneUnit ? Phase.WAIT_RELAY_COMPLETION
                         : firstBridgeHpiCleanup ? Phase.WAIT_HPI_CLEANUP
                         : Phase.WAIT_FIRST_BRIDGE_EXIT;
@@ -234,7 +238,7 @@ final class TxStateMachine {
                 && phase == Phase.FIRST_BRIDGE_VLC && vlcIndex <= 1;
         boolean postVlcBoundary = relayAfterAllVlc
                 && phase == Phase.WAIT_RELAY_COMPLETION
-                && vlcIndex == DmrProtocol.VLC_COUNT && pending == null;
+                && vlcIndex == session.vlcCount() && pending == null;
         if (!relayOneUnit || (!legacyBoundary && !postVlcBoundary)
                 || relayComplete) {
             throw fail("实时relay完成标记阶段错误");

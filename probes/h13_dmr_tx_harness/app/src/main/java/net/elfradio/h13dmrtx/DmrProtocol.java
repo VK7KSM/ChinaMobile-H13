@@ -18,6 +18,8 @@ final class DmrProtocol {
     static final int CODEC_PACKET_TYPE = 0x40;
     static final int CODEC_ACK_FIELD = 0x17;
     static final int VLC_COUNT = 5;
+    static final int VENDOR_VLC_COUNT = 2;
+    private static final int[] VENDOR_VLC_MODES = {0x01, 0x11};
     static final int VLC_COUNT_AFTER_FIRST_DATA = VLC_COUNT - 2;
     static final int TERMINATION_COUNT = 1;
     static final int CLEANUP_COUNT = 2;
@@ -342,6 +344,18 @@ final class DmrProtocol {
         private final int calledId;
         private final int outputSequence;
         private final byte[] runtime14;
+        // 厂商外部编码 DMR 开呼只发两条 VLC 头：callmode 0（首字节 0x01）
+        // 与 callmode 1（首字节 0x11），随后立即供语音。历史五条序列在
+        // 前三条之后各触发一次模块的"呼叫已结束"(17 0a)。
+        private boolean vendorVlc;
+
+        void useVendorVlc() {
+            this.vendorVlc = true;
+        }
+
+        int vlcCount() {
+            return vendorVlc ? VENDOR_VLC_COUNT : VLC_COUNT;
+        }
 
         Session(int ownId, int calledId, int outputSequence, byte[] runtime14) {
             requireU24(ownId, "本机ID");
@@ -427,10 +441,20 @@ final class DmrProtocol {
         }
 
         byte[] vlc(int index) {
-            if (index < 0 || index >= VLC_COUNT) {
+            if (index < 0 || index >= vlcCount()) {
                 throw new IndexOutOfBoundsException("VLC索引");
             }
             byte[] body;
+            if (vendorVlc) {
+                body = lc9();
+                byte[] vp = new byte[3 + body.length];
+                vp[0] = 0x43;
+                vp[1] = (byte) (VENDOR_VLC_MODES[index]
+                        | (outputSequence << 7));
+                vp[2] = (byte) body.length;
+                System.arraycopy(body, 0, vp, 3, body.length);
+                return HpiCodec.paddedFrame(5, vp);
+            }
             if (index == 0 || index == 1 || index == 4) {
                 body = lc9();
             } else if (index == 2) {
