@@ -481,6 +481,7 @@ final class DmrTxController {
         // 2026-09-19 第十三次发射就是这样变成约十秒噪音的。
         postVlcListenMs = MODE_DMR_REPLAY_CAPTURED_NO_RF.equals(mode)
                 ? 3000L : 0L;
+        offerPacedVoice = speechShortAbc || dmrReplayCaptured;
         boolean softwarePrivacyTripleSos =
                 MODE_RELAY_SOFTWARE_PRIVACY_TRIPLE_SOS_NO_RF.equals(mode)
                 || MODE_RELAY_SOFTWARE_PRIVACY_TRIPLE_SOS_LOW_POWER_RF
@@ -2113,7 +2114,13 @@ final class DmrTxController {
                 }
             }
             if (relayOne) {
-                if (ackPacedVlcSoftwareTripleSos) {
+                if (offerPacedVoice) {
+                    // 明文信道上模块会按帧率持续交帧并逐包回执，
+                    // 厂商纪律是收到一帧才回送一帧。见 2.8.73。
+                    runOfferPacedPostVlc(machine);
+                    machine.markRealtimeRelaySequenceComplete();
+                    exchangeAckPacedRelayVlc("termination_vlc", machine);
+                } else if (ackPacedVlcSoftwareTripleSos) {
                     runAckPacedPostVlcTripleSos(machine);
                     machine.markRealtimeRelaySequenceComplete();
                     exchangeAckPacedRelayVlc("termination_vlc", machine);
@@ -2339,6 +2346,8 @@ final class DmrTxController {
     // 写完全部单元才开始读上行。静听窗用来量出：VLC 之后我们保持安静时，
     // 模块到底交出多少帧、间隔多少。0 表示不静听。
     private long postVlcListenMs;
+    // 语音验证的两族模式改走按模块交帧逐帧回送，见 2.8.73。
+    private boolean offerPacedVoice;
     private final List<byte[]> bufferedRelayPlain = new ArrayList<>();
     private final List<byte[]> bufferedRelayWirePayload = new ArrayList<>();
     private final List<byte[]> bufferedRelayRequests = new ArrayList<>();
@@ -2769,6 +2778,159 @@ final class DmrTxController {
                 || activeRelay.creditsConsumed() != 1) {
             throw new IOException("ACK节拍五VLC后单包信用未闭合");
         }
+    }
+
+    /** 等一个触发信号的上限。 */
+    private static final long OFFER_WAIT_MS = 140;
+    /** 厂商 DMR 的 txDelay：先攒够这么多条模块交帧，再送第一帧。 */
+    private static final int VENDOR_TX_DELAY_OFFERS = 3;
+
+    /**
+     * 按模块的交帧与回执逐帧回送。
+     *
+     * <p>厂商 send_externaldataToDSP_TxSide() 的纪律是：模块把自己
+     * 编码的语音帧交给宿主，宿主改写后回送一帧，模块回执后再送下一帧。
+     * 我们此前按固定时钟开环推送，与模块的交帧流抢时隙，对端听感为
+     * 不可懂。这里改为等到一个许可（交帧或回执）再写一个单元；
+     * 等待超过 OFFER_WAIT_MS 仍无许可则照写，保证单元总数闭合。
+     */
+    private void runOfferPacedPostVlc(TxStateMachine machine)
+            throws Exception {
+        if (activeRelay == null
+                || machine.phase() != TxStateMachine.Phase.WAIT_RELAY_COMPLETION
+                || activeRelay.unitsWritten() != 0) {
+            throw new IOException("按交帧回送准入状态错误");
+        }
+        beginRelayHotPath();
+        ByteArrayOutputStream uplink = new ByteArrayOutputStream();
+        byte[] carry = new byte[0];
+        int offers = 0;
+        int credits = 0;
+        int creditsUsed = 0;
+        int waited = 0;
+        int readIndex = 0;
+        long firstFlushAt = -1L;
+        for (int index = 0; index < activeRelay.maximumUnits(); index++) {
+            // 两段式，与厂商 Form_SaveVocoder 一致：
+            // 第一帧等攒够 VENDOR_TX_DELAY_OFFERS 条模块交帧再送；
+            // 其后每一帧只由一条回执短帧触发，交帧本身不触发。
+            // 此前把两者混作一谈，导致有的时隙写两次、后面断供，
+            // 对端听感为语音被揉在一起。见 2.8.74。
+            long deadline = SystemClock.elapsedRealtime() + OFFER_WAIT_MS;
+            boolean permitted = false;
+            while (!permitted && SystemClock.elapsedRealtime() < deadline) {
+                long readBegin = SystemClock.elapsedRealtime();
+                byte[] chunk = transport.readAvailable(10L);
+                long readReturn = SystemClock.elapsedRealtime();
+                if (chunk.length > 0) {
+                    uplink.write(chunk);
+                    carry = Bytes.concat(carry, chunk);
+                    int[] counts = new int[2];
+                    carry = countPermits(carry, counts);
+                    offers += counts[0];
+                    credits += counts[1];
+                    if (index == 0) {
+                        permitted = offers >= VENDOR_TX_DELAY_OFFERS;
+                    } else {
+                        permitted = credits > creditsUsed;
+                    }
+                }
+                recordRelayRead("offer_wait_" + readIndex++,
+                        activeRelay.unitsWritten(), credits, readBegin,
+                        10L, readReturn, chunk);
+            }
+            if (permitted) {
+                if (index > 0) {
+                    creditsUsed++;
+                }
+            } else {
+                waited++;
+            }
+            byte[] request = activeRelay.takeActivePacedRequest44();
+            transport.rawWrite(request);
+            long flushAt = SystemClock.elapsedRealtime();
+            activeRelay.completeActivePacedWriteAfterTransportFlush();
+            if (index == 0) {
+                firstFlushAt = flushAt;
+                firstDataOrigin = flushAt;
+                machine.markRealtimeRelayComplete();
+                bufferedFirstWriteBoundary = "source=offer_paced_post_vlc\n"
+                        + "first_data_flush_ms=" + firstFlushAt + "\n"
+                        + "vlc_acks_at_write=" + activeRelay.vlcAckCount()
+                        + "\n";
+            } else {
+                machine.noteAdditionalRelayUnitWritten();
+            }
+            relayLastWriteAt = flushAt;
+            bufferRelayWrite(request, flushAt, flushAt, flushAt, flushAt);
+        }
+        long tailTargetAt = SystemClock.elapsedRealtime()
+                + ACTIVE_PACED_TAIL_MS;
+        while (SystemClock.elapsedRealtime() < tailTargetAt) {
+            long readBegin = SystemClock.elapsedRealtime();
+            byte[] chunk = transport.readAvailable(20L);
+            long readReturn = SystemClock.elapsedRealtime();
+            if (chunk.length > 0) {
+                uplink.write(chunk);
+                carry = Bytes.concat(carry, chunk);
+                int[] counts = new int[2];
+                carry = countPermits(carry, counts);
+                offers += counts[0];
+                credits += counts[1];
+            }
+            recordRelayRead("offer_tail_" + readIndex++,
+                    activeRelay.unitsWritten(), credits, readBegin, 20L,
+                    readReturn, chunk);
+        }
+        saveHotPathAwareEvent("relay", "offer_paced_uplink_raw",
+                uplink.toByteArray());
+        saveHotPathAwareText("relay", "offer_paced_summary",
+                "units_written=" + activeRelay.unitsWritten() + "\n"
+                + "module_offers=" + offers + "\n"
+                + "module_credits=" + credits + "\n"
+                + "writes_without_permit=" + waited + "\n"
+                + "credits_used=" + creditsUsed + "\n"
+                + "tx_delay_offers=" + VENDOR_TX_DELAY_OFFERS + "\n"
+                + "first_flush_ms=" + firstFlushAt + "\n");
+        if (!activeRelay.activePacedComplete()
+                || activeRelay.unitsWritten() != expectedUnitsFor(
+                        activeRelay.bodyBytes(), activeRelay.voiceFormat())) {
+            throw new IOException("按交帧回送的单元计数未闭合");
+        }
+    }
+
+    /**
+     * 从上行流里数出许可：模块交帧（类型 0x20、正文 [1, 长度, 载荷]）
+     * 计入 counts[0]，回执短帧（正文 1~2 字节、首字节 0 或 1）计入
+     * counts[1]。返回尚未成帧的残留字节。
+     */
+    private static byte[] countPermits(byte[] stream, int[] counts) {
+        int scan = 0;
+        while (scan + 6 <= stream.length) {
+            if ((stream[scan] & 0xff) != HpiCodec.SYNC0
+                    || (stream[scan + 1] & 0xff) != HpiCodec.SYNC1
+                    || (stream[scan + 2] & 0xff) != HpiCodec.COMMAND) {
+                scan++;
+                continue;
+            }
+            int bodyLength = ((stream[scan + 3] & 0xff) << 8)
+                    | (stream[scan + 4] & 0xff);
+            int packetType = stream[scan + 5] & 0xff;
+            if (scan + 6 + bodyLength > stream.length) {
+                break;
+            }
+            if (bodyLength >= 3 && packetType == 0x20
+                    && (stream[scan + 6] & 0xff) <= 1
+                    && (stream[scan + 7] & 0xff) == bodyLength - 2) {
+                counts[0]++;
+            } else if (bodyLength >= 1 && bodyLength <= 2
+                    && (stream[scan + 6] & 0xff) <= 1) {
+                counts[1]++;
+            }
+            int wireLength = 6 + bodyLength;
+            scan += wireLength + (wireLength & 1);
+        }
+        return java.util.Arrays.copyOfRange(stream, scan, stream.length);
     }
 
     private void runAckPacedPostVlcTripleSos(TxStateMachine machine)
