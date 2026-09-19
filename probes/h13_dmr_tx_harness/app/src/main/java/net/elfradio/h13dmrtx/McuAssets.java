@@ -10,6 +10,17 @@ final class McuAssets {
     static final int BRIDGE_FLAG = 0x2000015c;
     // 发射 codec 增益档位表：3 字节，按信道的麦克风增益档位取值。
     // 原厂外部DMR配置链把该地址传给信道与功率寄存器组写函数。
+    // 接收磁带缓冲区：44 字节管理头（+0x28 为块内单元数），4 字节固定块
+    // 标记（小端 d4 c3 b2 a1），随后是连续的 27 字节 CHAN_D 单元。
+    // 该结构与读法由 2026-08-06 的接收捕获实机闭环确认。
+    static final int TAPE_HEADER = 0x20001c00;
+    static final int TAPE_HEADER_LENGTH = 44;
+    static final int TAPE_UNIT_COUNT_OFFSET = 0x28;
+    static final int TAPE_MARKER = 0x20001c2c;
+    static final int TAPE_MARKER_VALUE = 0xa1b2c3d4;
+    static final int TAPE_DATA = 0x20001c30;
+    static final int TAPE_UNIT_BYTES = 27;
+
     static final int CODEC_GAIN_TABLE = 0x20002e25;
     static final int CODEC_GAIN_PRESETS = 3;
     static final int RF_EDGE_COUNTER = 0x20000134;
@@ -60,6 +71,14 @@ final class McuAssets {
             "mcu/h13_mcu_combined_multitick_external_dmr_rf_v009.bin";
     static final String FULLPREP_RF_SHA256 =
             "5E53D9D65A4C1BC63C822F59F0C759B0495B1DE46DD8E2F9ABE54BF0812B2871";
+    // 通道功率寄存器：射频时序回调每个时隙读取它并写入功率 DAC。
+    // 探针历史上从不设置它，发射功率取决于上次残留值——2026-09-19 五次
+    // 发射实测 0.05/0.279/0.803/1.24 瓦，同配置相差 25 倍。
+    // 出厂低功率档码值为 2030，记录 §18.189 实测约 2.3 瓦。
+    static final int CHANNEL_POWER_CODE = 0x20002DE6;
+    static final int CHANNEL_POWER_CODE_LENGTH = 2;
+    static final int FACTORY_LOW_POWER_CODE = 2030;
+
     static final int RF_HOLD_COUNTER = 0x20003074;
     static final int RF_HOLD_COUNTER_LENGTH = 4;
     static final int INBRIDGE_RF_OFF_CODE = 0x20003200;

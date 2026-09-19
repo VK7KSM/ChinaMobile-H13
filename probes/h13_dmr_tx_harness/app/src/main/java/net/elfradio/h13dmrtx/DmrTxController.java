@@ -115,6 +115,12 @@ final class DmrTxController {
     static final String MODE_DMR_REPLAY_CAPTURED_LOW_POWER_RF =
             "dmr_replay_captured_low_power_rf";
 
+    // 接收捕获（2026-09-19）：纯只读，不进桥、不发射、不改内存。
+    // 轮询接收磁带缓冲区，等对端发射后把模块交出来的 27 字节 CHAN_D
+    // 单元原样取回。用途有二：确认 H13 接收链是否正常；取得新鲜的
+    // 已知正确语音单元作为发射侧的参照。
+    static final String MODE_DMR_RX_CAPTURE_NO_RF = "dmr_rx_capture_no_rf";
+
     static final String RF_PERMISSION = "authorized_low_power_once";
     /**
      * 会话所用的语音注入格式。除三个语音突发验证模式外一律为历史实现，
@@ -339,6 +345,10 @@ final class DmrTxController {
     // 用户明确要求（"射频发射最长30秒就是极限了"），与热保护/RF_HOLD_MS
     // 无关，见ackPacedActiveRfBudgetWellFormedFor()。
     static final long MAX_SINGLE_TRANSMISSION_MS = 30000;
+    // 接收捕获：等待对端发射的上限与判定成立的最少单元数。
+    static final long RX_CAPTURE_TIMEOUT_MS = 120000;
+    static final long RX_CAPTURE_POLL_MS = 1000;
+    static final int RX_CAPTURE_MIN_UNITS = 6;
     private static final int[] FIRMWARE_SLICE_ADDRESSES = {
             0x0801568c, 0x0801db08, 0x080202a0, 0x08024dc0,
             0x0802680c, 0x0801d834, 0x0802314c, 0x080235c8
@@ -410,6 +420,7 @@ final class DmrTxController {
         used = true;
         boolean setup0Only = MODE_SETUP0_ONLY.equals(mode);
         boolean clearOnly = MODE_CLEAR_ONLY.equals(mode);
+        boolean rxCapture = MODE_DMR_RX_CAPTURE_NO_RF.equals(mode);
         boolean deadlineHandshakeOnly =
                 MODE_DEADLINE_HANDSHAKE_NO_RF.equals(mode);
         if (MODE_LOW_POWER_RF.equals(mode)) {
@@ -498,6 +509,7 @@ final class DmrTxController {
                 || encodeDmrRelay;
         boolean fixedAssetRelay = MODE_RELAY_FIXED_ASSET_NO_RF.equals(mode);
         if (!MODE_NO_RF.equals(mode) && !setup0Only && !clearOnly
+                && !rxCapture
                 && !deadlineHandshakeOnly && !allowRf && !relayOne) {
             throw new IllegalArgumentException("设备模式或低功率许可参数无效");
         }
@@ -506,6 +518,7 @@ final class DmrTxController {
                 : relayOne ? "_relay_no_rf"
                 : deadlineHandshakeOnly ? "_deadline_no_rf"
                 : setup0Only ? "_setup0"
+                : rxCapture ? "_rx"
                 : clearOnly ? "_clear" : "_no_rf");
         File root = new File(context.getFilesDir(), "captures");
         if (!root.exists() && !root.mkdirs()) {
@@ -546,7 +559,14 @@ final class DmrTxController {
             verifyTextBaseline();
             verifyFirmwareSlices();
             byte[] runtime14 = preparePrivacySessionAndMeasureRuntime();
-            if (clearOnly) {
+            if (rxCapture) {
+                captureDmrRx();
+                restorePrivacyOff();
+                verifyPostRestoreText();
+                disableDebugOutputAndVerify();
+                success = !privacyMutation && textRecoveryConfirmed
+                        && debugOutput.restored();
+            } else if (clearOnly) {
                 restorePrivacyOff();
                 verifyPostRestoreText();
                 disableDebugOutputAndVerify();
@@ -597,10 +617,23 @@ final class DmrTxController {
                         throw new IOException("重放载荷长度错误："
                                 + replay.length);
                     }
-                    software49Bit36 = replay;
+                    // 不能原样发：捕获帧里的迟入 C3 信息与当时那次发射的
+                    // 超帧相位绑定，本次发射相位不同，原样发会让接收端的
+                    // 锁定逻辑被带偏——2026-09-19 实测表现为对端只闪一下、
+                    // 无 ID、无音频，比我们自编码的语音还差。
+                    // 这里过一遍与正常路径相同的处理：取出 49 位语音参数
+                    // （丢弃原有 C3），按本次会话参数重新生成迟入信息。
+                    // 语音参数本身不动，编码器仍然被排除在变量之外。
+                    SoftwareDmrPrivacyPipeline.Result replayPipeline =
+                            SoftwareDmrPrivacyPipeline
+                                    .buildClearFromClearChannel72(
+                                            runtime14, replay);
+                    software49Bit36 = replayPipeline.channel72;
                     software49BitSource = RELAY_SOURCE_DMR_REPLAY_CAPTURED;
                     softwareFinalWirePayload = true;
                     evidence.saveEvent("replay", "captured_chan_d27", replay);
+                    evidence.saveEvent("replay", "rephased_chan_d27",
+                            replayPipeline.channel72);
                     evidence.saveText("replay", "captured_summary",
                             "bytes=" + replay.length + "\n"
                             + "units=" + (replay.length / 27) + "\n"
@@ -691,7 +724,16 @@ final class DmrTxController {
                             != RealtimeRelay.SPEECH_SHORT_ABC_BYTES) {
                         throw new IOException("短素材发送向量帧数错误");
                     }
-                    software49Bit36 = pipeline.channel72;
+                    // 假设验证（2026-09-19）：送未经信道编码的 49 位语音参数，
+                    // 由模块自己做 FEC 与交织。
+                    // 依据：带 codec 配置发射后，同步与链路控制（ID）都正常，
+                    // 唯独语音是噪音；重放真实接收帧反而更差。若模块本就会
+                    // 对语音数据做信道编码，我们再送已编码的帧就是编了两层，
+                    // 接收端解一层拿到的是编码后的比特当参数，必然是噪音，
+                    // 而链路控制由模块自己生成故不受影响——这能同时解释
+                    // 全部现象。raw49 与 channel72 都是每帧 9 字节，长度、
+                    // 包数、节拍均不变，是单变量改动。
+                    software49Bit36 = pipeline.raw49;
                     software49BitSource = RELAY_SOURCE_SPEECH_SHORT_ABC;
                     softwareFinalWirePayload = true;
                     evidence.saveEvent("ambe", "speech_short_abc_input_pcm",
@@ -1792,6 +1834,8 @@ final class DmrTxController {
                 McuAssets.INBRIDGE_RF_OFF_LENGTH);
         sram.backupStable("rf_hold_counter", McuAssets.RF_HOLD_COUNTER,
                 McuAssets.RF_HOLD_COUNTER_LENGTH);
+        sram.backupStable("channel_power_code", McuAssets.CHANNEL_POWER_CODE,
+                McuAssets.CHANNEL_POWER_CODE_LENGTH);
     }
 
     private void runFirstNoRfBridge(TxStateMachine machine, byte[] runtime14,
@@ -1836,6 +1880,21 @@ final class DmrTxController {
         upload("fullprep_meta_8", le32((int) Math.round(
                 measuredTickHz * FIRST_BRIDGE_EXIT_MS / 1000.0)));
         if (allowRf) {
+            // 显式设定发射功率码。不设的话用的是上次残留值，同配置的功率
+            // 会在 0.05 到 1.24 瓦之间乱跳，信号强弱本身就会左右接收端
+            // 能否锁定，使各次发射之间无法比较。
+            byte[] powerBefore = read("channel_power_code_before",
+                    McuAssets.CHANNEL_POWER_CODE,
+                    McuAssets.CHANNEL_POWER_CODE_LENGTH);
+            upload("channel_power_code",
+                    le16(McuAssets.FACTORY_LOW_POWER_CODE));
+            byte[] powerAfter = read("channel_power_code_after",
+                    McuAssets.CHANNEL_POWER_CODE,
+                    McuAssets.CHANNEL_POWER_CODE_LENGTH);
+            evidence.saveText("rf", "power_code",
+                    "before=" + Bytes.hex(powerBefore) + "\n"
+                    + "applied=" + McuAssets.FACTORY_LOW_POWER_CODE + "\n"
+                    + "after=" + Bytes.hex(powerAfter) + "\n");
             upload("rf_hold_counter", le32((int) Math.round(
                     measuredTickHz * RF_HOLD_MS / 1000.0)));
             byte[] chain = asset(McuAssets.RF_PREP_CHAIN_FILE,
@@ -3893,6 +3952,60 @@ final class DmrTxController {
         return firstValue;
     }
 
+    /**
+     * 接收捕获：轮询磁带管理头的单元数，等对端发射后把模块交出来的
+     * 27 字节 CHAN_D 单元原样取回。
+     *
+     * 全程只读：不进桥、不写任何内存、不触发射频。判定沿用 2026-08-06
+     * 已闭环的读法——先单独取 4 字节块标记并要求为小端 a1b2c3d4，再从
+     * 数据起点精确读取 单元数×27 字节；读取前后的管理头都保留，用来证明
+     * 快照来自同一块的追加过程。
+     */
+    private void captureDmrRx() throws Exception {
+        status("等待对端发射，最长" + (RX_CAPTURE_TIMEOUT_MS / 1000) + "秒");
+        byte[] headerBefore = read("rx_tape_header_before",
+                McuAssets.TAPE_HEADER, McuAssets.TAPE_HEADER_LENGTH);
+        int startCount = headerBefore[McuAssets.TAPE_UNIT_COUNT_OFFSET] & 0xff;
+        long deadline = SystemClock.elapsedRealtime() + RX_CAPTURE_TIMEOUT_MS;
+        int count = startCount;
+        int polls = 0;
+        while (SystemClock.elapsedRealtime() < deadline) {
+            McuMemory.ReadResult poll = memory.read(McuAssets.TAPE_HEADER,
+                    McuAssets.TAPE_HEADER_LENGTH);
+            polls++;
+            count = poll.parsed[McuAssets.TAPE_UNIT_COUNT_OFFSET] & 0xff;
+            if (count >= RX_CAPTURE_MIN_UNITS && count > startCount) {
+                break;
+            }
+            status("等待对端发射，已轮询" + polls + "次，当前单元数" + count);
+            SystemClock.sleep(RX_CAPTURE_POLL_MS);
+        }
+        if (count < RX_CAPTURE_MIN_UNITS || count <= startCount) {
+            throw new IOException("等待超时：未收到对端语音单元，起始"
+                    + startCount + " 当前" + count);
+        }
+        int marker = readInt("rx_tape_marker", McuAssets.TAPE_MARKER, 4);
+        if (marker != McuAssets.TAPE_MARKER_VALUE) {
+            throw new IOException("磁带块标记不符："
+                    + String.format(Locale.US, "0x%08x", marker));
+        }
+        byte[] units = read("rx_tape_units", McuAssets.TAPE_DATA,
+                count * McuAssets.TAPE_UNIT_BYTES);
+        byte[] headerAfter = read("rx_tape_header_after",
+                McuAssets.TAPE_HEADER, McuAssets.TAPE_HEADER_LENGTH);
+        evidence.saveEvent("rx", "chan_d27_units", units);
+        evidence.saveText("rx", "capture_summary",
+                "poll_count=" + polls + "\n"
+                + "start_units=" + startCount + "\n"
+                + "captured_units=" + count + "\n"
+                + "bytes=" + units.length + "\n"
+                + "seconds=" + (count * 0.06) + "\n"
+                + "sha256=" + Bytes.sha256(units) + "\n"
+                + "header_before_sha256=" + Bytes.sha256(headerBefore) + "\n"
+                + "header_after_sha256=" + Bytes.sha256(headerAfter) + "\n");
+        status("已捕获" + count + "个语音单元（" + units.length + "字节）");
+    }
+
     private byte[] read(String label, int address, int length) throws Exception {
         McuMemory.ReadResult result = memory.read(address, length);
         saveRead(label, result);
@@ -4081,6 +4194,10 @@ final class DmrTxController {
             }
         }
         return false;
+    }
+
+    private static byte[] le16(int value) {
+        return new byte[] {(byte) value, (byte) (value >>> 8)};
     }
 
     private static byte[] le32(int value) {

@@ -35,7 +35,8 @@ final class DeviceModePolicy {
                 // 与三遍SOS低功率一致，由MainActivity的射频分支带许可启动。
                 || DmrTxController.MODE_SPEECH_SHORT_ABC_NO_RF.equals(mode)
                 || DmrTxController.MODE_DMR_REPLAY_CAPTURED_NO_RF
-                        .equals(mode);
+                        .equals(mode)
+                || DmrTxController.MODE_DMR_RX_CAPTURE_NO_RF.equals(mode);
     }
 
     static boolean showsRelayStatus(String mode) {

@@ -29,7 +29,8 @@ param(
         'speech_short_abc_no_rf',
         'speech_short_abc_low_power_rf',
         'dmr_replay_captured_no_rf',
-        'dmr_replay_captured_low_power_rf')]
+        'dmr_replay_captured_low_power_rf',
+        'dmr_rx_capture_no_rf')]
     [string]$Mode = 'no_rf',
     [switch]$AllowInstall,
     [switch]$AllowDisableInterphone,
@@ -51,7 +52,7 @@ $Activity = 'net.elfradio.h13dmrtx/.MainActivity'
 $ExpectedFingerprint = 'CMCC/msm8909/msm8909:8.1.0/OPM1.171019.026/build11020953:user/test-keys'
 $ExpectedVersionCode = 87
 $ExpectedVersionName = '0.87-speech-short-abc-first-rf-candidate'
-$ExpectedApkSha256 = '5826BDBAB23147DFF0ED3946543D0EAD9FFBD72259651888A7B28DACF295F2F3'
+$ExpectedApkSha256 = 'FD7D416C1F1FE45801B453CFE29BEB5732B8B20AD41EB639628DC4E6E310A779'
 $Apk = Join-Path $PSScriptRoot '..\dist\H13_DMR_TX_Harness_v0.87_SpeechShortAbcFirstRfCandidate.apk'
 $DeadlineHelper = Join-Path $PSScriptRoot '..\..\h13_radio\tools\h13_external_dmr_rf_deadline_device.sh'
 $RemoteDeadlineHelper = '/data/local/tmp/h13_dmr_tx_deadline.sh'
@@ -269,9 +270,12 @@ function Assert-ModeResult {
             Mode='speech_short_abc_low_power_rf'; Setup=5; Vlc=5; Data=68 } }
         # replay of real captured DMR units: 66 units x 60 ms = 3.96 s
         'dmr_replay_captured_no_rf' { @{
-            Mode='dmr_replay_captured_no_rf'; Setup=5; Vlc=5; Data=66 } }
+            Mode='dmr_replay_captured_no_rf'; Setup=5; Vlc=5; Data=132 } }
         'dmr_replay_captured_low_power_rf' { @{
-            Mode='dmr_replay_captured_low_power_rf'; Setup=5; Vlc=5; Data=66 } }
+            Mode='dmr_replay_captured_low_power_rf'; Setup=5; Vlc=5; Data=132 } }
+        # receive capture: read-only, no bridge, no setup/vlc/data at all
+        'dmr_rx_capture_no_rf' { @{
+            Mode='dmr_rx_capture_no_rf'; Setup=0; Vlc=0; Data=0 } }
         'realtime_relay_software_privacy_triple_sos_low_power_rf' { @{
             Mode='realtime_relay_software_privacy_triple_sos_low_power_rf'; Setup=5; Vlc=5; Data=78 } }
         'realtime_relay_encode_dmr_morse_unique_five_low_power_rf' { @{
@@ -600,6 +604,11 @@ function Assert-ModeResult {
             rf_prepare_executed='true'; rf_off_confirmed='true';
             device_deadline_arm_requested='true';
             device_deadline_armed='true'; sram_transaction_started='true' } }
+        'dmr_rx_capture_no_rf' { @{
+            first_bridge_exit_confirmed='false'; second_bridge_exit_confirmed='false';
+            rf_prepare_executed='false'; rf_off_confirmed='false';
+            device_deadline_arm_requested='false';
+            device_deadline_armed='false'; sram_transaction_started='false' } }
         'realtime_relay_encode_dmr_morse_unique_five_low_power_rf' { @{
             first_bridge_exit_confirmed='true'; second_bridge_exit_confirmed='false';
             rf_prepare_executed='true'; rf_off_confirmed='true';
@@ -2794,6 +2803,7 @@ try {
         'speech_short_abc_low_power_rf' { 'speech_short_abc_low_power_rf' }
         'dmr_replay_captured_no_rf' { 'dmr_replay_captured_no_rf' }
         'dmr_replay_captured_low_power_rf' { 'dmr_replay_captured_low_power_rf' }
+        'dmr_rx_capture_no_rf' { 'dmr_rx_capture_no_rf' }
         'setup0_only' { 'setup0_only_no_rf' }
         'clear_only' { 'clear_channel_only_no_rf' }
         default { 'session_prepare_no_rf' }
