@@ -480,8 +480,15 @@ final class DmrProtocol {
         }
 
         private byte[] lc9() {
+            // 九字节语音链路控制：[0] 全链路控制操作码、[1] 厂商标识、
+            // [2] 服务选项、[3..5] 被叫地址、[6..8] 主叫地址。
+            // 服务选项的第 6 位（0x40）是加密标志。我们此前一直置 1，
+            // 而信道配置是加密关闭，等于告诉接收机这是加密语音，
+            // 对端会用它没有的密钥去解，放出来就是噪音——与历次
+            // "ID 正常显示、语音为噪音"的现象吻合。厂商 DMR_SendVLcheader
+            // 对应位置也是留零的。改为 0。
             byte[] result = new byte[9];
-            result[2] = 0x40;
+            result[2] = 0x00;
             putU24(result, 3, calledId);
             putU24(result, 6, ownId);
             return result;

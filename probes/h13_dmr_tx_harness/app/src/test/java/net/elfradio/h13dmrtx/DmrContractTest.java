@@ -250,13 +250,13 @@ public final class DmrContractTest {
         assertEquals(0x18, session.cleanupField(1));
         assertEquals(2, DmrProtocol.CLEANUP_COUNT);
 
-        assertEquals("84 a9 61 00 0c 05 43 01 09 00 00 40 00 00 63 00 00 0d",
+        assertEquals("84 a9 61 00 0c 05 43 01 09 00 00 00 00 00 63 00 00 0d",
                 Bytes.hex(session.vlc(0)));
         assertEquals("84 a9 61 00 0d 05 43 00 0a 01 10 01 12 34 56 78 00 00 63 00",
                 Bytes.hex(session.vlc(2)));
         assertEquals("84 a9 61 00 05 05 43 1f 02 00 09 00",
                 Bytes.hex(session.vlc(3)));
-        assertEquals("84 a9 61 00 0c 05 43 02 09 00 00 40 00 00 63 00 00 0d",
+        assertEquals("84 a9 61 00 0c 05 43 02 09 00 00 00 00 00 63 00 00 0d",
                 Bytes.hex(session.terminationVlc()));
         assertEquals(1, DmrProtocol.TERMINATION_COUNT);
     }
