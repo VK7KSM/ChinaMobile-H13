@@ -53,8 +53,9 @@ final class RealtimeRelay {
     // 200 个单元都会超预算，132 个留约 1.7 秒余量。
     // 载荷已是模块交出来的线上单元本身，发射时原样送出，不再经过
     // 编码器或隐私流水线。
-    static final int DMR_REPLAY_UNITS = 132;
-    static final int DMR_REPLAY_BYTES = DMR_REPLAY_UNITS * 27;
+    // 当前重放资产：204 帧交织前排列，按 36 字节单元 = 51 单元 = 1836 字节。
+    static final int DMR_REPLAY_UNITS = 51;
+    static final int DMR_REPLAY_BYTES = DMR_REPLAY_UNITS * 36;
 
     static final int MAX_ACCEPTED_RAW_BYTES = 1024 * 1024;
     static final int SPEECH_BYTE_OFFSET = 1296;

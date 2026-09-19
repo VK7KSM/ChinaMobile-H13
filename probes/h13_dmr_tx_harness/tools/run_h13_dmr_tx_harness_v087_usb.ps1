@@ -52,7 +52,7 @@ $Activity = 'net.elfradio.h13dmrtx/.MainActivity'
 $ExpectedFingerprint = 'CMCC/msm8909/msm8909:8.1.0/OPM1.171019.026/build11020953:user/test-keys'
 $ExpectedVersionCode = 87
 $ExpectedVersionName = '0.87-speech-short-abc-first-rf-candidate'
-$ExpectedApkSha256 = '83B63DA74C4B4DF4FE1944C0D33E75CC87F318E6876941040F10FF4137098C48'
+$ExpectedApkSha256 = '3D4D7ACF8F9318AAF577E49A941391456F119AD57FE60DD550094C7854856CC3'
 $Apk = Join-Path $PSScriptRoot '..\dist\H13_DMR_TX_Harness_v0.87_SpeechShortAbcFirstRfCandidate.apk'
 $DeadlineHelper = Join-Path $PSScriptRoot '..\..\h13_radio\tools\h13_external_dmr_rf_deadline_device.sh'
 $RemoteDeadlineHelper = '/data/local/tmp/h13_dmr_tx_deadline.sh'
@@ -270,9 +270,9 @@ function Assert-ModeResult {
             Mode='speech_short_abc_low_power_rf'; Setup=5; Vlc=2; Data=51 } }
         # replay of real captured DMR units: 66 units x 60 ms = 3.96 s
         'dmr_replay_captured_no_rf' { @{
-            Mode='dmr_replay_captured_no_rf'; Setup=5; Vlc=2; Data=132 } }
+            Mode='dmr_replay_captured_no_rf'; Setup=5; Vlc=2; Data=51 } }
         'dmr_replay_captured_low_power_rf' { @{
-            Mode='dmr_replay_captured_low_power_rf'; Setup=5; Vlc=2; Data=132 } }
+            Mode='dmr_replay_captured_low_power_rf'; Setup=5; Vlc=2; Data=51 } }
         # receive capture: read-only, no bridge, no setup/vlc/data at all
         'dmr_rx_capture_no_rf' { @{
             Mode='dmr_rx_capture_no_rf'; Setup=0; Vlc=0; Data=0 } }

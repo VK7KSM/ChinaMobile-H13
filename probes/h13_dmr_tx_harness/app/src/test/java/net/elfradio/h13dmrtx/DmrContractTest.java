@@ -71,9 +71,12 @@ public final class DmrContractTest {
         assertEquals(DmrProtocol.VoiceFormat.LEGACY_CHAN_D36,
                 DmrTxController.voiceFormatForMode(
                         DmrTxController.MODE_SPEECH_SHORT_ABC_LOW_POWER_RF));
-        assertEquals(DmrProtocol.VoiceFormat.CHAN_D27_TYPE3,
+        assertEquals(DmrProtocol.VoiceFormat.LEGACY_CHAN_D36,
                 DmrTxController.voiceFormatForMode(
                         DmrTxController.MODE_DMR_REPLAY_CAPTURED_LOW_POWER_RF));
+        assertEquals(51, DmrTxController.expectedUnitsFor(
+                RealtimeRelay.DMR_REPLAY_BYTES,
+                DmrProtocol.VoiceFormat.LEGACY_CHAN_D36));
         assertEquals(51, DmrTxController.expectedUnitsFor(
                 RealtimeRelay.SPEECH_SHORT_ABC_BYTES,
                 DmrProtocol.VoiceFormat.LEGACY_CHAN_D36));

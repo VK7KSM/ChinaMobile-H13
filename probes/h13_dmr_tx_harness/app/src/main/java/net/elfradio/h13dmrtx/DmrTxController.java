@@ -150,9 +150,9 @@ final class DmrTxController {
         // 60 毫秒，H13 接收真实 DMR 信号时模块交出来的也正是 27 字节单元。
         // 2026-09-19 两次发射用 36 字节格式，射频、时序、呼叫参数全对但
         // 语音是噪音，正是把 dPMR 格式的包发在 DMR 信道上的表现。
-        // 重放素材是模块交出的 27 字节单元，只能按 27 字节发。
+        // 重放模式按厂商 36 字节单元原样发送资产。
         if (isDmrReplayCapturedMode(mode)) {
-            return DmrProtocol.VoiceFormat.CHAN_D27_TYPE3;
+            return DmrProtocol.VoiceFormat.LEGACY_CHAN_D36;
         }
         // 短素材按厂商外部编码合同发：type3 [01 24 <36字节>]，即历史格式。
         if (isSpeechShortAbcMode(mode)) {
@@ -632,16 +632,14 @@ final class DmrTxController {
                     // 这里过一遍与正常路径相同的处理：取出 49 位语音参数
                     // （丢弃原有 C3），按本次会话参数重新生成迟入信息。
                     // 语音参数本身不动，编码器仍然被排除在变量之外。
-                    SoftwareDmrPrivacyPipeline.Result replayPipeline =
-                            SoftwareDmrPrivacyPipeline
-                                    .buildClearFromClearChannel72(
-                                            runtime14, replay);
-                    software49Bit36 = replayPipeline.channel72;
+                    // 重放模式现在的用途：把资产文件原样按 36 字节单元发出，
+                    // 不做任何变换。当前资产是把编码帧按 chan_d_to_wav 的映射
+                    // 还原到交织前排列（C0,C1,C2,C3 顺序）的 A/B/C 素材，
+                    // 用于验证"模块发射输入期望交织前排列"的假设。
+                    software49Bit36 = replay;
                     software49BitSource = RELAY_SOURCE_DMR_REPLAY_CAPTURED;
                     softwareFinalWirePayload = true;
-                    evidence.saveEvent("replay", "captured_chan_d27", replay);
-                    evidence.saveEvent("replay", "rephased_chan_d27",
-                            replayPipeline.channel72);
+                    evidence.saveEvent("replay", "verbatim_payload", replay);
                     evidence.saveText("replay", "captured_summary",
                             "bytes=" + replay.length + "\n"
                             + "units=" + (replay.length / 27) + "\n"
