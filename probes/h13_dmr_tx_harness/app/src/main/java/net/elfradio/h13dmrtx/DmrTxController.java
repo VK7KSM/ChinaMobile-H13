@@ -2525,9 +2525,42 @@ final class DmrTxController {
                     SystemClock.elapsedRealtime());
             activeRelay = relayFactory.apply(freshRuntime14);
             long vlcBegan = SystemClock.elapsedRealtime();
+            // 诊断：呼叫头之后不论成败，把三秒内的上行原样存证，并记下
+            // 确认/信用/交帧计数。此前异常路径上热路径证据不落盘，第二轮
+            // 模块到底回了什么一直看不到。
+            Exception vlcFailure = null;
             for (int index = 0; index < machine.vlcCountForSession();
                     index++) {
-                exchangeControl("vlc_" + index, machine);
+                try {
+                    exchangeControl("vlc_" + index, machine);
+                } catch (Exception failure) {
+                    vlcFailure = failure;
+                    note.append("vlc_").append(index).append("_failure=")
+                            .append(String.valueOf(failure.getMessage()))
+                            .append("\n");
+                    break;
+                }
+            }
+            java.io.ByteArrayOutputStream post =
+                    new java.io.ByteArrayOutputStream();
+            long postDeadline = SystemClock.elapsedRealtime() + 3000L;
+            while (SystemClock.elapsedRealtime() < postDeadline) {
+                byte[] chunk = transport.readAvailable(50);
+                if (chunk.length > 0) {
+                    post.write(chunk);
+                    activeRelay.acceptRaw(chunk);
+                }
+            }
+            evidence.saveEvent("rearm", "post_vlc_uplink_3s",
+                    post.toByteArray());
+            note.append("post_vlc_uplink_bytes=").append(post.size())
+                    .append("\n");
+            note.append("vlc_acks=").append(activeRelay.vlcAckCount())
+                    .append(" credits=").append(activeRelay.creditCount())
+                    .append(" units=").append(activeRelay.unitsWritten())
+                    .append("\n");
+            if (vlcFailure != null) {
+                throw vlcFailure;
             }
             runOfferPacedPostVlc(machine);
             machine.markRealtimeRelaySequenceComplete();
