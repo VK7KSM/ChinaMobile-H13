@@ -2638,6 +2638,13 @@ if (-not $AllowDisableInterphone) {
     throw '本流程必须暂时停用生产Interphone，需显式传入-AllowDisableInterphone。'
 }
 
+# 捕获目录名按分钟取时间戳，同一分钟内重跑会撞名（批次连跑时很容易命中，
+# 2026-09-21 实测）。撞名时加后缀，不覆盖已有证据。
+if (Test-Path -LiteralPath $Capture) {
+    $Suffix = 2
+    while (Test-Path -LiteralPath ($Capture + "_$Suffix")) { $Suffix++ }
+    $Capture = $Capture + "_$Suffix"
+}
 New-Item -ItemType Directory -Path $Capture | Out-Null
 Copy-Item -LiteralPath $PSCommandPath -Destination `
     (Join-Path $Capture 'run_h13_dmr_tx_harness_usb.ps1')
