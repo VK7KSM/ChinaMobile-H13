@@ -323,7 +323,24 @@ final class DmrTxController {
     // 加一次 setup0 重试；按每次最坏 1300 毫秒算需要 14800 毫秒，原 10000
     // 毫秒不够。放宽到 18000 毫秒，仍满足 rfHoldWindowWellFormed 的
     // FULLPREP_DELAY_MS + RF_HOLD_MS <= FIRST_BRIDGE_EXIT_MS - 1000。
-    private static final long FULLPREP_DELAY_MS = 18000;
+    /**
+     * 桩准备相延时，同时也是主机控制链必须完成的窗口。
+     *
+     * <p>桩本身只需 19 个节拍（置标量 1 拍、清队列甲 112 字节与队列乙
+     * 168 字节、每拍 16 字节），几十毫秒；这个值的真正约束是控制链要在
+     * 截止前做完，见 v0.85 记录「10 次守卫往返加一次重试、每次最坏 1300
+     * 毫秒」得出的 18 秒。
+     *
+     * <p>2026-09-20：控制链快速路径（2.9.9）把每次往返的固定等待改成
+     * 收到完整帧即返回。37 个会话样本显示改前 11.92 至 12.44 秒，改后
+     * 首轮 3.24 至 3.46 秒、重新武装轮 2.07 至 2.13 秒。
+     *
+     * <p>新的最坏情况按「模块响应但慢」算：每次往返最多 300 毫秒静默窗
+     * 加 500 毫秒响应窗加 30 毫秒沉降，11 次约 9.1 秒。完全不响应的情况
+     * 本来就会判失败，不为它留窗口。按 930 毫秒×11 加 500 毫秒沉降
+     * 得 10.73 秒，取 13 秒，余量 1.27 秒。
+     */
+    private static final long FULLPREP_DELAY_MS = 13000;
     static final long POST_BRIDGE_SETTLE_MS = 500;
     // v0.85之前固定为33500毫秒，按旧的6.24秒三遍SOS素材算够用；换成28.8秒
     // 的speech_az09素材后，实测供数在到达这个硬边界前就被设备侧第一桥的
@@ -1366,9 +1383,13 @@ final class DmrTxController {
     }
 
     static boolean firstBridgeBudgetWellFormed() {
-        // 每次交换包含300毫秒静默门、500毫秒确认窗、400毫秒迟到窗，
-        // 再为原始证据同步落盘预留100毫秒；setup0最多额外重试一次。
-        long guardedExchangeMs = 1300;
+        // 每次交换包含300毫秒静默门、500毫秒确认窗、迟到窗，再为原始证据
+        // 同步落盘预留100毫秒；setup0最多额外重试一次。
+        //
+        // 2026-09-20：控制链快速路径（2.9.9）下，收到完整帧后迟到窗由
+        // 400 毫秒降为 CONTROL_SETTLE_MS(30)，故最坏由 1300 降为 930。
+        // 完全不响应的 1300 情形本身就会让会话判失败，不为它留窗口。
+        long guardedExchangeMs = 930;
         // setup 五条 + codec 五条 + setup0 最多一次重试
         long setupWorstMs = POST_BRIDGE_SETTLE_MS + guardedExchangeMs
                 * (DmrProtocol.SETUP_COUNT + DmrProtocol.CODEC_COUNT + 1);
@@ -2488,6 +2509,28 @@ final class DmrTxController {
             } catch (Exception ignored) {
                 note.append("reconnect=异常\n");
             }
+            // 把 MCU 侧的呼叫生命周期状态清掉，模仿原厂收尾。
+            //
+            // 模拟器追踪（2.9.20）显示原厂关闭呼叫后会写 0x200017dd←0、
+            // 0x20000160←0 并清 0x200019a8..+16。我们直接驱动 HPI、绕过
+            // MCU 状态机，而 MCU 原厂运行时始终在跑（桥是挂接非替换），
+            // 因此它仍以为呼叫在进行中。2.9.23 实测第二轮呼叫头被确认但
+            // 声码器不产出帧，与此吻合。此处退桥后已回文本模式，可直接写。
+            StringBuilder lifecycle = new StringBuilder();
+            for (int[] one : new int[][] {
+                    {0x200017dd, 0}, {0x20000160, 0}}) {
+                byte[] before = memory.read(one[0], 1).parsed;
+                memory.writeByte(one[0], one[1]);
+                byte[] after = memory.read(one[0], 1).parsed;
+                lifecycle.append(String.format(java.util.Locale.US,
+                        "0x%08x %s->%s", one[0], Bytes.hex(before),
+                        Bytes.hex(after))).append(" ");
+            }
+            for (int off = 0; off < 16; off++) {
+                memory.writeByte(0x200019a8 + off, 0);
+            }
+            note.append("lifecycle_cleared=").append(lifecycle)
+                    .append("\n");
             byte[] freshRuntime14 =
                     preparePrivacySessionAndMeasureRuntime(true);
             note.append("runtime_refreshed=")
@@ -2523,6 +2566,15 @@ final class DmrTxController {
             sleepUntil(armedAt + FULLPREP_DELAY_MS);
             machine.beginVlcAfterFullprepDeadline(
                     SystemClock.elapsedRealtime());
+            // 每轮供数计时字段必须重置。呼叫头交换按 firstDataOrigin 分成
+            // 首包前（阻塞静默窗）与首包后（非阻塞、按流中信用判定）两条
+            // 分支；沿用上一轮的值会让第二轮的呼叫头走错分支，在首份信用
+            // 尚未到达时即判缺失，第二条呼叫头因此没发出，模块等不到完整
+            // 建立便自行结束（2.9.22 实测：模块其实已确认呼叫头并开始交帧）。
+            firstDataOrigin = 0;
+            relayLastWriteAt = -1L;
+            relayHotPathActive = false;
+            relayEvidenceFlushed = false;
             activeRelay = relayFactory.apply(freshRuntime14);
             long vlcBegan = SystemClock.elapsedRealtime();
             // 诊断：呼叫头之后不论成败，把三秒内的上行原样存证，并记下
