@@ -52,10 +52,10 @@ $ProductionPackage = 'net.elfradio.h13interphone'
 $ProductionActivity = 'net.elfradio.h13interphone/com.bozhou.interphone.ui.talk.MainActivity'
 $Activity = 'net.elfradio.h13dmrtx/.MainActivity'
 $ExpectedFingerprint = 'CMCC/msm8909/msm8909:8.1.0/OPM1.171019.026/build11020953:user/test-keys'
-$ExpectedVersionCode = 127
-$ExpectedVersionName = '1.27-repeat-vlc'
-$ExpectedApkSha256 = '1985DAA3DB00C2C63F3941A080D2E4A01C9D42CEB7618E8881DED64F7ECD7602'
-$Apk = Join-Path $PSScriptRoot '..\dist\H13_DMR_TX_Harness_v1.27_RepeatVlc.apk'
+$ExpectedVersionCode = 135
+$ExpectedVersionName = '1.35-vendor-stop'
+$ExpectedApkSha256 = 'B51888795B5CAF2A5102ACF0E0E9031A13898C2379D97444E2D28C084B0B0CF9'
+$Apk = Join-Path $PSScriptRoot '..\dist\H13_DMR_TX_Harness_v1.35_VendorStop.apk'
 $DeadlineHelper = Join-Path $PSScriptRoot '..\..\h13_radio\tools\h13_external_dmr_rf_deadline_device.sh'
 $RemoteDeadlineHelper = '/data/local/tmp/h13_dmr_tx_deadline.sh'
 $ExpectedDeadlineHelperSha256 = '522792E4E515DAAF674F56DA953178FC4E1A71812D71DFFE2D3F486BD82B2110'
@@ -2691,8 +2691,14 @@ $ProductionPidBefore = Assert-ProductionOwner
 Save-Text 'production_pid_before.txt' $ProductionPidBefore
 
 if ($AllowInstall) {
-    Save-Text 'install_output.txt' (& $Adb -P $AdbPort -s $Serial install -r $Apk 2>&1)
-    if ($LASTEXITCODE -ne 0) {
+    # 设备侧流式安装通道已损坏（PackageInstallerSession.openWrite: Failed to create
+    # bridge，2026-09-20），改为先 push 到 /data/local/tmp 再由 pm install 安装。
+    # adb 把进度写到 stderr，PowerShell 5.1 会把它包成 NativeCommandError；
+    # 经 cmd /c 合并后只以文本形式取回。
+    $PushOut = cmd /c "`"$Adb`" -P $AdbPort -s $Serial push `"$Apk`" /data/local/tmp/h13probe.apk 2>&1"
+    $InstOut = cmd /c "`"$Adb`" -P $AdbPort -s $Serial shell pm install -r /data/local/tmp/h13probe.apk 2>&1"
+    Save-Text 'install_output.txt' (@($PushOut) + @($InstOut) -join "`n")
+    if (-not (($InstOut -join "`n") -match 'Success')) {
         throw 'APK安装失败。'
     }
 }

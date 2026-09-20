@@ -346,7 +346,7 @@ final class DmrTxController {
     private static final boolean REPEAT_FULL_ROUND = true;
 
     /** 退桥后重新武装再跑一轮（零射频实验）。 */
-    private static final boolean REARM_SECOND_ROUND = false;
+    private static final boolean REARM_SECOND_ROUND = true;
 
     /** 重入探针进行中，影响呼叫头的取路。 */
     private boolean repeatProbeActive;
@@ -2203,6 +2203,9 @@ final class DmrTxController {
                     runOfferPacedPostVlc(machine);
                     machine.markRealtimeRelaySequenceComplete();
                     exchangeAckPacedRelayVlc("termination_vlc", machine);
+                    if (REARM_SECOND_ROUND && !allowRf) {
+                        sendVendorCallStop();
+                    }
                 } else if (ackPacedVlcSoftwareTripleSos) {
                     runAckPacedPostVlcTripleSos(machine);
                     machine.markRealtimeRelaySequenceComplete();
@@ -2233,6 +2236,9 @@ final class DmrTxController {
                 awaitPostVlcPlayoutWindow(armedAt);
                 machine.markRealtimeRelaySequenceComplete();
                 exchangeControl("termination_vlc", machine);
+                if (REARM_SECOND_ROUND && !allowRf) {
+                    sendVendorCallStop();
+                }
                 }
             }
             if (allowRf) {
@@ -2397,6 +2403,59 @@ final class DmrTxController {
      * 队列**。2.9.15 中同桥内第二轮拿不到语音信用，候选成因之一正是队列
      * 只准备一次；本路径同时验证该推断。
      */
+    /**
+     * 原厂结束呼叫序列（模拟器 trace_sct_seq.py 自 0x08014300 截得）。
+     *
+     * <pre>
+     *   type 0x40  00 01 34 00 00 00   P01/R34 <- 0
+     *   type 0     21                  CALL_STOP（SCT_Dsp_Send_CALL_STOP@0x0801affc）
+     *   （约 400 毫秒）
+     *   type 0x40  00 00 56 00 00 00   P00/R56 <- 0
+     *   type 0x40  00 01 3c 00 00 00   P01/R3C <- 0
+     *   type 0x40  00 01 3b 00 00 00   P01/R3B <- 0
+     *   type 0     18 00 00 00         WORK_MODE idle（已由既有收尾发出）
+     * </pre>
+     *
+     * <p>我们的收尾从未发过 CALL_STOP。2.9.15 至 2.9.18 中第二轮拿不到语音
+     * 信用，最直接的解释是模块认为上一次呼叫没有结束。v1.34 曾发 type3 0x21，
+     * 类型错误，模块不回应；固件里 CALL_STOP 明确是 type 0。
+     *
+     * <p>实验帧不经状态机，只记录回执不做断言。
+     */
+    private void sendVendorCallStop() throws Exception {
+        StringBuilder note = new StringBuilder();
+        byte[][] seq = {
+            HpiCodec.frame(0x40, new byte[] {0, 1, 0x34, 0, 0, 0}),
+            HpiCodec.frame(0, new byte[] {0x21}),
+        };
+        byte[][] seqAfter = {
+            HpiCodec.frame(0x40, new byte[] {0, 0, 0x56, 0, 0, 0}),
+            HpiCodec.frame(0x40, new byte[] {0, 1, 0x3c, 0, 0, 0}),
+            HpiCodec.frame(0x40, new byte[] {0, 1, 0x3b, 0, 0, 0}),
+        };
+        int index = 0;
+        for (byte[] frame : seq) {
+            SerialTransport.RawExchange ex =
+                    transport.rawExchangeDetailed(frame, 500, 100);
+            evidence.saveEvent("vstop", "req_" + index, frame);
+            evidence.saveEvent("vstop", "rsp_" + index, ex.combined());
+            note.append("step").append(index).append("_rsp=")
+                    .append(Bytes.hex(ex.combined())).append("\n");
+            index++;
+        }
+        SystemClock.sleep(400);
+        for (byte[] frame : seqAfter) {
+            SerialTransport.RawExchange ex =
+                    transport.rawExchangeDetailed(frame, 500, 100);
+            evidence.saveEvent("vstop", "req_" + index, frame);
+            evidence.saveEvent("vstop", "rsp_" + index, ex.combined());
+            note.append("step").append(index).append("_rsp=")
+                    .append(Bytes.hex(ex.combined())).append("\n");
+            index++;
+        }
+        evidence.saveText("vstop", "summary", note.toString());
+    }
+
     private void runRearmSecondRound(TxStateMachine machine,
             byte[] runtime14,
             java.util.function.Function<byte[], RealtimeRelay> relayFactory)
@@ -2446,22 +2505,6 @@ final class DmrTxController {
             memory.writeByte(McuAssets.BRIDGE_FLAG, 1);
             transport.markBridgeActive();
             bridgeExpectedExitAt = armedAt + activeFirstBridgeExitMs;
-            // 厂商外部编码工作流的结束呼叫是 type3 的 0x21（2.8.45），
-            // 与我们收尾用的呼叫模式 2 不是同一种表示。第二轮起呼前先
-            // 显式发一条，看能否清掉模块残留的呼叫状态。
-            try {
-                byte[] stopCall = HpiCodec.frame(3, new byte[] {0x21});
-                SerialTransport.RawExchange stopped =
-                        transport.rawExchangeDetailed(stopCall, 400, 200);
-                evidence.saveEvent("rearm", "stop_call_request", stopCall);
-                evidence.saveEvent("rearm", "stop_call_response",
-                        stopped.combined());
-                note.append("stop_call_bytes=")
-                        .append(stopped.combined().length)
-                        .append("\n");
-            } catch (Exception ignored) {
-                note.append("stop_call=异常\n");
-            }
             note.append("rearm_ms=")
                     .append(armedAt - began).append("\n");
             for (int index = 0; index < DmrProtocol.SETUP_COUNT; index++) {

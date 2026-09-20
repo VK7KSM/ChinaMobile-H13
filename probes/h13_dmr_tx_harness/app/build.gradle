@@ -8,8 +8,8 @@ android {
         applicationId 'net.elfradio.h13dmrtx'
         minSdk 21
         targetSdk 27
-        versionCode 127
-        versionName '1.27-repeat-vlc'
+        versionCode 135
+        versionName '1.35-vendor-stop'
         testInstrumentationRunner 'android.support.test.runner.AndroidJUnitRunner'
         ndk {
             abiFilters 'armeabi-v7a'
