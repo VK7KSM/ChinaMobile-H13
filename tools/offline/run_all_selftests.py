@@ -29,6 +29,14 @@ MODELS = [
     ("服务接口契约", "radio_service_contract.py"),
 ]
 
+# 工具类脚本：没有内置自检，这里用真实素材做冒烟检查，确保接口没被改坏。
+SMOKE = [
+    ("帧级比对", ["compare_frames.py", "--reference", "{ref}",
+                  "--received", "{ref}"], "误码率 0.0000%"),
+    ("链路控制解析", ["parse_link_control.py",
+                      "84a961000c0543010900000000006300000d"], "被叫 99"),
+]
+
 here = Path(__file__).parent
 
 
@@ -47,6 +55,23 @@ def main() -> int:
                  "，不通过 %d" % bad if bad else ""))
         if not ok:
             failed.append((name, proc.stdout, proc.stderr))
+    ref = (here.parents[1] / "captures_ref" / "2026-09-20-rx-watch"
+           / "rx_stitched_312units_18.7s.bin")
+    if ref.exists():
+        for name, argv, expect in SMOKE:
+            args = [a.replace("{ref}", str(ref)) for a in argv]
+            proc = subprocess.run([sys.executable, str(here / args[0])]
+                                  + args[1:], capture_output=True,
+                                  text=True, cwd=here)
+            ok = proc.returncode == 0 and expect in proc.stdout
+            print("%-20s %-6s 冒烟%s"
+                  % (name, "正常" if ok else "失败",
+                     "" if ok else "：未见「%s」" % expect))
+            if not ok:
+                failed.append((name, proc.stdout, proc.stderr))
+    else:
+        print("%-20s %-6s 参照素材缺失，跳过" % ("工具冒烟", "跳过"))
+
     print("-" * 46)
     if failed:
         print("失败 %d 个模型：" % len(failed))
