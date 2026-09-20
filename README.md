@@ -284,7 +284,7 @@ AT+DMOGETDIGITALRXINFO    空闲回 0,0,0；有信号时回 group,<目标>,<主�
 | `firmware/sct3258_bootloaders/` | 公开基带加载器变体 |
 | `firmware/android_device_tree/` | 设备树、引脚配置、音频配置 |
 | `tools/emulator/` | MCU 固件模拟器与发射链追踪脚本（纯离线） |
-| `tools/offline/` | 离线格式核验脚本 |
+| `tools/offline/` | 离线工具：判据与分析、编解码、服务层模型、素材生成。见其 `README.md` |
 | `tools/firmware_analysis/` | 固件校验与分析脚本 |
 | `tools/sct3258_analysis/` | 基带静态分析脚本 |
 | `tools/software_ambe_snapshot/` | 软件语音编码器源码快照 |
@@ -308,6 +308,19 @@ python tools/emulator/trace_tx_chain.py --flash firmware/mcu/Module_current_0.3.
 ```
 
 模拟器只做模拟与记录，不生成任何可写回设备的制品。
+
+## 回归自检
+
+```bash
+python tools/offline/run_all_selftests.py
+```
+
+一次跑完服务层模型的全部用例与工具冒烟检查。改动模型或工具后先跑这个；
+**用例数以它的输出为准，不要手数**。
+
+设备侧会话另有自动判据核对：`tools/device/run_candidate.sh` 在每次会话
+结束时调用 `tools/offline/audit_capture.py`，逐条核对已确立的不变量
+（信道是否明文、呼叫头服务选项是否带加密位等）。
 
 ## 阅读顺序
 
