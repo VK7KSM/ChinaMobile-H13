@@ -345,6 +345,9 @@ final class DmrTxController {
     /** 重入探针是否跑完整一轮（含供数与终止）。 */
     private static final boolean REPEAT_FULL_ROUND = true;
 
+    /** 退桥后重新武装再跑一轮（零射频实验）。 */
+    private static final boolean REARM_SECOND_ROUND = false;
+
     /** 重入探针进行中，影响呼叫头的取路。 */
     private boolean repeatProbeActive;
 
@@ -2278,6 +2281,15 @@ final class DmrTxController {
         }
         machine.attestFirstBridgeExit(prep, exit, bridge, vector, mirror);
         firstBridgeExitConfirmed = true;
+        if (REARM_SECOND_ROUND && !allowRf && relayOne
+                && software49Bit36 != null) {
+            runRearmSecondRound(machine, runtime14,
+                    fresh -> new RealtimeRelay(fresh, software49Bit36,
+                            software49BitSource, softwareFinalWirePayload,
+                            RealtimeRelay.REQUIRED_UNITS,
+                            postVlcThreeLiveSoftwareOne,
+                            ackPacedVlcSoftwareTripleSos, voiceFormat));
+        }
         if (allowRf) {
             completeFirstBridgeRfWithoutSecondBridge(machine);
         } else {
@@ -2372,6 +2384,112 @@ final class DmrTxController {
                 .append(SystemClock.elapsedRealtime() - began)
                 .append("\n");
         evidence.saveText("repeat", "pass_probe", note.toString());
+    }
+
+    /**
+     * 退桥后重新武装并跑完整第二轮（零射频实验）。
+     *
+     * <p>桩的代码与 helper 推一次后留在 SRAM，重新武装只需三次写：元数据、
+     * 向量槽、桥标志，约 0.3 秒，省掉约 55 秒推桩。
+     *
+     * <p>关键点：桩的相位变量 PREP_PHASE(0x20003060) 落在元数据块内，
+     * 因此重写元数据块会把相位归零，桩会重新跑一遍准备相、**重新准备供数
+     * 队列**。2.9.15 中同桥内第二轮拿不到语音信用，候选成因之一正是队列
+     * 只准备一次；本路径同时验证该推断。
+     */
+    private void runRearmSecondRound(TxStateMachine machine,
+            byte[] runtime14,
+            java.util.function.Function<byte[], RealtimeRelay> relayFactory)
+            throws Exception {
+        StringBuilder note = new StringBuilder();
+        long began = SystemClock.elapsedRealtime();
+        boolean rearmEntered = false;
+        try {
+            machine.beginRearmPass();
+            rearmEntered = true;
+            // 第二轮此前沿用首轮的运行快照。模块在一次呼叫完成后可能已
+            // 改变运行态，快照过期会让供数帧对不上。这里重做一次信道与
+            // 隐私设置并取新快照——这是首轮之前做过、第二轮从未做过的
+            // 唯一一件事。
+            byte[] freshRuntime14 =
+                    preparePrivacySessionAndMeasureRuntime(true);
+            note.append("runtime_refreshed=")
+                    .append(!java.util.Arrays.equals(runtime14,
+                            freshRuntime14))
+                    .append("\n");
+            byte[] metaBlock =
+                    new byte[McuAssets.FULLPREP_METADATA_LENGTH];
+            System.arraycopy(le32((int) Math.round(
+                    measuredTickHz * FULLPREP_DELAY_MS / 1000.0)), 0,
+                    metaBlock, 4, 4);
+            System.arraycopy(le32((int) Math.round(
+                    measuredTickHz * activeFirstBridgeExitMs / 1000.0)), 0,
+                    metaBlock, 8, 4);
+            upload("fullprep_meta", metaBlock);
+            long armedAt = SystemClock.elapsedRealtime();
+            machine.registerFullprepDeadline(armedAt + FULLPREP_DELAY_MS);
+            upload("vector", le32(McuAssets.FULLPREP_ENTRY));
+            memory.writeByte(McuAssets.BRIDGE_FLAG, 1);
+            transport.markBridgeActive();
+            bridgeExpectedExitAt = armedAt + activeFirstBridgeExitMs;
+            note.append("rearm_ms=")
+                    .append(armedAt - began).append("\n");
+            for (int index = 0; index < DmrProtocol.SETUP_COUNT; index++) {
+                exchangeControl("rearm_setup_" + index, machine);
+            }
+            for (int index = 0; index < DmrProtocol.CODEC_COUNT; index++) {
+                exchangeControl("rearm_codec_" + index, machine);
+            }
+            note.append("control_ms=")
+                    .append(SystemClock.elapsedRealtime() - armedAt)
+                    .append("\n");
+            sleepUntil(armedAt + FULLPREP_DELAY_MS);
+            machine.beginVlcAfterFullprepDeadline(
+                    SystemClock.elapsedRealtime());
+            activeRelay = relayFactory.apply(freshRuntime14);
+            long vlcBegan = SystemClock.elapsedRealtime();
+            for (int index = 0; index < machine.vlcCountForSession();
+                    index++) {
+                exchangeControl("vlc_" + index, machine);
+            }
+            runOfferPacedPostVlc(machine);
+            machine.markRealtimeRelaySequenceComplete();
+            exchangeAckPacedRelayVlc("termination_vlc", machine);
+            note.append("body_ms=")
+                    .append(SystemClock.elapsedRealtime() - vlcBegan)
+                    .append("\n");
+            note.append("units_written=")
+                    .append(activeRelay.unitsWritten()).append("/")
+                    .append(activeRelay.maximumUnits()).append("\n");
+            for (int index = 0; index < DmrProtocol.CLEANUP_COUNT; index++) {
+                exchangeControl("rearm_cleanup_" + index, machine);
+            }
+            sleepUntil(armedAt + activeFirstBridgeExitMs
+                    + FIRST_BRIDGE_MARGIN_MS);
+            transport.markAutomaticBridgeExit();
+            bridgeExpectedExitAt = 0;
+            note.append("result=REARM_FULL_ROUND\n");
+        } catch (Exception failure) {
+            note.append("result=REJECTED\n");
+            note.append("reason=")
+                    .append(String.valueOf(failure.getMessage()))
+                    .append("\n");
+            try {
+                transport.markAutomaticBridgeExit();
+            } catch (Exception ignored) {
+                note.append("exit_mark_failed\n");
+            }
+            bridgeExpectedExitAt = 0;
+        }
+        if (rearmEntered) {
+            // 只有真正进入过重入才还原；入口就被拒时状态未变，
+            // 此时还原会把相位写坏。
+            machine.abortRepeatPass();
+        }
+        note.append("total_ms=")
+                .append(SystemClock.elapsedRealtime() - began)
+                .append("\n");
+        evidence.saveText("rearm", "second_round", note.toString());
     }
 
     private void completeFirstBridgeRfWithoutSecondBridge(

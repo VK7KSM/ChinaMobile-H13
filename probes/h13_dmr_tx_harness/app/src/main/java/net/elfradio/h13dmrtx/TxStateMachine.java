@@ -54,6 +54,7 @@ final class TxStateMachine {
     private boolean savedTerminationAcked;
     private boolean savedRelayComplete;
     private int savedDataIndex;
+    private Phase savedPhaseBeforeRearm;
 
     TxStateMachine(DmrProtocol.Session session, TxPlan plan) {
         this(session, plan, false, false, false);
@@ -275,7 +276,31 @@ final class TxStateMachine {
         terminationAcked = savedTerminationAcked;
         relayComplete = savedRelayComplete;
         dataIndex = savedDataIndex;
+        // 还原到进入重入前的相位，而不是一律写成等待退桥；重新武装是
+        // 从 WAIT_RF_ATTESTATION 进入的，写错会让会话末尾阶段核对失败。
+        phase = savedPhaseBeforeRearm != null
+                ? savedPhaseBeforeRearm : Phase.WAIT_FIRST_BRIDGE_EXIT;
+        savedPhaseBeforeRearm = null;
+    }
+
+    /**
+     * 重新武装一座新桥前的重置。
+     *
+     * <p>与 {@link #beginRepeatPass()} 的区别：那是在**同一座桥内**再开
+     * 一轮，本方法用于**退桥之后重新武装**，因此还要清掉已登记的 fullprep
+     * 截止，让新桥重新登记。一次性见证标志同样保存待还原。
+     */
+    void beginRearmPass() {
+        // 第一桥见证通过后相位是 WAIT_RF_ATTESTATION（零射频下该见证不
+        // 再推进），从这里重新武装是合法的。
+        if (phase != Phase.WAIT_FIRST_BRIDGE_EXIT
+                && phase != Phase.WAIT_RF_ATTESTATION) {
+            throw fail("重新武装只能在上一座桥收尾之后开始");
+        }
+        savedPhaseBeforeRearm = phase;
         phase = Phase.WAIT_FIRST_BRIDGE_EXIT;
+        beginRepeatPass();
+        fullprepDeadlineMs = -1;
     }
 
     /** 本会话的呼叫头条数，供探针重入时使用。 */
