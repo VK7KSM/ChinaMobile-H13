@@ -100,7 +100,9 @@ class SeqTracer:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--flash", required=True)
-    ap.add_argument("--entry", required=True)
+    ap.add_argument("--entry", default="", help="直接调用的入口；与 --cmds 二选一")
+    ap.add_argument("--cmds", default="", help="按顺序经串口送入的 AT 命令，| 分隔")
+    ap.add_argument("--cmd-steps", type=int, default=4_000_000)
     ap.add_argument("--args", default="")
     ap.add_argument("--preset", default="", help="调用前写 SRAM：addr=val(字节),... 十六进制")
     ap.add_argument("--boot-steps", type=int, default=20_000_000)
@@ -123,11 +125,24 @@ def main():
         ad, val = kv.split("="); ad = int(ad, 16); val = int(val, 16)
         emu.uc.mem_write(ad, bytes([val & 0xff]))
         print(f"  预置 [{ad:#010x}] = {val:#x}")
-    entry = int(a.entry, 16)
-    argv = [int(x, 16) for x in a.args.split(",") if x.strip()]
-    print(f"调用 {entry:#010x} 参数={[hex(x) for x in argv]}", flush=True)
-    ret = tr.call(entry, argv, a.call_steps)
-    print(f"  返回 {ret:#x}\n")
+    ret = 0; entry = 0; argv = []
+    if a.cmds:
+        for cmd in [c for c in a.cmds.split("|") if c.strip()]:
+            mark = len(tr.packets)
+            print("\n>>> 串口送入 " + cmd, flush=True)
+            emu.send_uart(cmd + "\r\n")
+            emu.call_return_pending = False
+            emu.run(emu.steps + a.cmd_steps)
+            print("    本段 HPI 包 %d 条" % (len(tr.packets) - mark), flush=True)
+            for p in tr.packets[mark:]:
+                if "正文" in p:
+                    print("      %10d %-24s type=%-3d len=%-3d %s" % (p["步"], p["发送者"] or "?", p["类型"], p["长度"], p["正文"]))
+    else:
+        entry = int(a.entry, 16)
+        argv = [int(x, 16) for x in a.args.split(",") if x.strip()]
+        print("调用 %#010x 参数=%s" % (entry, [hex(x) for x in argv]), flush=True)
+        ret = tr.call(entry, argv, a.call_steps)
+        print("  返回 %#x\n" % ret)
     print("=== HPI 包序列（类型/正文）===")
     for p in tr.packets:
         if "正文" in p:
