@@ -333,7 +333,22 @@ final class DmrTxController {
     // 射频保持时间——射频保持由独立的SECOND_BRIDGE_EXIT_MS/RF_HOLD_MS控制。
     // 2026-09-19 再次放大：准备窗为容纳五条 codec 写从 10000 提到 18000，
     // 28.8 秒 speech_az09 的最坏收尾随之推到约 50580 毫秒，原 50000 不够。
+    /**
+     * 同桥内第二轮建立的可行性探针开关（零射频专用）。
+     *
+     * <p>热点形态要求一次武装多次发射。本开关只在收尾后追加一轮控制链，
+     * 用于回答模块是否接受；不供数、不发射。默认关闭，验证完即评估是否
+     * 转为正式循环。
+     */
+    private static final boolean REPEAT_PASS_PROBE = true;
+
+    /** 重入探针进行中，影响呼叫头的取路。 */
+    private boolean repeatProbeActive;
+
     private static final long FIRST_BRIDGE_EXIT_MS = 150000;
+
+    /** 本次会话实际使用的第一桥在位时长，武装时按素材预算求得。 */
+    private long activeFirstBridgeExitMs = FIRST_BRIDGE_EXIT_MS;
     private static final long FIRST_BRIDGE_MARGIN_MS = 2000;
     static final long RF_HOLD_MS = 16000;
     static final long RELAY_PRE_VLC2_WAIT_MS = 1000;
@@ -1446,6 +1461,31 @@ final class DmrTxController {
      * 用户设定的单次发射30秒硬上限——后者不是设备保护，是操作安全约束，
      * 这里显式核对，不能只指望RF_HOLD_MS间接兜底。
      */
+    /**
+     * 本次会话真正需要的第一桥在位时长（毫秒）。
+     *
+     * <p>此前一律按 {@link #FIRST_BRIDGE_EXIT_MS} 写死 150 秒，会话做完也要
+     * 等计数器走满；2.9.8 实测该等待占整场 47.7%。桥在位期间串口处于 HPI
+     * 透传，没法用文本命令提前叫停，所以正确做法不是主动退桥，而是**武装时
+     * 就按本次素材的实际预算设定计数器**。
+     *
+     * <p>算式与 {@link #ackPacedActiveRfBudgetWellFormedFor} 的最坏情况一致，
+     * 另加 {@link #FIRST_BRIDGE_MARGIN_MS} 安全边距，并以 150 秒为上限。
+     */
+    static long firstBridgeExitMsFor(int unitCount, long unitIntervalMs) {
+        long cleanupMs = 1300L * DmrProtocol.CLEANUP_COUNT;
+        long ackPacedVlcWorstMs = RELAY_VLC_ACK_DURATION_MS
+                * DmrProtocol.VLC_COUNT;
+        long bodyWorstMs = (unitCount - 1L) * unitIntervalMs
+                + TxPlan.MAX_LATE_MS;
+        long terminationWorstMs = 300L + 500L;
+        long worstEndMs = FULLPREP_DELAY_MS + ackPacedVlcWorstMs
+                + POST_VLC_LISTEN_MS + bodyWorstMs + ACTIVE_PACED_TAIL_MS
+                + terminationWorstMs + cleanupMs;
+        long needed = worstEndMs + FIRST_BRIDGE_MARGIN_MS;
+        return Math.min(FIRST_BRIDGE_EXIT_MS, Math.max(needed, 8000L));
+    }
+
     static boolean ackPacedActiveRfBudgetWellFormedFor(int unitCount,
             long unitIntervalMs) {
         long cleanupMs = 1300L * DmrProtocol.CLEANUP_COUNT;
@@ -1880,11 +1920,11 @@ final class DmrTxController {
                 4);
         sram.backupStable("fullprep_code", McuAssets.FULLPREP_CODE,
                 McuAssets.FULLPREP_LENGTH);
-        for (int offset = 0; offset < McuAssets.FULLPREP_METADATA_LENGTH;
-                offset += 4) {
-            sram.backupStable("fullprep_meta_" + offset,
-                    McuAssets.FULLPREP_METADATA + offset, 4);
-        }
+        // 元数据整块备份/上传。此前按 4 字节分 9 个区域，每个区域一次
+        // 写加一次整块回读校验，48 字节走了 11 个往返，实测占 19.4 秒
+        // （2.9.8）。合并为一次往返，写入内容与校验强度不变。
+        sram.backupStable("fullprep_meta", McuAssets.FULLPREP_METADATA,
+                McuAssets.FULLPREP_METADATA_LENGTH);
         sram.backupStable("fullprep_helper", McuAssets.FULLPREP_HELPER,
                 McuAssets.FULLPREP_HELPER_LENGTH);
         sram.backupStable("rf_off", McuAssets.RF_OFF_CODE,
@@ -1932,15 +1972,26 @@ final class DmrTxController {
         }
         upload("fullprep_code", fullprep);
         upload("fullprep_helper", helper);
-        for (int offset = 0; offset < McuAssets.FULLPREP_METADATA_LENGTH;
-                offset += 4) {
-            upload("fullprep_meta_" + offset, new byte[4]);
-        }
         measuredTickHz = measureTickHz();
-        upload("fullprep_meta_4", le32((int) Math.round(
-                measuredTickHz * FULLPREP_DELAY_MS / 1000.0)));
-        upload("fullprep_meta_8", le32((int) Math.round(
-                measuredTickHz * FIRST_BRIDGE_EXIT_MS / 1000.0)));
+        // 按本次素材的实际预算设定绝对退出计数器，而不是一律 150 秒。
+        // 见 firstBridgeExitMsFor 的说明与 2.9.8 的实测。
+        activeFirstBridgeExitMs = software49Bit36 != null
+                ? firstBridgeExitMsFor(expectedUnitsFor(
+                        software49Bit36.length, voiceFormat),
+                        TxPlan.unitIntervalMs(voiceFormat))
+                : FIRST_BRIDGE_EXIT_MS;
+        evidence.saveText("bridge", "exit_budget",
+                "first_bridge_exit_ms=" + activeFirstBridgeExitMs
+                + "\nceiling_ms=" + FIRST_BRIDGE_EXIT_MS
+                + "\n");
+        byte[] metaBlock = new byte[McuAssets.FULLPREP_METADATA_LENGTH];
+        System.arraycopy(le32((int) Math.round(
+                measuredTickHz * FULLPREP_DELAY_MS / 1000.0)), 0,
+                metaBlock, 4, 4);
+        System.arraycopy(le32((int) Math.round(
+                measuredTickHz * activeFirstBridgeExitMs / 1000.0)), 0,
+                metaBlock, 8, 4);
+        upload("fullprep_meta", metaBlock);
         if (allowRf) {
             // 显式设定发射功率码。不设的话用的是上次残留值，同配置的功率
             // 会在 0.05 到 1.24 瓦之间乱跳，信号强弱本身就会左右接收端
@@ -2182,7 +2233,13 @@ final class DmrTxController {
                 throw new IOException("会话未在第一桥退桥安全边距前完成");
             }
         }
-        sleepUntil(armedAt + FIRST_BRIDGE_EXIT_MS + FIRST_BRIDGE_MARGIN_MS);
+        boolean repeatPassProbe = REPEAT_PASS_PROBE && !allowRf
+                && relayOne && software49Bit36 != null;
+        if (repeatPassProbe && !setup0Only) {
+            runRepeatPassProbe(machine, armedAt);
+        }
+        sleepUntil(armedAt + activeFirstBridgeExitMs
+                + FIRST_BRIDGE_MARGIN_MS);
         transport.markAutomaticBridgeExit();
         bridgeExpectedExitAt = 0;
 
@@ -2207,6 +2264,67 @@ final class DmrTxController {
             // 78包原件逐文件持久化不得占用第一桥或RF窗口。
             flushRelayEvidence();
         }
+    }
+
+    /**
+     * 同一座桥内第二轮呼叫建立的可行性探针（零射频）。
+     *
+     * <p>要回答的问题：模块在一轮呼叫正常收尾之后，能否在**同一座桥内**
+     * 接受新一轮控制链与呼叫头。若可以，热点形态下每次发射的成本就只有
+     * 控制链加呼叫头加素材时长，不必重走推桩与 fullprep 延时。
+     *
+     * <p>只做控制链与呼叫头，不供数、不终止，做完即记录结果；失败不抛出，
+     * 原因写进证据，避免一个探索性探针把已验证的主流程判为失败。
+     */
+    private void runRepeatPassProbe(TxStateMachine machine, long armedAt)
+            throws Exception {
+        StringBuilder note = new StringBuilder();
+        long began = SystemClock.elapsedRealtime();
+        note.append("phase_before=").append(machine.phaseName())
+                .append("\n");
+        note.append("elapsed_since_arm_ms=").append(began - armedAt)
+                .append("\n");
+        repeatProbeActive = true;
+        try {
+            machine.beginRepeatPass();
+            for (int index = 0; index < DmrProtocol.SETUP_COUNT; index++) {
+                exchangeControl("repeat_setup_" + index, machine);
+            }
+            long setupDone = SystemClock.elapsedRealtime();
+            note.append("setup_ms=").append(setupDone - began)
+                    .append("\n");
+            for (int index = 0; index < DmrProtocol.CODEC_COUNT; index++) {
+                exchangeControl("repeat_codec_" + index, machine);
+            }
+            long codecDone = SystemClock.elapsedRealtime();
+            note.append("codec_ms=").append(codecDone - setupDone)
+                    .append("\n");
+            // 准备期截止在首轮已过，第二轮不必再等。
+            machine.beginVlcAfterFullprepDeadline(
+                    SystemClock.elapsedRealtime());
+            for (int index = 0; index < machine.vlcCountForSession();
+                    index++) {
+                exchangeControl("vlc_r" + index, machine);
+            }
+            note.append("vlc_ms=")
+                    .append(SystemClock.elapsedRealtime() - codecDone)
+                    .append("\n");
+            note.append("result=CALL_REESTABLISHED\n");
+        } catch (Exception failure) {
+            note.append("result=REJECTED\n");
+            note.append("reason=")
+                    .append(String.valueOf(failure.getMessage()))
+                    .append("\n");
+        }
+        repeatProbeActive = false;
+        // 探针不走完整轮次，必须显式还原相位，否则退桥见证会判失败。
+        machine.abortRepeatPass();
+        note.append("phase_after=").append(machine.phaseName())
+                .append("\n");
+        note.append("total_ms=")
+                .append(SystemClock.elapsedRealtime() - began)
+                .append("\n");
+        evidence.saveText("repeat", "pass_probe", note.toString());
     }
 
     private void completeFirstBridgeRfWithoutSecondBridge(
@@ -2527,7 +2645,10 @@ final class DmrTxController {
         evidence.saveEvent("hpi", label + "_request", request);
         boolean relaySessionVlc = label.startsWith("vlc_");
         boolean vlc = relaySessionVlc || "termination_vlc".equals(label);
-        boolean relayVlc = vlc && activeRelay != null;
+        // 重入探针只验证呼叫能否再次起来，不供数，因此呼叫头走非供数
+        // 路径；否则会用上一轮已耗尽的供数器，触发计数断言。
+        boolean relayVlc = vlc && activeRelay != null
+                && !repeatProbeActive;
         SerialTransport.RawExchange exchange;
         try {
             if (relayVlc) {

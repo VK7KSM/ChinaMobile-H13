@@ -51,6 +51,9 @@ final class TxStateMachine {
     private long watchdogAtMs = -1;
     private boolean setup0EmptyRetryConsumed;
     private boolean relayComplete;
+    private boolean savedTerminationAcked;
+    private boolean savedRelayComplete;
+    private int savedDataIndex;
 
     TxStateMachine(DmrProtocol.Session session, TxPlan plan) {
         this(session, plan, false, false, false);
@@ -220,6 +223,69 @@ final class TxStateMachine {
             return;
         }
         throw fail("控制响应阶段错误");
+    }
+
+    /**
+     * 同一座桥内开始新一轮呼叫建立（可行性探针用）。
+     *
+     * <p>桩的准备相一旦到位即保持，因此第二轮不必再等 fullprep 延时，
+     * 成本只有控制链加呼叫头。本方法只重置本轮相关的游标，不动 fullprep
+     * 截止、射频时刻等一次性见证量。
+     *
+     * <p>只允许从 {@link Phase#WAIT_FIRST_BRIDGE_EXIT} 进入，即上一轮已
+     * 正常收尾；其余相位调用属流程错误。
+     */
+    void beginRepeatPass() {
+        if (phase != Phase.WAIT_FIRST_BRIDGE_EXIT) {
+            throw fail("重入轮次只能在上一轮收尾之后开始");
+        }
+        if (pending != null) {
+            throw fail("重入前仍有未确认的控制请求");
+        }
+        // 上一轮的见证标志必须保存，还原时原样写回：它们是整场会话的
+        // 一次性事实，不属于本轮游标。清掉不还原会让末尾的完整结束态
+        // 核对失败。
+        savedTerminationAcked = terminationAcked;
+        savedRelayComplete = relayComplete;
+        savedDataIndex = dataIndex;
+        setupIndex = 0;
+        codecIndex = 0;
+        vlcIndex = 0;
+        cleanupIndex = 0;
+        dataIndex = 0;
+        terminationAcked = false;
+        relayComplete = false;
+        setup0EmptyRetryConsumed = false;
+        phase = Phase.FIRST_BRIDGE_SETUP;
+    }
+
+    /**
+     * 结束重入探针，把相位还原到等待退桥。
+     *
+     * <p>探针只验证模块是否接受新一轮建立，不走完整轮次，因此结束时必须
+     * 显式还原，否则后续的退桥见证会因相位不符而判失败。还原只动相位与
+     * 本轮游标，不触碰任何一次性见证量。
+     */
+    void abortRepeatPass() {
+        pending = null;
+        setupIndex = 0;
+        codecIndex = 0;
+        vlcIndex = 0;
+        cleanupIndex = 0;
+        terminationAcked = savedTerminationAcked;
+        relayComplete = savedRelayComplete;
+        dataIndex = savedDataIndex;
+        phase = Phase.WAIT_FIRST_BRIDGE_EXIT;
+    }
+
+    /** 本会话的呼叫头条数，供探针重入时使用。 */
+    int vlcCountForSession() {
+        return session.vlcCount();
+    }
+
+    /** 当前相位名，供探针记录。 */
+    String phaseName() {
+        return phase.name();
     }
 
     boolean abandonSetup0ForStrictEmptyRetry(byte[] response) {

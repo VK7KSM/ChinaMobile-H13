@@ -48,17 +48,30 @@ final class SerialTransport implements AutoCloseable {
         this.trace = trace;
     }
 
+    /** 文本命令写前的静默确认窗。 */
+    private static final long TEXT_PREDRAIN_QUIET_MS = 12;
+
     synchronized byte[] exchangeText(String command, long timeoutMs)
             throws Exception {
         requireMode(Mode.TEXT);
-        QuietResult drained = drainUntilQuiet(40, 300);
+        // 写前静默窗：上一条命令已按结构判据或静默判据收完，线路本就
+        // 安静，40 毫秒确认属纯等待。降到 12 毫秒；真有残留仍会被排空
+        // 并计入证据，上限 300 毫秒不变。
+        QuietResult drained = drainUntilQuiet(TEXT_PREDRAIN_QUIET_MS,
+                300);
         trace("rx", "text_predrain", drained.drained);
         byte[] request = (command + "\r\n")
                 .getBytes(StandardCharsets.US_ASCII);
         output.write(request);
         output.flush();
         trace("tx", "text_request", request);
-        byte[] response = readUntilQuietAfterData(80, timeoutMs);
+        // memwrite 的响应形状固定：命令回显一行加报告一行，各以 CRLF
+        // 结束。满两行即返回，不再空等 80 毫秒静默。实测文本命令中位
+        // 间隔 202 毫秒、最小 33 毫秒，差额主要是我方固定窗（2.9.10）。
+        // 其余命令形状不一，仍走静默判据。
+        byte[] response = command.startsWith("memwrite")
+                ? readUntilLinesOrQuiet(2, 80, timeoutMs)
+                : readUntilQuietAfterData(80, timeoutMs);
         trace("rx", "text_response", response);
         return response;
     }
@@ -69,7 +82,11 @@ final class SerialTransport implements AutoCloseable {
         if (expectedLength <= 0) {
             throw new IllegalArgumentException("memread期望长度无效");
         }
-        QuietResult drained = drainUntilQuiet(40, 300);
+        // 写前静默窗：上一条命令已按结构判据或静默判据收完，线路本就
+        // 安静，40 毫秒确认属纯等待。降到 12 毫秒；真有残留仍会被排空
+        // 并计入证据，上限 300 毫秒不变。
+        QuietResult drained = drainUntilQuiet(TEXT_PREDRAIN_QUIET_MS,
+                300);
         trace("rx", "text_predrain", drained.drained);
         byte[] request = (command + "\r\n")
                 .getBytes(StandardCharsets.US_ASCII);
@@ -80,6 +97,60 @@ final class SerialTransport implements AutoCloseable {
                 timeoutMs);
         trace("rx", "text_response", response);
         return response;
+    }
+
+    /**
+     * 读到指定行数（以 CRLF 计）即返回；未达行数则退回静默判据。
+     *
+     * <p>写入本身另有整块回读校验兜底，因此即便此处提前返回导致响应
+     * 解析出错，也不会让写入失败悄悄通过——会在回读比对处报错。
+     */
+    synchronized byte[] readUntilLinesOrQuiet(int lines, long quietMs,
+            long maximumMs) throws Exception {
+        if (mode == Mode.CLOSED || lines <= 0) {
+            throw new IllegalStateException("串口读取状态错误");
+        }
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] buffer = new byte[1024];
+        long started = nowMs();
+        long lastByte = -1;
+        while (nowMs() - started <= maximumMs) {
+            int available = input.available();
+            if (available > 0) {
+                int count = input.read(buffer, 0,
+                        Math.min(buffer.length, available));
+                if (count > 0) {
+                    out.write(buffer, 0, count);
+                    lastByte = nowMs();
+                    byte[] soFar = out.toByteArray();
+                    if (countLines(soFar) >= lines
+                            && endsWithCrLf(soFar)) {
+                        return soFar;
+                    }
+                }
+            } else {
+                if (lastByte > 0 && nowMs() - lastByte >= quietMs) {
+                    break;
+                }
+                Thread.sleep(1);
+            }
+        }
+        return out.toByteArray();
+    }
+
+    private static int countLines(byte[] data) {
+        int lines = 0;
+        for (int i = 1; i < data.length; i++) {
+            if (data[i] == '\n' && data[i - 1] == '\r') {
+                lines++;
+            }
+        }
+        return lines;
+    }
+
+    private static boolean endsWithCrLf(byte[] data) {
+        return data.length >= 2 && data[data.length - 2] == '\r'
+                && data[data.length - 1] == '\n';
     }
 
     synchronized QuietResult drainUntilQuiet(long quietMs, long maximumMs)
@@ -118,6 +189,9 @@ final class SerialTransport implements AutoCloseable {
         this.allowBusyBridge = allow;
     }
 
+    /** 已收到完整帧后的沉降窗，接住紧随其后的字节。 */
+    private static final long CONTROL_SETTLE_MS = 30;
+
     synchronized byte[] rawExchange(byte[] request, long responseMs,
             long lateMs) throws Exception {
         RawExchange result = rawExchangeDetailed(request, responseMs, lateMs);
@@ -142,8 +216,13 @@ final class SerialTransport implements AutoCloseable {
         output.flush();
         controlFlushCompleted++;
         trace("tx", "hpi_request", request);
-        byte[] first = readWindow(responseMs);
-        byte[] late = readWindow(lateMs);
+        // 快速路径：收到完整帧即返回，固定窗降为超时上限。此前是
+        // 固定等满 responseMs+lateMs，模块几毫秒回完也要等，十一条
+        // 控制写累计 13.2 秒（2.9.8 实测）。沉降窗只为接住紧随其后
+        // 的字节，不再整窗空等。
+        byte[] first = readWindowUntilFrame(responseMs);
+        byte[] late = readWindow(first.length > 0
+                ? Math.min(lateMs, CONTROL_SETTLE_MS) : lateMs);
         trace("rx", "hpi_primary", first);
         trace("rx", "hpi_late", late);
         return new RawExchange(quiet.drained, first, late,
@@ -268,6 +347,35 @@ final class SerialTransport implements AutoCloseable {
 
     synchronized int dataFlushCompleted() {
         return dataFlushCompleted;
+    }
+
+    /** 收到完整 HPI 帧即返回的读窗；超时上限仍为 timeoutMs。 */
+    synchronized byte[] readWindowUntilFrame(long timeoutMs)
+            throws Exception {
+        if (mode == Mode.CLOSED || timeoutMs < 0) {
+            throw new IllegalStateException("串口读取状态错误");
+        }
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] buffer = new byte[2048];
+        long deadline = nowMs() + timeoutMs;
+        while (nowMs() < deadline) {
+            int available = input.available();
+            if (available > 0) {
+                int count = input.read(buffer, 0,
+                        Math.min(buffer.length, available));
+                if (count > 0) {
+                    out.write(buffer, 0, count);
+                    java.util.List<HpiCodec.WireFrame> frames =
+                            HpiCodec.parseComplete(out.toByteArray());
+                    if (frames != null && !frames.isEmpty()) {
+                        return out.toByteArray();
+                    }
+                }
+            } else {
+                Thread.sleep(1);
+            }
+        }
+        return out.toByteArray();
     }
 
     synchronized byte[] readWindow(long timeoutMs) throws Exception {
