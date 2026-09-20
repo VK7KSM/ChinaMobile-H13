@@ -2424,9 +2424,13 @@ final class DmrTxController {
      */
     private void sendVendorCallStop() throws Exception {
         StringBuilder note = new StringBuilder();
+        // v1.35 实测：CALL_STOP(type0 21) 被接受，但其后所有写都回 17 0f，
+        // 第二轮控制链首条即被拒。模拟器追踪 0x08019814 证实原厂呼叫头路径
+        // 的关闭不发 CALL_STOP——它属于 DMR_CALL_START 那条路径。呼叫头路径
+        // 的收尾 = R34 回写、终止呼叫头、延时、R56/R3C/R3B 回写、工作模式空闲。
+        // 这里只补我们缺的寄存器回写。
         byte[][] seq = {
             HpiCodec.frame(0x40, new byte[] {0, 1, 0x34, 0, 0, 0}),
-            HpiCodec.frame(0, new byte[] {0x21}),
         };
         byte[][] seqAfter = {
             HpiCodec.frame(0x40, new byte[] {0, 0, 0x56, 0, 0, 0}),

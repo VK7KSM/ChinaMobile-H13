@@ -52,10 +52,10 @@ $ProductionPackage = 'net.elfradio.h13interphone'
 $ProductionActivity = 'net.elfradio.h13interphone/com.bozhou.interphone.ui.talk.MainActivity'
 $Activity = 'net.elfradio.h13dmrtx/.MainActivity'
 $ExpectedFingerprint = 'CMCC/msm8909/msm8909:8.1.0/OPM1.171019.026/build11020953:user/test-keys'
-$ExpectedVersionCode = 135
-$ExpectedVersionName = '1.35-vendor-stop'
-$ExpectedApkSha256 = 'B51888795B5CAF2A5102ACF0E0E9031A13898C2379D97444E2D28C084B0B0CF9'
-$Apk = Join-Path $PSScriptRoot '..\dist\H13_DMR_TX_Harness_v1.35_VendorStop.apk'
+$ExpectedVersionCode = 136
+$ExpectedVersionName = '1.36-vlc-path-teardown'
+$ExpectedApkSha256 = '76D987BDD5E2181BE484D5863906EE9282577767D951C8251FB14F6E7E5BD185'
+$Apk = Join-Path $PSScriptRoot '..\dist\H13_DMR_TX_Harness_v1.36_VlcPathTeardown.apk'
 $DeadlineHelper = Join-Path $PSScriptRoot '..\..\h13_radio\tools\h13_external_dmr_rf_deadline_device.sh'
 $RemoteDeadlineHelper = '/data/local/tmp/h13_dmr_tx_deadline.sh'
 $ExpectedDeadlineHelperSha256 = '522792E4E515DAAF674F56DA953178FC4E1A71812D71DFFE2D3F486BD82B2110'
@@ -2533,6 +2533,18 @@ function Restore-ProductionStrict {
         Invoke-Adb shell am force-stop $Package | Out-Null
         Start-Sleep -Milliseconds 400
     }
+    # 2026-09-20：预检曾在此处失败——生产程序被系统提前拉起并持有串口
+    # （时序性）。若持有者正是生产包，先把它停掉，再轮询最多 3 秒等串口释放；
+    # 之后仍会按原流程重新启用并拉起生产程序。
+    for ($Try = 0; $Try -lt 10; $Try++) {
+        $Owners = @(Get-TtyOwnerPids)
+        if ($Owners.Count -eq 0) { break }
+        $ProdPid = Get-PackagePid $ProductionPackage
+        if ($ProdPid -and ($Owners -contains [string]$ProdPid)) {
+            Invoke-Adb shell am force-stop $ProductionPackage | Out-Null
+        }
+        Start-Sleep -Milliseconds 300
+    }
     Assert-TtyUnowned
     Save-Text 'disable_probe_restored.txt' (Invoke-Adb -Arguments @(
         'shell','pm','disable-user','--user','0',$Package))
@@ -2693,10 +2705,11 @@ Save-Text 'production_pid_before.txt' $ProductionPidBefore
 if ($AllowInstall) {
     # 设备侧流式安装通道已损坏（PackageInstallerSession.openWrite: Failed to create
     # bridge，2026-09-20），改为先 push 到 /data/local/tmp 再由 pm install 安装。
-    # adb 把进度写到 stderr，PowerShell 5.1 会把它包成 NativeCommandError；
-    # 经 cmd /c 合并后只以文本形式取回。
-    $PushOut = cmd /c "`"$Adb`" -P $AdbPort -s $Serial push `"$Apk`" /data/local/tmp/h13probe.apk 2>&1"
-    $InstOut = cmd /c "`"$Adb`" -P $AdbPort -s $Serial shell pm install -r /data/local/tmp/h13probe.apk 2>&1"
+    # 不重定向 stderr（PowerShell 5.1 会把原生命令的 stderr 包成 NativeCommandError），
+    # 也不经 cmd /c（会等待输入而挂起）。只取 stdout，用退出码判断。
+    $PushOut = & $Adb -P $AdbPort -s $Serial push $Apk /data/local/tmp/h13probe.apk
+    if ($LASTEXITCODE -ne 0) { throw 'APK push 失败。' }
+    $InstOut = & $Adb -P $AdbPort -s $Serial shell pm install -r /data/local/tmp/h13probe.apk
     Save-Text 'install_output.txt' (@($PushOut) + @($InstOut) -join "`n")
     if (-not (($InstOut -join "`n") -match 'Success')) {
         throw 'APK安装失败。'
