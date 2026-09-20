@@ -2411,6 +2411,20 @@ final class DmrTxController {
             // 改变运行态，快照过期会让供数帧对不上。这里重做一次信道与
             // 隐私设置并取新快照——这是首轮之前做过、第二轮从未做过的
             // 唯一一件事。
+            // 首轮之前发过会话建立与省电关闭，第二轮从未重发。模块可能
+            // 要求重新建立会话才肯重启语音面。这两条是首轮做过而第二轮
+            // 没做过的最后差异项。
+            try {
+                byte[] connect = text("AT+DMOCONNECT", 2000);
+                note.append("reconnect=")
+                        .append(new String(connect,
+                                StandardCharsets.UTF_8)
+                                .replace("\r", " ")
+                                .replace("\n", " ").trim())
+                        .append("\n");
+            } catch (Exception ignored) {
+                note.append("reconnect=异常\n");
+            }
             byte[] freshRuntime14 =
                     preparePrivacySessionAndMeasureRuntime(true);
             note.append("runtime_refreshed=")
@@ -2432,6 +2446,22 @@ final class DmrTxController {
             memory.writeByte(McuAssets.BRIDGE_FLAG, 1);
             transport.markBridgeActive();
             bridgeExpectedExitAt = armedAt + activeFirstBridgeExitMs;
+            // 厂商外部编码工作流的结束呼叫是 type3 的 0x21（2.8.45），
+            // 与我们收尾用的呼叫模式 2 不是同一种表示。第二轮起呼前先
+            // 显式发一条，看能否清掉模块残留的呼叫状态。
+            try {
+                byte[] stopCall = HpiCodec.frame(3, new byte[] {0x21});
+                SerialTransport.RawExchange stopped =
+                        transport.rawExchangeDetailed(stopCall, 400, 200);
+                evidence.saveEvent("rearm", "stop_call_request", stopCall);
+                evidence.saveEvent("rearm", "stop_call_response",
+                        stopped.combined());
+                note.append("stop_call_bytes=")
+                        .append(stopped.combined().length)
+                        .append("\n");
+            } catch (Exception ignored) {
+                note.append("stop_call=异常\n");
+            }
             note.append("rearm_ms=")
                     .append(armedAt - began).append("\n");
             for (int index = 0; index < DmrProtocol.SETUP_COUNT; index++) {
