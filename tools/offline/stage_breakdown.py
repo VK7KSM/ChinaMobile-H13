@@ -1,70 +1,67 @@
-"""拆解一次会话各阶段耗时，用于定位九十秒准备时间的真实构成。"""
-import sys, re, os
+"""拆解一次会话各阶段耗时。
+
+**重要**：证据文件的落盘时间不等于协议事件发生时间。热路径为了不打断
+供数节拍，会把证据写入推迟到之后统一落盘（见 saveHotPathAwareEvent）。
+2026-09-20 首版工具按证据时间归并，把两条呼叫头算成 13.7 秒，而它们的
+实际写出只相隔 0.2 秒——差别来自 141 秒后才落盘的证据。
+
+因此本工具只用 `*_request.bin` 这类**由主机主动写出**的事件做时间轴，
+它们是同步落盘的；其余证据仅计数，不参与耗时归并。
+
+用法: python stage_breakdown.py <session.log>
+"""
+import sys
+import re
 from datetime import datetime
 
-log = sys.argv[1]
-# 阶段的判定锚点：证据文件名里的关键词 -> 阶段名
 MARKS = [
-    ("pre_device_build",        "会话建立"),
-    ("text_baseline",           "文本基线校验"),
-    ("firmware_slice",          "固件切片校验"),
-    ("privacy",                 "信道与隐私设置"),
-    ("channel_",                "信道设置"),
-    ("power_save",              "省电处理"),
-    ("tickhz",                  "节拍测量"),
-    ("fullprep_code",           "推桩(代码)"),
-    ("fullprep_helper",         "推桩(helper)"),
-    ("fullprep_meta",           "推桩(元数据)"),
-    ("bridge_arm",              "武装桥"),
-    ("hpi_setup",               "控制链"),
-    ("hpi_vlc",                 "呼叫头"),
-    ("relay_",                  "供数"),
-    ("offer_paced",             "供数"),
-    ("hpi_term",                "终止"),
-    ("restore",                 "恢复"),
+    ("hpi_setup", "控制链"), ("hpi_codec", "控制链"),
+    ("hpi_vlc", "呼叫头"), ("hpi_term", "终止"),
+    ("fullprep_code", "推桩(代码)"), ("fullprep_helper", "推桩(helper)"),
+    ("fullprep_meta", "推桩(元数据)"), ("tickhz", "节拍测量"),
+    ("privacy", "信道与隐私"), ("channel_", "信道设置"),
+    ("power_save", "省电处理"), ("firmware_slice", "固件切片校验"),
+    ("relay_", "供数"), ("restore", "恢复"),
 ]
 
 events = []
-for line in open(log, encoding='utf-8', errors='replace'):
+for line in open(sys.argv[1], encoding="utf-8", errors="replace"):
     m = re.match(r"(\S+)\s+.*path=(\S+)", line)
-    if not m:
-        continue
-    ts = datetime.fromisoformat(m.group(1))
-    events.append((ts, m.group(2)))
+    if m:
+        events.append((datetime.fromisoformat(m.group(1)), m.group(2)))
 
 if not events:
-    print("无事件"); sys.exit(1)
+    print("无事件")
+    sys.exit(1)
 
-t0 = events[0][0]
-total = (events[-1][0] - t0).total_seconds()
-
-def stage_of(name):
-    for key, label in MARKS:
-        if key in name:
-            return label
-    return None
-
-# 按阶段归并连续区间
-spans = {}
-cur = None
-cur_start = None
-last = t0
-for ts, name in events:
-    st = stage_of(name)
-    if st is None:
-        st = cur
-    if st != cur:
-        if cur is not None and cur_start is not None:
-            spans[cur] = spans.get(cur, 0.0) + (last - cur_start).total_seconds()
-        cur, cur_start = st, last
-    last = ts
-if cur is not None and cur_start is not None:
-    spans[cur] = spans.get(cur, 0.0) + (last - cur_start).total_seconds()
-
+total = (events[-1][0] - events[0][0]).total_seconds()
 print("会话总时长 %.1f 秒，事件 %d 条" % (total, len(events)))
 print()
-print("%-16s %8s %7s" % ("阶段", "秒", "占比"))
-for st, sec in sorted(spans.items(), key=lambda kv: -kv[1]):
-    if sec < 0.05:
-        continue
-    print("%-16s %8.1f %6.1f%%" % (st, sec, 100.0*sec/total))
+
+
+def label_of(name):
+    for key, lab in MARKS:
+        if key in name:
+            return lab
+    return None
+
+
+# 只用主机主动写出的事件做时间轴
+timeline = [(t, label_of(n)) for t, n in events
+            if n.endswith("_request.bin") or "upload" in n or "memwrite" in n]
+timeline = [(t, l) for t, l in timeline if l]
+
+print("%-14s %8s %8s  %s" % ("阶段", "首", "末", "跨度秒"))
+spans = {}
+for t, lab in timeline:
+    if lab not in spans:
+        spans[lab] = [t, t]
+    else:
+        spans[lab][1] = t
+for lab, (a, b) in sorted(spans.items(), key=lambda kv: kv[1][0]):
+    print("%-14s %8s %8s  %6.1f" % (
+        lab, a.strftime("%H:%M:%S"), b.strftime("%H:%M:%S"),
+        (b - a).total_seconds()))
+
+print()
+print("注：跨度按主机写出事件计；证据落盘时间不可用于耗时判断。")
