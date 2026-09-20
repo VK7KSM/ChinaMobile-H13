@@ -140,6 +140,14 @@ else
     echo "未生成原子结果"
 fi
 
+# 判据自动核对：审计器逐条检查已确立的不变量。手工跑等于没跑——
+# 十九次发射全部发在加密信道上，正是因为检查存在却没人执行（2.8.71/2.9.29）。
+if [ -n "$D" ] && [ -d "$D/device_capture" ]; then
+    echo
+    echo "=== 判据自动核对 ==="
+    python "$(dirname "$0")/../offline/audit_capture.py" "$D" ||         echo "审计不通过，详见上方条目"
+fi
+
 # 无论成败都确认生产基线回到位
 echo
 echo "=== 收尾核验 ==="

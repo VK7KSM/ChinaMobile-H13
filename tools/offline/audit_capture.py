@@ -77,11 +77,22 @@ def check_units_complete(root: Path) -> tuple[str, str]:
         return SKIP, "无单元计数"
     count = int(written.group(1))
     verdict = result.group(1) if result else "未知"
-    if count == 0:
-        return BAD, "一个单元都没写（结果 %s）" % verdict
+    # 设备侧的供数摘要要一并看：宿主的 relay_units_written 可能因为会话后段
+    # 失败而归零，而设备侧其实已经写满。只信一边会把成功的供数误判为没发生。
+    dev_units = None
+    for f in sorted((root / "device_capture").glob(
+            "*offer_paced_summary*.bin")):
+        m = re.search(r"units_written=(\d+)", read_text(f))
+        if m:
+            dev_units = int(m.group(1))
+    detail = "宿主计数 %d，结果 %s" % (count, verdict)
+    if dev_units is not None:
+        detail += "，设备侧供数 %d" % dev_units
+    if count == 0 and (dev_units is None or dev_units == 0):
+        return BAD, "两侧都没有写出单元（%s）" % detail
     if verdict != "PASS":
-        return BAD, "写出 %d 个单元但结果 %s" % (count, verdict)
-    return OK, "写出 %d 个单元，结果 PASS" % count
+        return BAD, "会话未通过（%s）" % detail
+    return OK, detail
 
 
 def check_rf_duty(dev: Path) -> tuple[str, str]:
