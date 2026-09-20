@@ -52,10 +52,10 @@ $ProductionPackage = 'net.elfradio.h13interphone'
 $ProductionActivity = 'net.elfradio.h13interphone/com.bozhou.interphone.ui.talk.MainActivity'
 $Activity = 'net.elfradio.h13dmrtx/.MainActivity'
 $ExpectedFingerprint = 'CMCC/msm8909/msm8909:8.1.0/OPM1.171019.026/build11020953:user/test-keys'
-$ExpectedVersionCode = 101
-$ExpectedVersionName = '1.01-one-per-offer-relay'
-$ExpectedApkSha256 = '46D2C1F2E76318387DB04AD6CA4286A3E787AA00D8A78C04048810F057DDE26C'
-$Apk = Join-Path $PSScriptRoot '..\dist\H13_DMR_TX_Harness_v1.01_OnePerOfferRelay.apk'
+$ExpectedVersionCode = 120
+$ExpectedVersionName = '1.20-raw49-params'
+$ExpectedApkSha256 = '9432BD1697318667FDDE66C3D0B289AC5149C6E6797BDD378BE2FC9B9B9EE89C'
+$Apk = Join-Path $PSScriptRoot '..\dist\H13_DMR_TX_Harness_v1.20_Raw49Params.apk'
 $DeadlineHelper = Join-Path $PSScriptRoot '..\..\h13_radio\tools\h13_external_dmr_rf_deadline_device.sh'
 $RemoteDeadlineHelper = '/data/local/tmp/h13_dmr_tx_deadline.sh'
 $ExpectedDeadlineHelperSha256 = '522792E4E515DAAF674F56DA953178FC4E1A71812D71DFFE2D3F486BD82B2110'
@@ -641,7 +641,8 @@ function Assert-ModeResult {
             throw "模式布尔语义门失败：要求$Name=$Value"
         }
     }
-    $ExpectedPowerSaveDisabled = if ($Mode -eq 'clear_only') { 'false' } else { 'true' }
+    # at_probe_no_rf 与 clear_only 一样只走文本路径，不动省电入口。
+    $ExpectedPowerSaveDisabled = if ($Mode -in @('clear_only','at_probe_no_rf')) { 'false' } else { 'true' }
     foreach ($Pair in @(
         @{ Name='power_save_disabled'; Value=$ExpectedPowerSaveDisabled },
         @{ Name='power_save_mutation_active'; Value='false' },
@@ -650,7 +651,9 @@ function Assert-ModeResult {
             throw "省电恢复语义门失败：要求$($Pair.Name)=$($Pair.Value)"
         }
     }
-    if ($Mode -eq 'clear_only') {
+    # at_probe_no_rf 与 clear_only 同样只走文本路径，不读写省电入口，
+    # 因此原像值保持 -1 是正确结果，不应按通用规则要求它是 0 或 1。
+    if ($Mode -in @('clear_only','at_probe_no_rf')) {
         foreach ($Pair in @(
             @{ Name='power_save_entry_value'; Value='-1' },
             @{ Name='power_save_restored_value'; Value='-1' })) {

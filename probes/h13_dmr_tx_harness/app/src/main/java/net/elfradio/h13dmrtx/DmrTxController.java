@@ -333,7 +333,7 @@ final class DmrTxController {
     // 射频保持时间——射频保持由独立的SECOND_BRIDGE_EXIT_MS/RF_HOLD_MS控制。
     // 2026-09-19 再次放大：准备窗为容纳五条 codec 写从 10000 提到 18000，
     // 28.8 秒 speech_az09 的最坏收尾随之推到约 50580 毫秒，原 50000 不够。
-    private static final long FIRST_BRIDGE_EXIT_MS = 60000;
+    private static final long FIRST_BRIDGE_EXIT_MS = 150000;
     private static final long FIRST_BRIDGE_MARGIN_MS = 2000;
     static final long RF_HOLD_MS = 16000;
     static final long RELAY_PRE_VLC2_WAIT_MS = 1000;
@@ -482,6 +482,11 @@ final class DmrTxController {
         postVlcListenMs = MODE_DMR_REPLAY_CAPTURED_NO_RF.equals(mode)
                 ? 3000L : 0L;
         offerPacedVoice = speechShortAbc || dmrReplayCaptured;
+        // 配对采集：同一次会话里，模块经 HPI 交给宿主的帧与录音磁带里
+        // 的同一段音频，是同一个编码器、同一时刻的两种表示。两家 AMBE
+        // 实现的比特并不一致，拿我们的编码器去对照模块的编码器没有意义；
+        // 配对数据绕开了这个问题，可直接解出比特映射。见 2.8.78。
+        pairedCapture = offerPacedVoice;
         boolean softwarePrivacyTripleSos =
                 MODE_RELAY_SOFTWARE_PRIVACY_TRIPLE_SOS_NO_RF.equals(mode)
                 || MODE_RELAY_SOFTWARE_PRIVACY_TRIPLE_SOS_LOW_POWER_RF
@@ -576,8 +581,10 @@ final class DmrTxController {
             debugOutput = new McuDebugOutput(textExchange);
             verifyTextBaseline();
             verifyFirmwareSlices();
+            // 接收守望与语音验证都必须走明文信道：加密打开时模块会把
+            // 语音加扰，采到的帧全是密文，2026-09-19 的根因即在此。
             byte[] runtime14 = preparePrivacySessionAndMeasureRuntime(
-                    speechShortAbc || dmrReplayCaptured);
+                    speechShortAbc || dmrReplayCaptured || atProbe);
             if (atProbe) {
                 runAtProbe();
                 restorePrivacyOff();
@@ -1180,6 +1187,9 @@ final class DmrTxController {
                 captureRfEdgeCounter("恢复后");
                 restorePrivacyOff();
                 verifyPostRestoreText();
+                if (pairedCapture) {
+                    readPairedTape();
+                }
                 restorePowerSavePreimage();
                 disableDebugOutputAndVerify();
                 if (allowRf) {
@@ -1272,6 +1282,11 @@ final class DmrTxController {
         evidence.saveEvent("privacy", "clear_channel_runtime14",
                 privacyOffBaseline14);
 
+        if (keepClearChannel && pairedCapture) {
+            // 开录音开关，让模块在本次会话里同时把音频写进录音磁带。
+            byte[] recordOn = text("AT+DMOSETRECORDSW=1", 2000);
+            evidence.saveEvent("paired", "record_switch_on", recordOn);
+        }
         if (keepClearChannel) {
             evidence.saveText("privacy", "clear_channel_session",
                     "channel=" + CHANNEL_OFF + "\n"
@@ -2348,6 +2363,8 @@ final class DmrTxController {
     private long postVlcListenMs;
     // 语音验证的两族模式改走按模块交帧逐帧回送，见 2.8.73。
     private boolean offerPacedVoice;
+    private boolean pairedCapture;
+    private int tapeUnitsBefore = -1;
     private final List<byte[]> bufferedRelayPlain = new ArrayList<>();
     private final List<byte[]> bufferedRelayWirePayload = new ArrayList<>();
     private final List<byte[]> bufferedRelayRequests = new ArrayList<>();
@@ -2781,7 +2798,10 @@ final class DmrTxController {
     }
 
     /** 等一个触发信号的上限。 */
-    private static final long OFFER_WAIT_MS = 140;
+    // 实验版：外部接收模式下等对端发射，窗口放宽到 300 毫秒，
+    // 68 个单元约给出 20 秒的采集窗。
+    // 接收采集窗：68 x 1300 毫秒约 88 秒
+    private static final long OFFER_WAIT_MS = 1300;
     /** 厂商 DMR 的 txDelay：先攒够这么多条模块交帧，再送第一帧。 */
     private static final int VENDOR_TX_DELAY_OFFERS = 3;
 
@@ -2837,9 +2857,13 @@ final class DmrTxController {
                     // 交帧本身就是"该替换这一帧了"的信号，见 2.8.75。
                     permitted = offers > offersUsed;
                 }
-                recordRelayRead("offer_wait_" + readIndex++,
-                        activeRelay.unitsWritten(), credits, readBegin,
-                        10L, readReturn, chunk);
+                // 长采集窗下空轮询数以万计，会撑爆热路径证据缓冲区。
+                // 只记真正读到字节的那些读取。
+                if (chunk.length > 0) {
+                    recordRelayRead("offer_wait_" + readIndex++,
+                            activeRelay.unitsWritten(), credits, readBegin,
+                            10L, readReturn, chunk);
+                }
             }
             if (permitted) {
                 offersUsed++;
@@ -2878,9 +2902,11 @@ final class DmrTxController {
                 offers += counts[0];
                 credits += counts[1];
             }
-            recordRelayRead("offer_tail_" + readIndex++,
-                    activeRelay.unitsWritten(), credits, readBegin, 20L,
-                    readReturn, chunk);
+            if (chunk.length > 0) {
+                recordRelayRead("offer_tail_" + readIndex++,
+                        activeRelay.unitsWritten(), credits, readBegin,
+                        20L, readReturn, chunk);
+            }
         }
         saveHotPathAwareEvent("relay", "offer_paced_uplink_raw",
                 uplink.toByteArray());
@@ -4274,37 +4300,200 @@ final class DmrTxController {
      * 每条的命令与回复都按既有 text() 路径落盘，便于事后核对。
      * 这里不下发任何会引起发射的命令（尤其不含 AT+DMOPTT）。
      */
+    /** 接收守望的轮询间隔与总时长。 */
+    private static final long RX_WATCH_POLL_MS = 120;
+    /** 上一次读到的磁带单元数，用于只取增量。 */
+    private int lastTapeUnits;
+    /** 观察到的磁带最大单元数，用作容量上限。 */
+    private int tapeCapacitySeen;
+    private static final long RX_WATCH_TOTAL_MS = 150000;
+
+    /**
+     * 由 H13 自己判定对端何时开始、何时停止发射。
+     *
+     * <p>轮询 {@code AT+DMOGETDIGITALRXINFO} 与 {@code AT+DMOGETRSSI}：
+     * 空闲时接收信息为 0,0,0；有信号时字段变为非零。同时把录音磁带的
+     * 单元数一并记下，信号期间它会增长。每次状态翻转都写进证据，
+     * 事后可精确对出信号的起止时刻。全程文本模式，不装桥、不发射。
+     */
     private void runAtProbe() throws Exception {
-        String[] probes = {
-            "AT+DMOGETDIGITALCH",
-            "AT+DMOGETRSSI",
-            "AT+DMOGETDIGITALRXINFO",
-            "AT+DMOSETRECORDSW=1",
-            "AT+DMOSETRECORDSW=0",
-            "AT+DMOSETPLAY=0",
-            "AT+DMOSETPLAY=1",
-            "AT+DMOEXITPLAY",
-            "AT+DMOSETRECORDDLYTIME=0",
-        };
         StringBuilder log = new StringBuilder();
-        for (int index = 0; index < probes.length; index++) {
-            String command = probes[index];
-            status("AT探针 " + (index + 1) + "/" + probes.length
-                    + " " + command);
-            byte[] response;
-            String text;
+        log.append("poll_ms=").append(RX_WATCH_POLL_MS).append("\n");
+        log.append("total_ms=").append(RX_WATCH_TOTAL_MS).append("\n");
+        // 先清空录音存储：固件有 DMOAUTOUPDATARECORDFULL 上报，存储写满后
+        // 不再录入。2026-09-20 一次采集中磁带计数全程为 0，即因前几轮已写满。
+        try {
+            byte[] del = text("AT+DMODELALLRECORD", 3000);
+            evidence.saveEvent("rx_watch", "record_clear", del);
+            log.append("record_clear=")
+                    .append(new String(del, StandardCharsets.UTF_8)
+                            .replace("\r", " ").replace("\n", " ").trim())
+                    .append("\n");
+        } catch (Exception ignored) {
+            log.append("record_clear=异常\n");
+        }
+        // 录音开关：接收态下模块应当接受，录下的是空口帧，
+        // 与守望给出的信号起止时刻配合即可定位到具体片段。
+        try {
+            byte[] recordOn = text("AT+DMOSETRECORDSW=1", 2000);
+            evidence.saveEvent("rx_watch", "record_on", recordOn);
+            log.append("record_on=")
+                    .append(new String(recordOn, StandardCharsets.UTF_8)
+                            .replace("\r", " ").replace("\n", " ").trim())
+                    .append("\n");
+        } catch (Exception ignored) {
+            log.append("record_on=异常\n");
+        }
+        byte[] header0 = read("rx_watch_tape_before",
+                McuAssets.TAPE_HEADER, McuAssets.TAPE_HEADER_LENGTH);
+        log.append("tape_units_before=")
+                .append(header0[McuAssets.TAPE_UNIT_COUNT_OFFSET] & 0xff)
+                .append("\n");
+        byte[] channel = text("AT+DMOGETDIGITALCH", 2000);
+        log.append("channel=")
+                .append(new String(channel, StandardCharsets.UTF_8)
+                        .replace("\r", " ").replace("\n", " ").trim())
+                .append("\n");
+
+        long deadline = SystemClock.elapsedRealtime() + RX_WATCH_TOTAL_MS;
+        boolean active = false;
+        int transitions = 0;
+        int samples = 0;
+        long activeSince = 0L;
+        while (SystemClock.elapsedRealtime() < deadline) {
+            samples++;
+            String info;
             try {
-                response = text(command, 2500);
-                text = new String(response, StandardCharsets.UTF_8)
+                byte[] raw = text("AT+DMOGETDIGITALRXINFO", 1200);
+                info = new String(raw, StandardCharsets.UTF_8)
                         .replace("\r", " ").replace("\n", " ").trim();
             } catch (Exception failure) {
-                text = "异常: " + failure.getMessage();
+                info = "异常";
             }
-            log.append(command).append("  ->  ").append(text)
-                    .append("\n");
-            SystemClock.sleep(250);
+            boolean nowActive = info.contains("DMOGETDIGITALRXINFO:")
+                    && !info.contains("DMOGETDIGITALRXINFO:0,0,0");
+            if (nowActive != active) {
+                transitions++;
+                long at = SystemClock.elapsedRealtime();
+                if (nowActive) {
+                    activeSince = at;
+                    log.append("SIGNAL_START ms=").append(at)
+                            .append(" info=").append(info).append("\n");
+                    status("检测到对端发射");
+                } else {
+                    log.append("SIGNAL_END ms=").append(at)
+                            .append(" duration_ms=").append(at - activeSince)
+                            .append("\n");
+                    status("对端发射结束");
+                }
+                evidence.saveText("rx_watch", "transition_" + transitions,
+                        log.toString());
+                active = nowActive;
+            }
+            // 信号存在期间反复读磁带：磁带是小环形缓冲，只保留最近一段，
+            // 等信号结束再读就只剩末尾一秒。边收边读并累积，才能拿到全程。
+            if (active) {
+                // 只读新增部分。整条磁带约 70 个单元、1800 余字节，
+                // 整体读一次要一秒多，跟不上写入速度，回绕时会整段漏掉
+                // （2026-09-20 的 18.7 秒素材里有 5 处断裂即由此而来）。
+                // 按上次计数取增量，单次读取小得多，才追得上。
+                try {
+                    byte[] head = read("rx_live_tape_header_" + samples,
+                            McuAssets.TAPE_HEADER,
+                            McuAssets.TAPE_HEADER_LENGTH);
+                    int units =
+                            head[McuAssets.TAPE_UNIT_COUNT_OFFSET] & 0xff;
+                    if (units > tapeCapacitySeen) {
+                        tapeCapacitySeen = units;
+                    }
+                    if (units < lastTapeUnits) {
+                        // 磁带绕回：上次位置到容量上限之间那一段还没读过，
+                        // 漏掉它会在解码时打断跨帧状态，之后数帧都劣化。
+                        int tail = tapeCapacitySeen - lastTapeUnits;
+                        if (tail > 0) {
+                            read("rx_live_tape_units_" + samples + "_wrap"
+                                    + lastTapeUnits,
+                                    McuAssets.TAPE_DATA
+                                    + lastTapeUnits
+                                    * McuAssets.TAPE_UNIT_BYTES,
+                                    tail * McuAssets.TAPE_UNIT_BYTES);
+                            log.append("live_wrap sample=").append(samples)
+                                    .append(" from=").append(lastTapeUnits)
+                                    .append(" tail=").append(tail)
+                                    .append("\n");
+                        }
+                        lastTapeUnits = 0;
+                    }
+                    int from = lastTapeUnits;
+                    int fresh = units - from;
+                    if (fresh > 0) {
+                        read("rx_live_tape_units_" + samples + "_from"
+                                + from,
+                                McuAssets.TAPE_DATA
+                                + from * McuAssets.TAPE_UNIT_BYTES,
+                                fresh * McuAssets.TAPE_UNIT_BYTES);
+                        log.append("live_read sample=").append(samples)
+                                .append(" from=").append(from)
+                                .append(" fresh=").append(fresh)
+                                .append(" total=").append(units)
+                                .append("\n");
+                    }
+                    lastTapeUnits = units;
+                } catch (Exception ignored) {
+                    log.append("live_read_failed sample=").append(samples)
+                            .append("\n");
+                }
+            } else {
+                lastTapeUnits = 0;
+            }
+            if (samples % 10 == 0) {
+                status("接收守望 " + samples + " 次，当前"
+                        + (active ? "有信号" : "无信号"));
+            }
+            SystemClock.sleep(RX_WATCH_POLL_MS);
         }
-        evidence.saveText("at_probe", "summary", log.toString());
+        log.append("samples=").append(samples).append("\n");
+        log.append("transitions=").append(transitions).append("\n");
+        try {
+            readPairedTape();
+            log.append("tape_read=done\n");
+        } catch (Exception failure) {
+            log.append("tape_read=").append(failure.getMessage())
+                    .append("\n");
+        }
+        try {
+            text("AT+DMOSETRECORDSW=0", 2000);
+        } catch (Exception ignored) {
+            log.append("record_off=异常\n");
+        }
+        evidence.saveText("rx_watch", "summary", log.toString());
+    }
+
+    /** 会话结束后读出录音磁带，与本次捕获的 HPI 帧构成配对数据。 */
+    private void readPairedTape() throws Exception {
+        try {
+            byte[] header = read("paired_tape_header",
+                    McuAssets.TAPE_HEADER, McuAssets.TAPE_HEADER_LENGTH);
+            int count = header[McuAssets.TAPE_UNIT_COUNT_OFFSET] & 0xff;
+            int marker = readInt("paired_tape_marker",
+                    McuAssets.TAPE_MARKER, 4);
+            StringBuilder note = new StringBuilder();
+            note.append("tape_units=").append(count).append("\n");
+            note.append("marker_ok=")
+                    .append(marker == McuAssets.TAPE_MARKER_VALUE)
+                    .append("\n");
+            if (marker == McuAssets.TAPE_MARKER_VALUE && count > 0) {
+                byte[] units = read("paired_tape_units",
+                        McuAssets.TAPE_DATA,
+                        count * McuAssets.TAPE_UNIT_BYTES);
+                note.append("tape_bytes=").append(units.length)
+                        .append("\n");
+            }
+            evidence.saveText("paired", "tape_summary", note.toString());
+        } catch (Exception failure) {
+            evidence.saveText("paired", "tape_failure",
+                    String.valueOf(failure.getMessage()) + "\n");
+        }
     }
 
     private void captureDmrRx() throws Exception {

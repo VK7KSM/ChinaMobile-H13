@@ -242,8 +242,13 @@ final class DmrProtocol {
             return false;
         }
         HpiCodec.WireFrame frame = frames.get(0);
-        return (frame.packetType == 5 || frame.packetType == 0x20)
-                && Arrays.equals(frame.payload, new byte[] {0x43});
+        if ((frame.packetType == 5 || frame.packetType == 0x20)
+                && Arrays.equals(frame.payload, new byte[] {0x43})) {
+            return true;
+        }
+        // 接收侧采集版：载波就绪的回执是命令字段回显加状态零。
+        return frame.payload.length >= 1
+                && (frame.payload[0] & 0xff) == 0x19;
     }
 
     /**
@@ -256,8 +261,14 @@ final class DmrProtocol {
             return null;
         }
         for (HpiCodec.WireFrame frame : frames) {
-            if ((frame.packetType == 5 || frame.packetType == 0x20)
-                    && Arrays.equals(frame.payload, new byte[] {0x43})) {
+            boolean callHeaderAck =
+                    (frame.packetType == 5 || frame.packetType == 0x20)
+                    && Arrays.equals(frame.payload, new byte[] {0x43});
+            // 接收态下这两个位置发的是载波就绪，回执为命令字段回显加状态零。
+            boolean carrierAck = frame.payload.length == 2
+                    && (frame.payload[0] & 0xff) == 0x19
+                    && frame.payload[1] == 0;
+            if (callHeaderAck || carrierAck) {
                 return Arrays.copyOfRange(raw, frame.offset,
                         frame.offset + frame.wireLength);
             }
@@ -351,6 +362,11 @@ final class DmrProtocol {
 
         void useVendorVlc() {
             this.vendorVlc = true;
+        }
+
+        /** 接收态采集用：把呼叫头位置换成载波就绪。 */
+        void useReceiveMode() {
+            receiveMode = true;
         }
 
         int vlcCount() {
@@ -448,6 +464,12 @@ final class DmrProtocol {
             if (index < 0 || index >= vlcCount()) {
                 throw new IndexOutOfBoundsException("VLC索引");
             }
+            // 接收态：厂商 DMR_Receive 的序列是工作模式、处理模式、载波丢失、
+            // 载波就绪，并且不发呼叫头——呼叫头是开始发射呼叫的命令，发了
+            // 模块就去发射而不是接听。接收采集时把这两个位置换成载波就绪。
+            if (receiveMode) {
+                return HpiCodec.frame(0, new byte[] {0x19, 0x01});
+            }
             byte[] body;
             if (vendorVlc) {
                 body = lc9();
@@ -478,6 +500,8 @@ final class DmrProtocol {
         byte[] runtime14() {
             return runtime14.clone();
         }
+
+        private boolean receiveMode;
 
         private byte[] lc9() {
             // 九字节语音链路控制：[0] 全链路控制操作码、[1] 厂商标识、

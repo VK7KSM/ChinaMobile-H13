@@ -110,6 +110,14 @@ final class SerialTransport implements AutoCloseable {
         return new QuietResult(false, nowMs() - started, out.toByteArray());
     }
 
+    // 接收态采集：模块持续上报接收帧，串口上不会出现静默窗。
+    // 置位后仍照常排空并记录（那正是要采的帧），但不因线上有数据而中止。
+    private boolean allowBusyBridge;
+
+    synchronized void allowBusyBridge(boolean allow) {
+        this.allowBusyBridge = allow;
+    }
+
     synchronized byte[] rawExchange(byte[] request, long responseMs,
             long lateMs) throws Exception {
         RawExchange result = rawExchangeDetailed(request, responseMs, lateMs);
@@ -126,7 +134,7 @@ final class SerialTransport implements AutoCloseable {
             throw new PreWriteSessionResetException(rebuildSignal,
                     quiet.drained);
         }
-        if (!quiet.established) {
+        if (!quiet.established && !allowBusyBridge) {
             throw new IOException("HPI请求前未取得静默窗");
         }
         controlWriteAttempts++;
@@ -172,7 +180,7 @@ final class SerialTransport implements AutoCloseable {
             throw new PreWriteSessionResetException(rebuildSignal,
                     quiet.drained);
         }
-        if (!quiet.established) {
+        if (!quiet.established && !allowBusyBridge) {
             throw new IOException("HPI请求前未取得静默窗");
         }
         return quiet;
