@@ -363,7 +363,7 @@ final class DmrTxController {
     private static final boolean REPEAT_FULL_ROUND = true;
 
     /** 退桥后重新武装再跑一轮（零射频实验）。 */
-    private static final boolean REARM_SECOND_ROUND = true;
+    private static final boolean REARM_SECOND_ROUND = false;
 
     /** 重入探针进行中，影响呼叫头的取路。 */
     private boolean repeatProbeActive;
@@ -2481,6 +2481,24 @@ final class DmrTxController {
         evidence.saveText("vstop", "summary", note.toString());
     }
 
+    /**
+     * 读桩的关键状态，用于核对重新武装后准备相是否真的重跑。
+     *
+     * <p>此前一直假设「重写元数据会把 PREP_PHASE 归零、桩重跑准备相」，
+     * 从未核对。相位到 4 表示准备完成；队列指针与计数反映供数通路状态。
+     */
+    private String readStubState() throws Exception {
+        int phase = readInt("stub_prep_phase", 0x20003060, 4);
+        int cursor = readInt("stub_prep_cursor", 0x20003064, 4);
+        int abs = readInt("stub_abs_counter", 0x20003058, 4);
+        int gate = readInt("stub_gate", 0x2000045C, 1);
+        int state = readInt("stub_state", 0x20000410, 1);
+        int count = readInt("stub_count", 0x20000420, 4);
+        return String.format(java.util.Locale.US,
+                "phase=%d cursor=%d abs=%d gate=%d state=%d count=%d",
+                phase, cursor, abs, gate, state, count);
+    }
+
     private void runRearmSecondRound(TxStateMachine machine,
             byte[] runtime14,
             java.util.function.Function<byte[], RealtimeRelay> relayFactory)
@@ -2530,6 +2548,37 @@ final class DmrTxController {
                 memory.writeByte(0x200019a8 + off, 0);
             }
             note.append("lifecycle_cleared=").append(lifecycle)
+                    .append("\n");
+            // 清呼叫槽表的起呼前置位。模拟器追踪 0x08013a44 显示原厂起呼
+            // 的前置条件是 [0x2000180c + idx*188 + 1] == 0（idx 取自
+            // 0x200001a9），而收尾路径清的是另一张 8 字节步长的表
+            // 0x20001998。第一轮很可能把这一位留成了非零，模块因此不再
+            // 开始新的发射会话。
+            // 2.9.18 候选之二：省电关闭在第二轮从未重做。
+            try {
+                byte[] ps = text("AT+DMOSETPWRSAVELV=off", 1800);
+                note.append("powersave_off=")
+                        .append(new String(ps,
+                                StandardCharsets.UTF_8)
+                                .replace("\r", " ")
+                                .replace("\n", " ").trim())
+                        .append("\n");
+            } catch (Exception ignored) {
+                note.append("powersave_off=异常\n");
+            }
+            int slotIdx = readInt("call_slot_index", 0x200001a9, 1);
+            int slotByte = 0x2000180c + slotIdx * 188 + 1;
+            byte[] slotBefore = memory.read(slotByte, 1).parsed;
+            memory.writeByte(slotByte, 0);
+            byte[] slotAfter = memory.read(slotByte, 1).parsed;
+            memory.writeByte(0x20001998 + slotIdx * 8 + 1, 0);
+            note.append("call_slot idx=").append(slotIdx)
+                    .append(" [0x")
+                    .append(Integer.toHexString(slotByte)).append("] ")
+                    .append(Bytes.hex(slotBefore)).append("->")
+                    .append(Bytes.hex(slotAfter)).append("\n");
+            // 必须在武装之前读：桥一旦武装，串口即转 HPI 模式，读不了。
+            note.append("stub_before=").append(readStubState())
                     .append("\n");
             byte[] freshRuntime14 =
                     preparePrivacySessionAndMeasureRuntime(true);
@@ -2644,6 +2693,13 @@ final class DmrTxController {
             bridgeExpectedExitAt = 0;
         }
         if (rearmEntered) {
+            try {
+                note.append("stub_after=").append(readStubState())
+                        .append("\n");
+            } catch (Exception ignored) {
+                note.append("stub_after=读取失败\n");
+            }
+
             // 只有真正进入过重入才还原；入口就被拒时状态未变，
             // 此时还原会把相位写坏。
             machine.abortRepeatPass();
