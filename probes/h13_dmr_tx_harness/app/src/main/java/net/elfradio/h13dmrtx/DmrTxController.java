@@ -340,7 +340,10 @@ final class DmrTxController {
      * 用于回答模块是否接受；不供数、不发射。默认关闭，验证完即评估是否
      * 转为正式循环。
      */
-    private static final boolean REPEAT_PASS_PROBE = true;
+    private static final boolean REPEAT_PASS_PROBE = false;
+
+    /** 重入探针是否跑完整一轮（含供数与终止）。 */
+    private static final boolean REPEAT_FULL_ROUND = true;
 
     /** 重入探针进行中，影响呼叫头的取路。 */
     private boolean repeatProbeActive;
@@ -1980,6 +1983,17 @@ final class DmrTxController {
                         software49Bit36.length, voiceFormat),
                         TxPlan.unitIntervalMs(voiceFormat))
                 : FIRST_BRIDGE_EXIT_MS;
+        if (REPEAT_PASS_PROBE && !allowRf && relayOne
+                && software49Bit36 != null) {
+            // 重入轮次要在同一座桥内跑完：控制链与编解码链约 2.4 秒、
+            // 呼叫头约 0.2 秒，加本轮素材时长与收尾，按上限截断。
+            long repeatCost = 3000L
+                    + (REPEAT_FULL_ROUND
+                    ? expectedUnitsFor(software49Bit36.length, voiceFormat)
+                    * TxPlan.unitIntervalMs(voiceFormat) + 4000L : 0L);
+            activeFirstBridgeExitMs = Math.min(FIRST_BRIDGE_EXIT_MS,
+                    activeFirstBridgeExitMs + repeatCost);
+        }
         evidence.saveText("bridge", "exit_budget",
                 "first_bridge_exit_ms=" + activeFirstBridgeExitMs
                 + "\nceiling_ms=" + FIRST_BRIDGE_EXIT_MS
@@ -2236,7 +2250,16 @@ final class DmrTxController {
         boolean repeatPassProbe = REPEAT_PASS_PROBE && !allowRf
                 && relayOne && software49Bit36 != null;
         if (repeatPassProbe && !setup0Only) {
-            runRepeatPassProbe(machine, armedAt);
+            // 供数器每轮新建：上一轮的已耗尽，其计数即本轮的判据。
+            java.util.concurrent.Callable<RealtimeRelay> factory =
+                    REPEAT_FULL_ROUND && software49Bit36 != null
+                    ? () -> new RealtimeRelay(runtime14, software49Bit36,
+                            software49BitSource, softwareFinalWirePayload,
+                            RealtimeRelay.REQUIRED_UNITS,
+                            postVlcThreeLiveSoftwareOne,
+                            ackPacedVlcSoftwareTripleSos, voiceFormat)
+                    : null;
+            runRepeatPassProbe(machine, armedAt, factory);
         }
         sleepUntil(armedAt + activeFirstBridgeExitMs
                 + FIRST_BRIDGE_MARGIN_MS);
@@ -2276,7 +2299,8 @@ final class DmrTxController {
      * <p>只做控制链与呼叫头，不供数、不终止，做完即记录结果；失败不抛出，
      * 原因写进证据，避免一个探索性探针把已验证的主流程判为失败。
      */
-    private void runRepeatPassProbe(TxStateMachine machine, long armedAt)
+    private void runRepeatPassProbe(TxStateMachine machine, long armedAt,
+            java.util.concurrent.Callable<RealtimeRelay> relayFactory)
             throws Exception {
         StringBuilder note = new StringBuilder();
         long began = SystemClock.elapsedRealtime();
@@ -2302,14 +2326,37 @@ final class DmrTxController {
             // 准备期截止在首轮已过，第二轮不必再等。
             machine.beginVlcAfterFullprepDeadline(
                     SystemClock.elapsedRealtime());
+            if (relayFactory != null) {
+                activeRelay = relayFactory.call();
+                repeatProbeActive = false;
+            }
             for (int index = 0; index < machine.vlcCountForSession();
                     index++) {
-                exchangeControl("vlc_r" + index, machine);
+                // 必须与首轮同路：本模式首轮的呼叫头走 exchangeControl
+                // 的供数路径（relayVlc），模块在此期间才交出信用。
+                // 先前误用 ackPaced 路径，导致第二轮 credit_candidates=0。
+                exchangeControl(relayFactory != null
+                        ? "vlc_" + index : "vlc_r" + index, machine);
             }
-            note.append("vlc_ms=")
-                    .append(SystemClock.elapsedRealtime() - codecDone)
+            long vlcDone = SystemClock.elapsedRealtime();
+            note.append("vlc_ms=").append(vlcDone - codecDone)
                     .append("\n");
-            note.append("result=CALL_REESTABLISHED\n");
+            if (relayFactory != null) {
+                runOfferPacedPostVlc(machine);
+                machine.markRealtimeRelaySequenceComplete();
+                // 标签必须是 termination_vlc，否则不被识别为呼叫头。
+                exchangeAckPacedRelayVlc("termination_vlc", machine);
+                note.append("body_ms=")
+                        .append(SystemClock.elapsedRealtime() - vlcDone)
+                        .append("\n");
+                note.append("units_written=")
+                        .append(activeRelay.unitsWritten())
+                        .append("/").append(activeRelay.maximumUnits())
+                        .append("\n");
+                note.append("result=FULL_ROUND\n");
+            } else {
+                note.append("result=CALL_REESTABLISHED\n");
+            }
         } catch (Exception failure) {
             note.append("result=REJECTED\n");
             note.append("reason=")
