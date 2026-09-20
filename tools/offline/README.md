@@ -10,6 +10,9 @@ python run_all_selftests.py
 
 覆盖五个模型的全部用例，外加两项工具冒烟检查。改动任何模型后先跑这个。
 
+入口脚本是 `run_all_selftests.py`；它同时汇总模型用例数与工具冒烟结果，
+**用例数以它的输出为准**，不要手数。
+
 ## 判据与分析
 
 | 工具 | 用途 |
@@ -20,6 +23,8 @@ python run_all_selftests.py
 | `stage_breakdown.py` | 会话各阶段耗时。**只用主机写出事件计时**，证据落盘时间不可用于耗时判断 |
 | `summarize_capture.py` | 捕获目录概览 |
 | `analyze_session_uplink.py` | 上行原件分析 |
+| `compare_received_audio.py` | 接收录音与参照音频分段比对，给出从第几段开始劣化 |
+| `scan_relay_frames.py` | 扫描供数帧，用于核对线上帧结构 |
 
 ## 编解码
 
