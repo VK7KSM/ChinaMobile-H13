@@ -12,16 +12,24 @@ import java.util.List;
  * 导致第六包迟到 67 毫秒；改为有界内存缓冲后最大迟到降到 1 毫秒。
  *
  * 容量按最长正文估算。原值 256 项是按 78 包（6.24 秒摩尔斯）设计的，
- * 人声素材为 480 包（28.8 秒），第 257 包即触上限。现按 480 包留余量取 1024 项，
- * 字节上限同步放大。仍为有界内存，不会无限增长。
+ * 人声素材为 480 包（28.8 秒），第 257 包即触上限，于是放大到 1024 项。
+ *
+ * 2026-09-21 的长时供数老化（1020 单元、61.2 秒）在**第 1010 单元**撞上
+ * 1024 这条线，会话以「实时原始证据缓冲区已满」失败——是宿主的天花板，
+ * 不是模块的。这正是长时测试该暴露的东西：此前所有素材都不够长，这条
+ * 上限从来没被碰到过。
+ *
+ * 现按 2040 单元（约两分钟）留余量。单元请求每条 44 字节，2040 条约
+ * 90 KB，字节上限放到 1 MiB 仍有富余。**仍为有界内存**——不改成无界，
+ * 是因为热路径落盘正是当初 v0.53 让第六包迟到 67 毫秒的原因。
  */
 final class RelayHotPathEvidence {
-    static final int MAX_EVENTS = 1024;
-    static final int MAX_EVENT_BYTES = 262144;
+    static final int MAX_EVENTS = 4096;
+    static final int MAX_EVENT_BYTES = 1048576;
     // 三个VLC确认窗都可能触发信用背压。读取轮询次数随包数增长，
-    // 按 480 包留余量取 2048 项，仍为有界内存。
-    static final int MAX_READ_SAMPLES = 2048;
-    static final int MAX_READ_BYTES = 262144;
+    // 与事件上限同比例放大。
+    static final int MAX_READ_SAMPLES = 8192;
+    static final int MAX_READ_BYTES = 1048576;
 
     static final class Event {
         final String category;

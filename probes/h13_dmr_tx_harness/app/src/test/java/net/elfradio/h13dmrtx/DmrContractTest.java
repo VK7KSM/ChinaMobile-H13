@@ -2144,7 +2144,12 @@ public final class DmrContractTest {
         // MAX_EVENTS从256提到1024），这条断言当时没跟着改，一直静默过着
         // 陈旧值——和本文件里刚补的第一桥预算断言是同一类问题：容量/时限
         // 常量换了，核对它们的断言没跟着换。
-        assertEquals(2048, RelayHotPathEvidence.MAX_READ_SAMPLES);
+        // 2026-09-21 长时老化撞上 1024 上限后再次放大：事件 4096、读取 8192。
+        assertEquals(8192, RelayHotPathEvidence.MAX_READ_SAMPLES);
+        assertEquals(4096, RelayHotPathEvidence.MAX_EVENTS);
+        // 容量必须真的容得下长素材：1020 单元加非单元事件预留
+        assertTrue(1020 + DmrTxController.RELAY_NON_UNIT_EVENT_RESERVE
+                <= RelayHotPathEvidence.MAX_EVENTS);
         byte[] raw = new byte[] { 0x01, 0x02, 0x03 };
         for (int index = 0;
                 index < RelayHotPathEvidence.MAX_READ_SAMPLES; index++) {

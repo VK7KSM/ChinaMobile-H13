@@ -20,6 +20,13 @@ import java.util.List;
 import java.util.Locale;
 
 final class DmrTxController {
+    /**
+     * 热路径证据里非单元事件的预留位数：控制链、编解码链、呼叫头、
+     * 终止、清理各占若干。2026-09-21 的 1020 单元会话实测非单元事件
+     * 约 14 项（13 次控制写加一次收尾），取 64 留足余量。
+     */
+    static final int RELAY_NON_UNIT_EVENT_RESERVE = 64;
+
     static final String MODE_SETUP0_ONLY = "setup0_only_no_rf";
     static final String MODE_CLEAR_ONLY = "clear_channel_only_no_rf";
     static final String MODE_NO_RF = "session_prepare_no_rf";
@@ -114,6 +121,12 @@ final class DmrTxController {
             "dmr_replay_captured_no_rf";
     static final String MODE_DMR_REPLAY_CAPTURED_LOW_POWER_RF =
             "dmr_replay_captured_low_power_rf";
+    // 长时供数老化（2026-09-21）：同一条重放通路，素材换成 68 单元资产
+    // 重复 15 次共 1020 单元、61.2 秒。零射频，只压帧泵——环形缓冲回绕、
+    // 内存增长、MCU 省电节拍与 60 毫秒交帧的相互影响，都要靠时长暴露。
+    // 用重放而不是编码素材，是为了把编码器排除在变量之外（与 2.9.31 同理）。
+    static final String MODE_DMR_REPLAY_LONG_NO_RF =
+            "dmr_replay_long_no_rf";
 
     // 接收捕获（2026-09-19）：纯只读，不进桥、不发射、不改内存。
     // 轮询接收磁带缓冲区，等对端发射后把模块交出来的 27 字节 CHAN_D
@@ -224,9 +237,15 @@ final class DmrTxController {
         // 热路径证据缓冲容量必须覆盖本次包数。历史上该容量按 78 包写死，
         // 换用 480 包的人声正文后在第 257 包触上限，会话中途失败。
         // 此处在准入期核对，避免把容量不足表现成协议失败。
-        if (expected > RelayHotPathEvidence.MAX_EVENTS) {
-            return "本次" + expected + "包超出热路径证据容量"
-                    + RelayHotPathEvidence.MAX_EVENTS + "项";
+        //
+        // 2026-09-21 更正：只比包数是不够的。控制链、呼叫头、收尾、清理
+        // 也各占事件位，1020 包的会话实际在第 1010 包就撞上 1024 的上限，
+        // 准入期却判了通过。这里扣掉这部分的余量再比。
+        if (expected + RELAY_NON_UNIT_EVENT_RESERVE
+                > RelayHotPathEvidence.MAX_EVENTS) {
+            return "本次" + expected + "包加"
+                    + RELAY_NON_UNIT_EVENT_RESERVE + "项非单元事件超出热路径"
+                    + "证据容量" + RelayHotPathEvidence.MAX_EVENTS + "项";
         }
 
         long totalMs = (expected - 1L) * interval;
@@ -259,7 +278,13 @@ final class DmrTxController {
 
     static boolean isDmrReplayCapturedMode(String mode) {
         return MODE_DMR_REPLAY_CAPTURED_NO_RF.equals(mode)
-                || MODE_DMR_REPLAY_CAPTURED_LOW_POWER_RF.equals(mode);
+                || MODE_DMR_REPLAY_CAPTURED_LOW_POWER_RF.equals(mode)
+                || MODE_DMR_REPLAY_LONG_NO_RF.equals(mode);
+    }
+
+    /** 长时老化用的重放变体：同一条通路，素材更长。 */
+    static boolean isDmrReplayLongMode(String mode) {
+        return MODE_DMR_REPLAY_LONG_NO_RF.equals(mode);
     }
 
     static final String RELAY_SOURCE_SPEECH_AZ09 = "speech_az09";
@@ -684,10 +709,16 @@ final class DmrTxController {
                     // 软件 AMBE 编码器，也不经过隐私流水线。载荷已经是
                     // 模块接收时交出来的 27 字节 CHAN_D 单元本身。
                     status("重放2026-08-06捕获的真实DMR语音单元");
+                    boolean replayLong = isDmrReplayLongMode(mode);
                     byte[] replay = readAll(assets.open(
                             "software_ambe_vectors/"
-                            + "dmr_replay_captured.chan_d27.bin"));
-                    if (replay.length != RealtimeRelay.DMR_REPLAY_BYTES) {
+                            + (replayLong
+                               ? "dmr_replay_long.chan_d27.bin"
+                               : "dmr_replay_captured.chan_d27.bin")));
+                    int expectedReplayBytes = replayLong
+                            ? RealtimeRelay.DMR_REPLAY_LONG_BYTES
+                            : RealtimeRelay.DMR_REPLAY_BYTES;
+                    if (replay.length != expectedReplayBytes) {
                         throw new IOException("重放载荷长度错误："
                                 + replay.length);
                     }
@@ -1292,6 +1323,37 @@ final class DmrTxController {
                 || Bytes.u32le(vector.parsed, 0)
                 != TxStateMachine.ORIGINAL_SYSTICK) {
             throw new IOException("bridge或SysTick不是生产基线");
+        }
+        captureModuleFrameCounters("baseline");
+    }
+
+    /**
+     * 采样模块自己维护的帧泵诊断量。地址取自 MCU 调试控制台三条只读命令
+     * 的实现（H13_new.md 2.9.46）：`getchandcnt` / `getsm` / `dropvoice`。
+     *
+     * <p>读失败不让会话失败：这是诊断量，不是判据前提。失败只记原因。
+     */
+    private void captureModuleFrameCounters(String stage) {
+        try {
+            byte[] zero = memory.read(McuAssets.ZERO_CHAN_D_COUNT,
+                    McuAssets.ZERO_CHAN_D_COUNT_LENGTH).parsed;
+            byte[] state = memory.read(McuAssets.CALL_STATE_BYTE, 1).parsed;
+            byte[] drop = memory.read(McuAssets.DROP_VOICE_COUNT, 1).parsed;
+            byte[] zeroFlag = memory.read(McuAssets.ZERO_VOICE_FLAG, 1).parsed;
+            int zeroCount = (zero[0] & 0xff) | ((zero[1] & 0xff) << 8);
+            evidence.saveText("module_counters", stage,
+                    "zero_chan_d_count=" + zeroCount + "\n"
+                    + "call_state=" + (state[0] & 0xff) + "\n"
+                    + "drop_voice_count=" + (drop[0] & 0xff) + "\n"
+                    + "zero_voice_flag=" + (zeroFlag[0] & 0xff) + "\n");
+            status("模块补零单元数 " + zeroCount + "（" + stage + "）");
+        } catch (Exception failure) {
+            try {
+                evidence.saveText("module_counters", stage + "_failed",
+                        "error=" + failure + "\n");
+            } catch (Exception ignored) {
+                // 证据写不下去时不再追加错误，避免掩盖原始失败
+            }
         }
     }
 
@@ -2321,6 +2383,7 @@ final class DmrTxController {
             completeFirstBridgeRfWithoutSecondBridge(machine);
         } else {
             captureAllSramRegions("bridge1_postexit");
+            captureModuleFrameCounters("bridge1_postexit");
         }
         if (relayOne) {
             // 78包原件逐文件持久化不得占用第一桥或RF窗口。

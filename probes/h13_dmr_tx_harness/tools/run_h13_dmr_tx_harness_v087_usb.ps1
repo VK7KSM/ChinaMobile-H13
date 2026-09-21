@@ -1,4 +1,4 @@
-param(
+﻿param(
     [ValidateSet('clear_only', 'setup0_only', 'no_rf',
         'deadline_handshake_no_rf', 'realtime_relay_one_data36_no_rf',
         'realtime_relay_fixed_asset_one_data36_no_rf',
@@ -29,6 +29,7 @@ param(
         'speech_short_abc_no_rf',
         'speech_short_abc_low_power_rf',
         'dmr_replay_captured_no_rf',
+        'dmr_replay_long_no_rf',
         'dmr_replay_captured_low_power_rf',
         'dmr_rx_capture_no_rf',
         'at_probe_no_rf')]
@@ -52,10 +53,10 @@ $ProductionPackage = 'net.elfradio.h13interphone'
 $ProductionActivity = 'net.elfradio.h13interphone/com.bozhou.interphone.ui.talk.MainActivity'
 $Activity = 'net.elfradio.h13dmrtx/.MainActivity'
 $ExpectedFingerprint = 'CMCC/msm8909/msm8909:8.1.0/OPM1.171019.026/build11020953:user/test-keys'
-$ExpectedVersionCode = 144
-$ExpectedVersionName = '1.44-probes-off'
-$ExpectedApkSha256 = '56C31FADC1C3B3C2A8E7470718D0F6AEE66D0BC21491F5C95D6B9CB115C4348F'
-$Apk = Join-Path $PSScriptRoot '..\dist\H13_DMR_TX_Harness_v1.44_ProbesOff.apk'
+$ExpectedVersionCode = 146
+$ExpectedVersionName = '1.46-soak-caps'
+$ExpectedApkSha256 = '0F8B98A7C94A566C0EB72FF3D2B3071287EEDF27DD9AFA7814F716D5E043B40B'
+$Apk = Join-Path $PSScriptRoot '..\dist\H13_DMR_TX_Harness_v1.46_SoakCaps.apk'
 $DeadlineHelper = Join-Path $PSScriptRoot '..\..\h13_radio\tools\h13_external_dmr_rf_deadline_device.sh'
 $RemoteDeadlineHelper = '/data/local/tmp/h13_dmr_tx_deadline.sh'
 $ExpectedDeadlineHelperSha256 = '522792E4E515DAAF674F56DA953178FC4E1A71812D71DFFE2D3F486BD82B2110'
@@ -273,6 +274,10 @@ function Assert-ModeResult {
         # replay of real captured DMR units: 66 units x 60 ms = 3.96 s
         'dmr_replay_captured_no_rf' { @{
             Mode='dmr_replay_captured_no_rf'; Setup=5; Vlc=2; Data=68 } }
+        # 长时供数老化：同一条重放通路，素材为 68 单元资产重复 15 次
+        # 共 1020 单元、61.2 秒。零射频，只压帧泵。
+        'dmr_replay_long_no_rf' { @{
+            Mode='dmr_replay_long_no_rf'; Setup=5; Vlc=2; Data=1020 } }
         'dmr_replay_captured_low_power_rf' { @{
             Mode='dmr_replay_captured_low_power_rf'; Setup=5; Vlc=2; Data=68 } }
         # receive capture: read-only, no bridge, no setup/vlc/data at all
@@ -293,6 +298,7 @@ function Assert-ModeResult {
             'speech_short_abc_no_rf',
             'speech_short_abc_low_power_rf',
             'dmr_replay_captured_no_rf',
+            'dmr_replay_long_no_rf',
             'dmr_replay_captured_low_power_rf')) { 6 } else { 0 }
     $CleanupCount = if ($Mode -in @(
             'realtime_relay_encode_dmr_morse_unique_five_low_power_rf',
@@ -600,6 +606,11 @@ function Assert-ModeResult {
             device_deadline_arm_requested='true';
             device_deadline_armed='true'; sram_transaction_started='true' } }
         'dmr_replay_captured_no_rf' { @{
+            first_bridge_exit_confirmed='true'; second_bridge_exit_confirmed='false';
+            rf_prepare_executed='false'; rf_off_confirmed='false';
+            device_deadline_arm_requested='false';
+            device_deadline_armed='false'; sram_transaction_started='true' } }
+        'dmr_replay_long_no_rf' { @{
             first_bridge_exit_confirmed='true'; second_bridge_exit_confirmed='false';
             rf_prepare_executed='false'; rf_off_confirmed='false';
             device_deadline_arm_requested='false';
@@ -2628,6 +2639,7 @@ if ($Mode -in @('realtime_relay_one_data36_no_rf',
         'speech_short_abc_no_rf',
         'speech_short_abc_low_power_rf',
         'dmr_replay_captured_no_rf',
+        'dmr_replay_long_no_rf',
         'dmr_replay_captured_low_power_rf') -and -not $AllowPotentialRf) {
     throw '实时relay一包仍属潜在发射路径，需显式传入-AllowPotentialRf。'
 }
@@ -2851,6 +2863,7 @@ try {
         'speech_short_abc_no_rf' { 'speech_short_abc_no_rf' }
         'speech_short_abc_low_power_rf' { 'speech_short_abc_low_power_rf' }
         'dmr_replay_captured_no_rf' { 'dmr_replay_captured_no_rf' }
+        'dmr_replay_long_no_rf' { 'dmr_replay_long_no_rf' }
         'dmr_replay_captured_low_power_rf' { 'dmr_replay_captured_low_power_rf' }
         'dmr_rx_capture_no_rf' { 'dmr_rx_capture_no_rf' }
         'at_probe_no_rf' { 'at_probe_no_rf' }

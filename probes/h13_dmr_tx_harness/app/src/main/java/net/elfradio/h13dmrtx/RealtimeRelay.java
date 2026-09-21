@@ -57,6 +57,12 @@ final class RealtimeRelay {
     // 当前重放资产：204 帧，按 27 字节 DMR 突发 = 68 单元 = 1836 字节。
     static final int DMR_REPLAY_UNITS = 68;
     static final int DMR_REPLAY_BYTES = DMR_REPLAY_UNITS * 27;
+    // 长时老化素材：68 单元资产重复 15 次。倍数写死，避免"资产多长就发多长"
+    // 这种不可复现的写法——素材一换，历史结果就不可比。
+    static final int DMR_REPLAY_LONG_REPEATS = 15;
+    static final int DMR_REPLAY_LONG_UNITS =
+            DMR_REPLAY_UNITS * DMR_REPLAY_LONG_REPEATS;
+    static final int DMR_REPLAY_LONG_BYTES = DMR_REPLAY_LONG_UNITS * 27;
 
     static final int MAX_ACCEPTED_RAW_BYTES = 1024 * 1024;
     static final int SPEECH_BYTE_OFFSET = 1296;

@@ -43,6 +43,19 @@ final class McuAssets {
     static final int MCU_TICK = 0x200000d0;
     static final int POWER_SAVE_FLAG = 0x200017e1;
 
+    // MCU 调试控制台的三条诊断命令其实就是读这几个固定地址（H13_new.md
+    // 2.9.46）。会话期间宿主握着串口，用 memread 直接取即可，不必另开
+    // 控制台会话——欠载因此成为会话内指标，且是**模块自己报的数**，
+    // 不是我们从时间轴推算的。
+    /** `getchandcnt`：模块因宿主未按时供数而自行补的零 CHAN_D 单元数。 */
+    static final int ZERO_CHAN_D_COUNT = 0x2000042c;
+    static final int ZERO_CHAN_D_COUNT_LENGTH = 2;
+    /** `getsm`：呼叫状态字节，与 2.9.19 的前置条件同一个。 */
+    static final int CALL_STATE_BYTE = 0x20000160;
+    /** `dropvoice` 的丢帧计数与 `zerovoice` 的供零开关，故障注入用。 */
+    static final int DROP_VOICE_COUNT = 0x200001e2;
+    static final int ZERO_VOICE_FLAG = 0x200001e3;
+
     static final int FULLPREP_CODE = 0x20002f00;
     static final int FULLPREP_ENTRY = 0x20002f01;
     static final int FULLPREP_METADATA = 0x20003050;
