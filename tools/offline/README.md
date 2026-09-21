@@ -38,6 +38,10 @@ python run_all_selftests.py
 
 ## 服务层模型（带用例，服务实现的验收标准）
 
+这五个模型在 `probes/h13_dmr_tx_harness/app/src/main/java/net/elfradio/h13radio/`
+下各有一个 Java 实现，**同一组行为在两边都有用例**：模型定行为、Java 跑设备，
+一旦分叉就会被用例抓住。
+
 | 模型 | 规则要点 |
 |---|---|
 | `arbitration_model.py` | 单工仲裁：接收优先、本地优先于网络、发射时限、尾音期 |
@@ -62,9 +66,12 @@ python run_all_selftests.py
 | 工具 | 用途 |
 |---|---|
 | `../firmware/fw_xref.py` | 固件静态分析：按字符串找引用（字面量池与 **ADR** 两路，只扫字面量池会漏掉绝大多数调试字符串）、定位函数边界、找 BL 调用者、反汇编 |
+| `../firmware/dump_mcu_console.py` | 导出 MCU 调试控制台整表：101 条命令的等级、取参、输出格式串、实现例程与 SRAM 地址 |
+| `../firmware/dump_at_commands.py` | 导出 AT 命令表（35 条）与模块主动上报消息（8 条） |
 | `../emulator/trace_sct_seq.py` | 在模拟器里直调固件入口，截取发往 SCT3258 的每条 HPI 包 |
 | `../device/mcu_console.sh` | MCU 调试控制台客户端。只读白名单、`--rx` 才放行接收类、发射类一律不放行；下发期间持续采样 `pa_enable` |
 | `../device/batch_repeatability.sh` | 零射频复现性批次 |
+| `../device/at_timing.sh` | AT 命令往返计时，含信道/TG 切换代价；带 PA 看护 |
 
 `mcu_console.sh` 的由来见 H13_new.md 2.9.44：固件自带约一百条控制台命令，
 一直挂在我们用的那条串口上，`memread`/`memwrite` 只是其中三条。

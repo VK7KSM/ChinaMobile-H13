@@ -434,8 +434,17 @@ python tools/emulator/trace_tx_chain.py --flash firmware/mcu/Module_current_0.3.
 python tools/offline/run_all_selftests.py
 ```
 
-一次跑完服务层模型的全部用例与工具冒烟检查。改动模型或工具后先跑这个；
-**用例数以它的输出为准，不要手数**。
+一次跑完服务层模型的全部用例、控制台白名单一致性闸与工具冒烟检查。
+改动模型或工具后先跑这个；**用例数以它的输出为准，不要手数**。
+
+Java 侧另有一套：
+
+```bash
+cd probes/h13_dmr_tx_harness
+JAVA_HOME=<jdk17> ./gradlew testDebugUnitTest
+```
+
+覆盖探针协议契约与射频服务层两部分。
 
 设备侧会话另有自动判据核对：`tools/device/run_candidate.sh` 在每次会话
 结束时调用 `tools/offline/audit_capture.py`，逐条核对已确立的不变量
