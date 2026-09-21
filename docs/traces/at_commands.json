@@ -1,0 +1,189 @@
+{
+ "命令": [
+  {
+   "命令": "DMOCONNECT",
+   "地址": "0x08007550",
+   "等级": "只读"
+  },
+  {
+   "命令": "DMOEAREXIST=",
+   "地址": "0x080076b8",
+   "等级": "只读"
+  },
+  {
+   "命令": "DMOGETANALOGCH",
+   "地址": "0x080075c8",
+   "等级": "只读"
+  },
+  {
+   "命令": "DMOGETDIGITALCH",
+   "地址": "0x080075a8",
+   "等级": "只读"
+  },
+  {
+   "命令": "DMOGETDIGITALRXINFO",
+   "地址": "0x08007618",
+   "等级": "只读"
+  },
+  {
+   "命令": "DMOGETMESGINFO",
+   "地址": "0x0800762c",
+   "等级": "只读"
+  },
+  {
+   "命令": "DMOGETRSSI",
+   "地址": "0x080076ac",
+   "等级": "只读"
+  },
+  {
+   "命令": "DMOGETSOFTVERSION",
+   "地址": "0x0800763c",
+   "等级": "只读"
+  },
+  {
+   "命令": "DMODELALLRECORD",
+   "地址": "0x08007668",
+   "等级": "改状态"
+  },
+  {
+   "命令": "DMODISCONNECT",
+   "地址": "0x0800756c",
+   "等级": "改状态"
+  },
+  {
+   "命令": "DMOEXITPLAY",
+   "地址": "0x080076a0",
+   "等级": "改状态"
+  },
+  {
+   "命令": "DMOINSTANTLOG=",
+   "地址": "0x080076c8",
+   "等级": "改状态"
+  },
+  {
+   "命令": "DMOSENDMESG=",
+   "地址": "0x080075e4",
+   "等级": "改状态"
+  },
+  {
+   "命令": "DMOSETANALOGCH=",
+   "地址": "0x080075b8",
+   "等级": "改状态"
+  },
+  {
+   "命令": "DMOSETCOMMPARA=",
+   "地址": "0x0800757c",
+   "等级": "改状态"
+  },
+  {
+   "命令": "DMOSETCSBK=",
+   "地址": "0x080075d8",
+   "等级": "改状态"
+  },
+  {
+   "命令": "DMOSETDIGITALCH=",
+   "地址": "0x08007594",
+   "等级": "改状态"
+  },
+  {
+   "命令": "DMOSETDIGITALCHMESH=",
+   "地址": "0x080076d8",
+   "等级": "改状态"
+  },
+  {
+   "命令": "DMOSETDIGITALCHMULTI=",
+   "地址": "0x080076f0",
+   "等级": "改状态"
+  },
+  {
+   "命令": "DMOSETMIC=",
+   "地址": "0x08007650",
+   "等级": "改状态"
+  },
+  {
+   "命令": "DMOSETPLAY=",
+   "地址": "0x0800765c",
+   "等级": "改状态"
+  },
+  {
+   "命令": "DMOSETPWRSAVELV=",
+   "地址": "0x080075f4",
+   "等级": "改状态"
+  },
+  {
+   "命令": "DMOSETRECORDDLYTIME=",
+   "地址": "0x08007688",
+   "等级": "改状态"
+  },
+  {
+   "命令": "DMOSETRECORDSW=",
+   "地址": "0x08007678",
+   "等级": "改状态"
+  },
+  {
+   "命令": "DMOSETVOLUME=",
+   "地址": "0x08007608",
+   "等级": "改状态"
+  },
+  {
+   "命令": "DMOTESTBASEPARAMR",
+   "地址": "0x08007768",
+   "等级": "出厂测试"
+  },
+  {
+   "命令": "DMOTESTBASEPARAMW=",
+   "地址": "0x08007754",
+   "等级": "出厂测试"
+  },
+  {
+   "命令": "DMOTESTBERO153=",
+   "地址": "0x0800777c",
+   "等级": "出厂测试"
+  },
+  {
+   "命令": "DMOTESTEND",
+   "地址": "0x0800770c",
+   "等级": "出厂测试"
+  },
+  {
+   "命令": "DMOTESTONE=",
+   "地址": "0x08007718",
+   "等级": "出厂测试"
+  },
+  {
+   "命令": "DMOTESTREAD",
+   "地址": "0x08007748",
+   "等级": "出厂测试"
+  },
+  {
+   "命令": "DMOTESTSTART",
+   "地址": "0x0800755c",
+   "等级": "出厂测试"
+  },
+  {
+   "命令": "DMOTESTWRITE=",
+   "地址": "0x08007738",
+   "等级": "出厂测试"
+  },
+  {
+   "命令": "DMOTESTWRITEITEM=",
+   "地址": "0x08007724",
+   "等级": "出厂测试"
+  },
+  {
+   "命令": "DMOPTT=",
+   "地址": "0x0800758c",
+   "等级": "会开射频"
+  }
+ ],
+ "主动上报": [
+  "DMOAUTOUPDATACSBKINFO",
+  "DMOAUTOUPDATADIGITALRXINFO",
+  "DMOAUTOUPDATAMESGINFO",
+  "DMOAUTOUPDATARECORDFULL",
+  "DMOAUTOUPDATARECORDINFO",
+  "DMOSENDMOUDULEPLAYSTA",
+  "DMOSENDMOUDULESTA",
+  "DMOSTARTUP"
+ ]
+}
