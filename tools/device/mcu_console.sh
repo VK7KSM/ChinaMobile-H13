@@ -28,10 +28,14 @@ ENTRY=$PKG/com.bozhou.interphone.ui.talk.MainActivity
 READ_SECONDS=${READ_SECONDS:-5}
 HERE=$(cd "$(dirname "$0")" && pwd)
 
+# 白名单必须与固件导出表里的「只读」一类一致。
+# tools/offline/check_console_whitelist.py 会在离线自检里核对这一点，
+# 防止手写名单与实际固件行为悄悄走偏。
 WHITELIST="print version gettick showsyscfg showtestpara getslotint sct3258read
 sct3258read1 sct3258prostr sct3258hwver sct3258swver sct3258cidsn
 nandlistbadblock getsm getsleepstat readreg17val showcurrsq hobibstat
-getchandcnt sct3258getoobe memread ramlog"
+getchandcnt sct3258getoobe memread ramlog read2571 get2571lockflag
+nandreadmain nandreadspare nandgetfeature readeeprom"
 
 adb_sh() { MSYS_NO_PATHCONV=1 "$ADB" -P "$ADB_PORT" -s "$ADB_SERIAL" shell "$@" 2>&1; }
 

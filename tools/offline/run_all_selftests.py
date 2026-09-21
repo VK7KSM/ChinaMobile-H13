@@ -27,6 +27,9 @@ MODELS = [
     ("TG 与 Last Heard", "talkgroup_model.py"),
     ("功率标定", "power_calibration.py"),
     ("服务接口契约", "radio_service_contract.py"),
+    # 这条不是模型，是安全闸：控制台客户端的白名单与固件导出表是否一致。
+    # 名单一旦漂到「会开射频」那一类，脚本就会在没有操作者在场时发射。
+    ("控制台白名单", "check_console_whitelist.py"),
 ]
 
 # 工具类脚本：没有内置自检，这里用真实素材做冒烟检查，确保接口没被改坏。
