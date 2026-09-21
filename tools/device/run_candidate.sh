@@ -30,6 +30,11 @@ adb_sh() { MSYS_NO_PATHCONV=1 "$ADB" -P 5038 -s 0 shell "$@" 2>&1; }
 
 restore_production() {
     # 生产专网应用重新启用并取回串口。宿主失败退出时不做这件事。
+    #
+    # 身份边界（2.9.61）：生产专网应用是系统应用，只能用 root 切；
+    # **探针包是普通应用，必须用 shell 身份切**（宿主脚本用的是
+    # `pm enable --user 0`）。用 root 禁用过探针包，shell 就再也启用不了，
+    # 下一次回归会以 SecurityException 失败，而现场离原因隔着好几步。
     adb_sh "su -c 'pm enable $PKG >/dev/null 2>&1; am start -n $ENTRY >/dev/null 2>&1'" >/dev/null
     sleep 6
     local owner

@@ -5409,3 +5409,31 @@ Python 侧 `jitter_buffer_model.py` 与 `radio_service_contract.py` 同步更正
 
 **真正卡住的全部带 [阻]**，一律需要操作者在场：接收侧交帧、射频复现性、
 长时射频发射、功率多点标定、SDR 闭环、进程死亡射频兜底、事件上报验证。
+
+### 2.9.61 一次自己造的故障：用 root 禁用包，宿主脚本就再也启用不了
+
+验完服务外壳后，我把探针包恢复基线，用的是
+`su -c 'pm disable net.elfradio.h13dmrtx'`。下一次回归立刻失败：
+
+```
+Error: java.lang.SecurityException:
+  Shell cannot change component state for net.elfradio.h13dmrtx/null to 1
+ADB命令失败：shell pm enable --user 0 net.elfradio.h13dmrtx
+```
+
+**组件启用状态记着是谁设的。** root 设过之后，shell 身份就改不动了；
+而宿主脚本用的正是 shell 身份的 `pm enable --user 0`。
+
+修法：先用 root `pm enable` 把状态还原，再确认 shell 身份能正常
+`pm enable --user 0` / `pm disable-user --user 0` 来回切。实测两者此后都正常。
+
+#### 边界要记清楚
+
+| 包 | 谁来切 | 原因 |
+|---|---|---|
+| 生产专网应用（系统应用） | **root** | 系统应用 shell 身份切不动；`run_candidate.sh` 一直这么做，没问题 |
+| 探针包（普通应用） | **shell** | 宿主脚本用 shell 身份；root 碰过就锁死 |
+
+我的临时排查命令绕开了这条边界。**手敲的一次性命令和脚本里的命令必须
+用同一套身份**——否则脚本下次跑就会莫名其妙失败，而故障现场与真正的
+原因隔着好几步。
