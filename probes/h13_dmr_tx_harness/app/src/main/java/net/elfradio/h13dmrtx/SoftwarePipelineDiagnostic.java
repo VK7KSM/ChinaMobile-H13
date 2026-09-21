@@ -86,6 +86,33 @@ final class SoftwarePipelineDiagnostic {
                     historicalExpectedMetrics, historicalActualMetrics,
                     historicalDecoded.frameErrors);
 
+            // 剥信道编码的两条实现是否一致（2026-09-21）。
+            // 离线工具 chan_d_to_params.py 走 chan_d_to_wav.exe，设备上走
+            // 这里的 native channelDecodeTo49BitPacked9。网关要把网络来的
+            // 已编码帧剥成 49 位参数，两条实现若不一致，取哪条会决定空口
+            // 上是不是可懂——而"能听出是人声但听不懂"恰恰分辨不出这种错
+            // （十九次失败发射就是这个样子）。
+            // 锚点是有空口结果背书的那一对：输入为 2026-08-06 捕获的空口
+            // 单元，期望输出就是 2.8.83 那次成功发射真正送出的载荷。
+            byte[] replayAir = readAsset(context,
+                    "software_ambe_vectors/dmr_replay_air_input.chan_d27.bin");
+            byte[] replayExpected49 = readAsset(context,
+                    "software_ambe_vectors/dmr_replay_captured.chan_d27.bin");
+            byte[] replayExtracted49 = SoftwareAmbeDecoder
+                    .channelDecodeTo49BitPacked9(replayAir);
+            write(output, "replay_air_input.bin", replayAir);
+            write(output, "replay_expected49.bin", replayExpected49);
+            write(output, "replay_native_extracted49.bin", replayExtracted49);
+            write(output, "replay_strip_agreement.txt",
+                    ("input_bytes=" + replayAir.length + "\n"
+                     + "expected_bytes=" + replayExpected49.length + "\n"
+                     + "native_bytes=" + replayExtracted49.length + "\n"
+                     + "agrees=" + Arrays.equals(replayExpected49,
+                            replayExtracted49) + "\n")
+                            .getBytes(StandardCharsets.UTF_8));
+            requireEqual("剥信道编码与冻结载荷一致", replayExpected49,
+                    replayExtracted49);
+
             byte[] inputPcmRaw = readAsset(context,
                     "software_ambe_vectors/tone_800hz.pcm_s16le");
             short[] input = pcmFromS16Le(inputPcmRaw);

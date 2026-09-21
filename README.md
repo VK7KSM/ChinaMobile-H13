@@ -251,6 +251,35 @@ tools/device/mcu_console.sh --rx "sct3258initcfg 0"   # 接收类要显式开启
 
 ---
 
+## 射频服务层：模型与实现并存，同一组用例跑两边
+
+`probes/h13_dmr_tx_harness/app/src/main/java/net/elfradio/h13radio/` 下五个类，
+**不依赖 Android 框架、不碰硬件**，只决定「允不允许、回哪一帧」：
+
+| 类 | 对应模型 | 职责 |
+|---|---|---|
+| `Arbiter` | `tools/offline/arbitration_model.py` | 单工仲裁 |
+| `JitterBuffer` | `tools/offline/jitter_buffer_model.py` | 欠载补静音、过载保新弃旧 |
+| `TalkgroupRouter` | `tools/offline/talkgroup_model.py` | TG 订阅与 Last Heard |
+| `PowerTable` | `tools/offline/power_calibration.py` | 标定不足拒绝外推 |
+| `RadioService` | `tools/offline/radio_service_contract.py` | 以上四者的接缝 |
+
+两边都保留不是重复：模型先定行为、Java 要跑在设备上，**同一组用例跑两边**，
+行为一旦分叉就会被用例抓住。
+
+用例的重点全在**拒绝**——主流程写对不难，难的是边界什么时候说不：
+接收中不得发射、尾音期内拒绝、发射硬性时限、标定不足拒绝求解、
+未订阅的 TG 丢弃、加密信道一律拒绝、模块交几帧就必须回几帧。
+
+```bash
+JAVA_HOME='C:\Users\x\.jdks\jdk-17.0.20.1+1' ./gradlew testDebugUnitTest
+```
+
+**这一层还不是完整服务**：前台服务、串口归属、开机自启、六十毫秒帧泵的
+实时调度线程、进程死亡时的射频兜底都还没做，其中兜底必须有射频才验得了。
+
+---
+
 ## 一次方法转变的记录（2026-09-18）
 
 这个项目在此之前已经进行了数周。发送方向做到 v0.80，做了大量真机试验，
