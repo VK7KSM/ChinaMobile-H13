@@ -263,6 +263,15 @@ tools/device/mcu_console.sh --rx "sct3258initcfg 0"   # 接收类要显式开启
 | `TalkgroupRouter` | `tools/offline/talkgroup_model.py` | TG 订阅与 Last Heard |
 | `PowerTable` | `tools/offline/power_calibration.py` | 标定不足拒绝外推 |
 | `RadioService` | `tools/offline/radio_service_contract.py` | 以上四者的接缝 |
+| `RfSafetyGate` | — | 默认禁发；授权/频段/功率/呼号/占空五条 |
+| `ModuleTransport` | — | 帧泵与基带之间的接缝（接口） |
+| `FramePump` | — | 一对一供数契约 |
+| `DmrVoiceBurst` | — | 33 字节突发与 27 字节单元的拆装 |
+| `HomebrewPacket` / `HomebrewClient` | — | 网络侧报文与链路状态机 |
+| `MasterPool` | — | 多 master 轮换与重连节流 |
+| `KeepaliveScheduler` | — | NAT 保活与网络切换 |
+| `GatewaySession` | — | 一次完整发射的顺序与回滚 |
+| `RadioForegroundService` | — | Android 外壳：前台、串口归属、退出兜底 |
 
 两边都保留不是重复：模型先定行为、Java 要跑在设备上，**同一组用例跑两边**，
 行为一旦分叉就会被用例抓住。
@@ -275,8 +284,22 @@ tools/device/mcu_console.sh --rx "sct3258initcfg 0"   # 接收类要显式开启
 JAVA_HOME='C:\Users\x\.jdks\jdk-17.0.20.1+1' ./gradlew testDebugUnitTest
 ```
 
-**这一层还不是完整服务**：前台服务、串口归属、开机自启、六十毫秒帧泵的
-实时调度线程、进程死亡时的射频兜底都还没做，其中兜底必须有射频才验得了。
+### 几条写死在实现里的取向
+
+- **默认禁发。** 没有显式授权（且必须带呼号），任何发射请求都被拒。
+- **标定不足拒绝给值，不外推。** 目前只有一个功率标定点，因此**任何
+  功率求解都会被拒绝**——这是正确行为，要能用得由操作者带功率表多点标定。
+- **拿不准就返回 null，不猜。** 网络报文长度或标签对不上一律拒绝解析，
+  宁可失败也不要把不认识的字节当成语音送上空口。
+- **收尾放 `finally`。** 漏掉的后果不是数据不准，是发射没停下来。
+
+### 这一层还不是什么
+
+前台服务与串口归属已在真机验过（零射频），但**帧泵尚未接到内存桥**；
+开机自启**刻意不做**（常驻组件自动复活会悄悄占住串口）；
+进程死亡时的射频兜底逻辑已就位，**必须有射频才验得了**。
+
+网络层的用例证明的是**自洽**，不是与真实 master 兼容——对接属于对外发包。
 
 ---
 
