@@ -47,7 +47,7 @@ public final class PowerTable {
             this.why = why;
         }
 
-        static Result refuse(String why) {
+        public static Result refuse(String why) {
             return new Result(false, 0, 0, why);
         }
 
