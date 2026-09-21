@@ -163,6 +163,86 @@ AT+DMOGETDIGITALRXINFO    空闲回 0,0,0；有信号时回 group,<目标>,<主�
 
 ---
 
+## MCU 自带调试控制台：一百零一条命令，就在同一条串口上（2026-09-21）
+
+模块 MCU 固件 `0.3.66` 内置一个工厂/调试命令台，**挂在 `/dev/ttyHS0` 上，
+与 AT 命令共用同一条串口**。本仓库长期使用的 `memread` / `memwrite1` /
+`memwrite4` 并不是私有接口，而是这张表里的三条——内存桥的地基本来就是
+厂商留的调试口。
+
+整表 101 条，见 [`docs/traces/mcu_console_commands.md`](docs/traces/mcu_console_commands.md)
+（`.json` 同名文件另含分发点地址、取参个数与实现例程地址）。
+导出脚本 `tools/firmware/dump_mcu_console.py`。
+
+### 怎么用
+
+回显默认关闭，**第一条必须是 `print 1`**。串口 57600、8N1、raw，命令以
+CRLF 结尾。生产专网应用常驻持有串口，须先让出。
+
+```bash
+tools/device/mcu_console.sh version gettick getsm getchandcnt
+tools/device/mcu_console.sh --list          # 只读白名单
+tools/device/mcu_console.sh --rx "sct3258initcfg 0"   # 接收类要显式开启
+```
+
+脚本自动释放串口、下发、收集回显，结束后恢复生产基线，并在整个下发窗内
+以 100 毫秒间隔采样 `/sys/boptt/pa_enable`。
+
+### 安全约束
+
+命令按危险等级分四类：
+
+| 等级 | 条数 | 工具是否放行 |
+|---|---:|---|
+| 只读 | 28 | 放行 |
+| 进接收态 | 8 | 需显式 `--rx` |
+| 改状态 | 37 | 不放行 |
+| **会开射频** | 15 | **一律不放行** |
+| **写非易失** | 5 | **一律不放行** |
+
+`pttctrl`、`rfswon`、`txvcovccon`、各 `*callstart` / `*entertx`、
+`sct3258pwrval`、`dacset` 会让设备真的发射；`writeeeprom`、`nanderaseblock`、
+`nandwritepage`、`sct3258dspupdate`、`ddreboot` 会写非易失存储。
+**这两类必须由操作者在场亲自执行，自动化脚本不代劳。**
+
+### 几条最有用的
+
+| 命令 | 回显 | 用途 |
+|---|---|---|
+| `getchandcnt` | `supply zero chand count:%d` | **模块自己报的帧泵欠载计数**：因宿主没按时供数而补的零 CHAN_D 单元数 |
+| `getsm` | `sm:0x%02x` | 呼叫状态字节 |
+| `getsleepstat` | 休眠/活跃时长 | 省电节拍，实测休眠 310 毫秒、活跃 120 毫秒 |
+| `showcurrsq` | 静噪门限表 | 接收侧判据 |
+| `hobibstat` | `hobibstat:0x%02x` | HPI 忙线状态 |
+| `sct3258send2 <hex>` | — | 裸 HPI 发包（v223 曾用它推 DSP loader） |
+
+其中三条的实现就是读一个固定 RAM 地址，因此**在会话中间也能用
+`memread` 取到，不必另开控制台会话**：
+
+| 量 | 地址 | 宽度 |
+|---|---|---|
+| 零 CHAN_D 补帧计数 | `0x2000042c` | u16 |
+| 呼叫状态字节 | `0x20000160` | u8 |
+| 供零语音开关（`zerovoice`） | `0x200001e3` | u8 |
+| 丢帧计数（`dropvoice`） | `0x200001e2` | u8 |
+
+后两条是现成的**故障注入**手段：要验证抖动缓冲的欠载补帧，用它人为
+制造欠载即可，不必专门造素材。
+
+### 边界
+
+- `sct3258send2` 是文本十六进制的**单向**发送，没有包类型字段，也拿不回
+  模块交出的帧，**替代不了内存桥**——60 毫秒节拍的双向供数仍须走桥。
+- `sct3258enterrx` 在真机上只回显命令、不出 `cmp`，其后命令无响应；
+  原因未定位。
+- `sct3258hwver` / `sct3258swver` / `sct3258cidsn` / `sct3258prostr`
+  无回显，推测与 DSP 休眠有关，**未验证**。
+- 「取参个数」一列来自静态分析；**只有实际下过的那几条是实测的**。
+
+详见 `docs/H13_new.md` 2.9.44 与 2.9.46。
+
+---
+
 ## 一次方法转变的记录（2026-09-18）
 
 这个项目在此之前已经进行了数周。发送方向做到 v0.80，做了大量真机试验，
@@ -285,6 +365,8 @@ AT+DMOGETDIGITALRXINFO    空闲回 0,0,0；有信号时回 group,<目标>,<主�
 | `firmware/android_device_tree/` | 设备树、引脚配置、音频配置 |
 | `tools/emulator/` | MCU 固件模拟器与发射链追踪脚本（纯离线） |
 | `tools/offline/` | 离线工具：判据与分析、编解码、服务层模型、素材生成。见其 `README.md` |
+| `tools/firmware/` | 固件静态分析：交叉引用与反汇编、调试控制台整表导出 |
+| `tools/device/` | 设备侧脚本：候选会话、复现性批次、MCU 调试控制台客户端 |
 | `tools/firmware_analysis/` | 固件校验与分析脚本 |
 | `tools/sct3258_analysis/` | 基带静态分析脚本 |
 | `tools/software_ambe_snapshot/` | 软件语音编码器源码快照 |

@@ -15,6 +15,10 @@ MODE=${1:?用法: run_candidate.sh <模式名> [超时秒]}
 # 默认值改大留出余量，避免以后的成功会话被误判成超时失败。
 STEP_TIMEOUT=${2:-700}
 
+# 脚本自身所在目录必须在任何 cd 之前解析成绝对路径：本脚本后面会
+# cd 到宿主工具目录，之后再用 $(dirname "$0") 会拼出 tools/tools/... 这种
+# 不存在的路径，审计器因此一直没真正跑起来（2026-09-21 才发现）。
+SELF_DIR=$(cd "$(dirname "$0")" && pwd)
 TOOLS=/c/Dev/H13_D22/research/h13_dmr_tx_harness/tools
 CAPDIR=/c/Dev/H13_D22/research/h13_radio/captures/$(date +%Y-%m-%d)
 SCRIPT=run_h13_dmr_tx_harness_v087_usb.ps1
@@ -145,7 +149,7 @@ fi
 if [ -n "$D" ] && [ -d "$D/device_capture" ]; then
     echo
     echo "=== 判据自动核对 ==="
-    python "$(dirname "$0")/../offline/audit_capture.py" "$D" ||         echo "审计不通过，详见上方条目"
+    python "$SELF_DIR/../offline/audit_capture.py" "$D" ||         echo "审计不通过，详见上方条目"
 fi
 
 # 无论成败都确认生产基线回到位
