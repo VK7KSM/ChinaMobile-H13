@@ -23,6 +23,11 @@ final class McuAssets {
 
     static final int CODEC_GAIN_TABLE = 0x20002e25;
     static final int CODEC_GAIN_PRESETS = 3;
+    // 2026-09-21 更名说明（先记，不改名）：固件自带的控制台命令 `getslotint`
+    // 读的就是这个地址，宽度同为四字节，打印成 `slotint %d`——**它是时隙
+    // 中断计数，不是射频边沿计数**。两者在电台活跃时相关，但不是一回事，
+    // 按"射频边沿"去解读会得出过头的结论。常量名暂不改：它出现在大量
+    // 历史证据标签里，改名会让旧捕获对不上。见 H13_new.md 2.9.46。
     static final int RF_EDGE_COUNTER = 0x20000134;
     static final int RF_EDGE_COUNTER_LENGTH = 4;
     static final int RF_TIMING_CONTROL = 0x20000138;

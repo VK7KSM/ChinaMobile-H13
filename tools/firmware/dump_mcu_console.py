@@ -35,7 +35,7 @@ from pathlib import Path
 BASE = 0x08000000
 DEFAULT_IMAGE = (Path(__file__).resolve().parents[2]
                  / "firmware" / "mcu"
-                 / "Module_current_0.3.66_full_flash_256k.bin")
+                 / "Module_current_0.3.66_full_flash_256k.bint.replace("|", "\|")
 
 # 分发器所在区间（含其字符串常量），由 2.9.44 的定位得出
 DISPATCH_LO = 0x0800B900
@@ -120,6 +120,31 @@ def bl_targets(flash: bytes, lo: int, hi: int):
         yield BASE + i, BASE + i + 4 + imm
 
 
+
+def ram_literals(flash: bytes, lo: int, hi: int) -> list[int]:
+    """区间内 LDR Rn,[PC,#imm] 取到的 SRAM 地址（0x2000xxxx）。
+
+    粗但有用：只读类命令的实现大多是「读一个固定地址返回」，把地址找出来
+    就能在会话中间用 memread 采到同一个量，不必另开控制台会话
+    （H13_new.md 2.9.46 用这条把 getchandcnt 做成了会话内指标）。
+
+    **是线索不是结论**：同一区间里可能混着别的常量，用之前要看反汇编。
+    """
+    out = []
+    for i in range(lo - BASE, min(hi, lo + 0x200) - BASE, 2):
+        hw = struct.unpack_from("<H", flash, i)[0]
+        if (hw & 0xF800) != 0x4800:          # LDR Rt, [PC, #imm8*4]
+            continue
+        pc = BASE + i + 4
+        at = (pc & ~3) + (hw & 0xFF) * 4
+        off = at - BASE
+        if off < 0 or off + 4 > len(flash):
+            continue
+        val = struct.unpack_from("<I", flash, off)[0]
+        if 0x20000000 <= val < 0x20010000 and val not in out:
+            out.append(val)
+    return out
+
 def classify(name: str) -> str:
     if name in NONVOLATILE:
         return "写非易失"
@@ -145,11 +170,11 @@ def main() -> int:
     sites = list(adr_sites(flash, DISPATCH_LO, DISPATCH_HI))
     for site, target in sites:
         s = cstr(flash, target)
-        if s and s.endswith(" cmp"):
+        if s and s.endswith(" cmpt.replace("|", "\|"):
             completions.setdefault(s[:-4].strip().split()[0], []).append(site)
 
     # 第二遍：候选命令名 = ADR 目标是纯命令名形状的字符串
-    name_re = re.compile(r"^[a-z0-9_]{3,24}$")
+    name_re = re.compile(r"^[a-z0-9_]{3,24}$t.replace("|", "\|")
     cands = []
     for site, target in sites:
         s = cstr(flash, target)
@@ -201,13 +226,19 @@ def main() -> int:
             "有完成日志": nm in completions,
             "实现例程": ["0x%08x" % c for c in calls[:6]],
             "输出": prints[:6],
+            "读到的SRAM地址": ["0x%08x" % v for v in
+                               ram_literals(flash, site,
+                                            min(end, site + 0x400))[:4]],
+            "实现里的SRAM地址": ["0x%08x" % v for v in
+                                 (ram_literals(flash, calls[0], calls[0] + 0x80)
+                                  if calls else [])[:4]],
             "等级": classify(nm),
         })
 
     order = {"只读": 0, "进接收态": 1, "改状态": 2, "会开射频": 3, "写非易失": 4}
     print("共 %d 条命令\n" % len(entries))
     print("%-22s %-8s %-4s %-5s %s"
-          % ("命令", "等级", "取参", "完成", "实现例程"))
+          % ("命令", "等级", "取参", "完成", "实现例程t.replace("|", "\|"))
     print("-" * 78)
     for e in sorted(entries, key=lambda x: (order.get(x["等级"], 9), x["命令"])):
         print("%-22s %-8s %-4d %-5s %s"
@@ -217,19 +248,19 @@ def main() -> int:
 
     if a.json:
         a.json.write_text(json.dumps(entries, ensure_ascii=False, indent=1),
-                          encoding="utf-8")
+                          encoding="utf-8t.replace("|", "\|")
         print("\n已写 %s" % a.json)
     if a.md:
         lines = ["| 命令 | 等级 | 取参 | 输出 | 实现例程 |",
                  "|---|---|---|---|---|"]
         for e in sorted(entries,
                         key=lambda x: (order.get(x["等级"], 9), x["命令"])):
-            out = " ".join("`%s`" % t.replace("|", "\|")
+            out = " ".join("`%s`" % t.replace("|", "\|")\|")
                            for t in e["输出"][:3]) or "—"
             lines.append("| `%s` | %s | %d | %s | %s |"
                          % (e["命令"], e["等级"], e["取参次数"], out,
                             " ".join("`%s`" % c for c in e["实现例程"][:3])))
-        a.md.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        a.md.write_text("\n".join(lines) + "\n", encoding="utf-8t.replace("|", "\|")
         print("已写 %s" % a.md)
     return 0
 
