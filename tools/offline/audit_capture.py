@@ -24,6 +24,8 @@ import re
 from pathlib import Path
 
 OK, BAD, SKIP = "通过", "不通过", "不适用"
+# 读数照报，但不声称它证明了什么——见 check_module_zero_fill。
+INFO = "参考"
 
 
 def read_text(path: Path) -> str:
@@ -110,8 +112,16 @@ def check_rf_duty(dev: Path) -> tuple[str, str]:
 def check_module_zero_fill(dev: Path) -> tuple[str, str]:
     """模块自报的欠载：因宿主没按时供数而自行补的零 CHAN_D 单元数。
 
-    这是**模块自己的计数**，不是我们从时间轴推算的（H13_new.md 2.9.46）。
-    地址取自控制台 `getchandcnt` 的实现，会话内用 memread 采样。
+    地址取自控制台 `getchandcnt` 的实现，会话内用 memread 采样
+    （H13_new.md 2.9.46）。
+
+    **这一条目前只作参考，不当判据。** 理由见 2.9.58：把 `zerovoice`
+    标志置 1 跑完整会话（读回确认标志确实是 1），计数仍然是 0——
+    **一次故意制造的欠载没能让它动**。所以现在无法分辨"确实没欠载"
+    与"这个计数在我们这条供数路径上根本不更新"。
+
+    读数非零仍然报不通过：那会是实打实的信息。读数为零则报「参考」，
+    不冒充通过——一个从未被观察到会失败的判据，不该摆在那里像是验过。
     """
     stages = {}
     for f in sorted(dev.glob("*module_counters_*.bin")):
@@ -132,7 +142,7 @@ def check_module_zero_fill(dev: Path) -> tuple[str, str]:
     detail = "基线 %d → 退桥后 %d，增量 %d" % (base, after, delta)
     if delta:
         return BAD, "模块补了 %d 个零单元（%s）" % (delta, detail)
-    return OK, detail
+    return INFO, detail + "（该计数尚未被证明敏感，见 2.9.58）"
 
 
 CHECKS = [

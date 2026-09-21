@@ -406,6 +406,20 @@ final class DmrTxController {
      */
     private static final boolean RECEIVE_CHAIN_PROBE = false;
 
+    /**
+     * 补零计数灵敏度探针（零射频实验开关，默认关）。
+     *
+     * <p>审计器有一条判据是「模块补零单元增量为 0」（2.9.46）。问题在于
+     * **这个数每次读都是 0，从没见它非零过**——一个从未被观察到会失败的
+     * 判据，还不能算已知有效。它可能一直对，也可能地址错了、或者根本不在
+     * 这条路径上更新，而我们无从分辨。
+     *
+     * <p>本开关在会话开始前把 `zerovoice` 标志（`0x200001e3`）置 1，
+     * 会话结束后读计数并清标志。计数动了，说明判据确实敏感；不动，
+     * 说明这条判据目前是摆设，应当据实改掉而不是留着装点门面。
+     */
+    private static final boolean ZERO_FILL_SENSITIVITY_PROBE = false;
+
     /** 重入探针进行中，影响呼叫头的取路。 */
     private boolean repeatProbeActive;
 
@@ -1341,6 +1355,14 @@ final class DmrTxController {
             throw new IOException("bridge或SysTick不是生产基线");
         }
         captureModuleFrameCounters("baseline");
+        if (ZERO_FILL_SENSITIVITY_PROBE) {
+            // 故意让模块补零，用来检验补零计数这条判据是否真的敏感。
+            byte[] rsp = memory.writeByte(McuAssets.ZERO_VOICE_FLAG, 1);
+            evidence.saveEvent("zerofill", "set_flag_rsp", rsp);
+            byte[] back = memory.read(McuAssets.ZERO_VOICE_FLAG, 1).parsed;
+            evidence.saveText("zerofill", "set_flag",
+                    "wrote=1 readback=" + (back[0] & 0xff) + "\n");
+        }
     }
 
     /**
@@ -2403,6 +2425,13 @@ final class DmrTxController {
         } else {
             captureAllSramRegions("bridge1_postexit");
             captureModuleFrameCounters("bridge1_postexit");
+            if (ZERO_FILL_SENSITIVITY_PROBE) {
+                // 先读后清：清早了就读不到本次会话累计的值。
+                captureModuleFrameCounters("zerofill_before_clear");
+                byte[] rsp = memory.writeByte(McuAssets.ZERO_VOICE_FLAG, 0);
+                evidence.saveEvent("zerofill", "clear_flag_rsp", rsp);
+                captureModuleFrameCounters("zerofill_after_clear");
+            }
         }
         if (relayOne) {
             // 78包原件逐文件持久化不得占用第一桥或RF窗口。
