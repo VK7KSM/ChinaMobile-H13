@@ -18,5 +18,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- 射频服务外壳。刻意不给 LAUNCHER 入口、不注册开机广播：
+             探针工程里多一个会抢串口的常驻组件，风险不对称，
+             只能由显式的 startForegroundService 拉起（2.9.60）。 -->
+        <service
+            android:name="net.elfradio.h13radio.RadioForegroundService"
+            android:exported="true"
+            android:permission="android.permission.DUMP" />
     </application>
 </manifest>
