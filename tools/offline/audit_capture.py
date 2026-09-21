@@ -107,8 +107,37 @@ def check_rf_duty(dev: Path) -> tuple[str, str]:
     return SKIP, "非发射会话"
 
 
+def check_module_zero_fill(dev: Path) -> tuple[str, str]:
+    """模块自报的欠载：因宿主没按时供数而自行补的零 CHAN_D 单元数。
+
+    这是**模块自己的计数**，不是我们从时间轴推算的（H13_new.md 2.9.46）。
+    地址取自控制台 `getchandcnt` 的实现，会话内用 memread 采样。
+    """
+    stages = {}
+    for f in sorted(dev.glob("*module_counters_*.bin")):
+        m = re.search(r"zero_chan_d_count=(\d+)", read_text(f))
+        if not m:
+            continue
+        stage = f.stem.split("module_counters_", 1)[-1]
+        stages[stage] = int(m.group(1))
+    if not stages:
+        return SKIP, "本次会话没有采到模块计数"
+    if "baseline" not in stages or len(stages) < 2:
+        only = ", ".join("%s=%d" % kv for kv in stages.items())
+        return SKIP, "只采到一个阶段（%s）" % only
+    base = stages["baseline"]
+    after = max(v for k, v in stages.items() if k != "baseline")
+    # 计数器是 u16，会绕回。绕回时差值为负，按环绕补回。
+    delta = (after - base) & 0xFFFF
+    detail = "基线 %d → 退桥后 %d，增量 %d" % (base, after, delta)
+    if delta:
+        return BAD, "模块补了 %d 个零单元（%s）" % (delta, detail)
+    return OK, detail
+
+
 CHECKS = [
     ("信道加密关闭", lambda r, d: check_channel_clear(d)),
+    ("模块无补零单元", lambda r, d: check_module_zero_fill(d)),
     ("服务选项无加密位", lambda r, d: check_service_option(d)),
     ("语音单元计数", lambda r, d: check_unit_bytes(d)),
     ("单元写出完整", lambda r, d: check_units_complete(r)),

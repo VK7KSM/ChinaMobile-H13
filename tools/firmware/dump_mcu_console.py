@@ -172,6 +172,16 @@ def main() -> int:
     for idx, (nm, (site, target, s)) in enumerate(ordered):
         end = ordered[idx + 1][1][0] if idx + 1 < len(ordered) else DISPATCH_HI
         calls, parses, logs = [], 0, 0
+        # 处理体里 ADR 取址的字符串就是它会打印的东西：完成日志与格式串。
+        # 把它们一并收下来，等于不用跑就知道每条命令的输出长什么样。
+        prints = []
+        for _, t2 in adr_sites(flash, site, min(end, site + 0x400)):
+            txt = cstr(flash, t2)
+            if not txt or txt == nm:
+                continue
+            if txt in prints:
+                continue
+            prints.append(txt)
         for _, dst in bl_targets(flash, site, min(end, site + 0x400)):
             if dst in CMP_FUNCS:
                 continue
@@ -190,6 +200,7 @@ def main() -> int:
             "取参次数": parses,
             "有完成日志": nm in completions,
             "实现例程": ["0x%08x" % c for c in calls[:6]],
+            "输出": prints[:6],
             "等级": classify(nm),
         })
 
@@ -209,11 +220,14 @@ def main() -> int:
                           encoding="utf-8")
         print("\n已写 %s" % a.json)
     if a.md:
-        lines = ["| 命令 | 等级 | 取参 | 实现例程 |", "|---|---|---|---|"]
+        lines = ["| 命令 | 等级 | 取参 | 输出 | 实现例程 |",
+                 "|---|---|---|---|---|"]
         for e in sorted(entries,
                         key=lambda x: (order.get(x["等级"], 9), x["命令"])):
-            lines.append("| `%s` | %s | %d | %s |"
-                         % (e["命令"], e["等级"], e["取参次数"],
+            out = " ".join("`%s`" % t.replace("|", "\|")
+                           for t in e["输出"][:3]) or "—"
+            lines.append("| `%s` | %s | %d | %s | %s |"
+                         % (e["命令"], e["等级"], e["取参次数"], out,
                             " ".join("`%s`" % c for c in e["实现例程"][:3])))
         a.md.write_text("\n".join(lines) + "\n", encoding="utf-8")
         print("已写 %s" % a.md)
