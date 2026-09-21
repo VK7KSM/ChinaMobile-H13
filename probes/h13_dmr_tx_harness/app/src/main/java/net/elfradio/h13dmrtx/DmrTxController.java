@@ -390,6 +390,22 @@ final class DmrTxController {
     /** 退桥后重新武装再跑一轮（零射频实验）。 */
     private static final boolean REARM_SECOND_ROUND = false;
 
+    /**
+     * 接收链探针（零射频实验开关，默认关）。
+     *
+     * <p>2.9.45 从原厂 `0x08017f78` 逐字节截得外部解码接收的八条 HPI 包，
+     * 固化为 {@link DmrProtocol#receiveChain}，但**从未在真机上发过**。
+     * 本开关让一次正常的零射频会话在收尾之前多做一件事：把这八条按序发出，
+     * 逐条记下模块的回应。
+     *
+     * <p>它回答的是「模块认不认这套接收配置」——这一半不需要对端发射。
+     * 剩下的一半「进接收态之后会不会持续交帧」必须有对端配合，不在此列。
+     *
+     * <p>纪律同 2.9.16：探索性分支对主流程零影响，默认关闭，开关打开时
+     * 也只在零射频路径上生效。
+     */
+    private static final boolean RECEIVE_CHAIN_PROBE = false;
+
     /** 重入探针进行中，影响呼叫头的取路。 */
     private boolean repeatProbeActive;
 
@@ -2289,6 +2305,9 @@ final class DmrTxController {
                     if (REARM_SECOND_ROUND && !allowRf) {
                         sendVendorCallStop();
                     }
+                    if (RECEIVE_CHAIN_PROBE && !allowRf) {
+                        runReceiveChainProbe();
+                    }
                 } else if (ackPacedVlcSoftwareTripleSos) {
                     runAckPacedPostVlcTripleSos(machine);
                     machine.markRealtimeRelaySequenceComplete();
@@ -2506,6 +2525,56 @@ final class DmrTxController {
      *
      * <p>实验帧不经状态机，只记录回执不做断言。
      */
+    /**
+     * 按序发出 2.9.45 截得的接收链八条，逐条记录模块回应。
+     *
+     * <p>判据：`HpiCodec.parseComplete` 能解出确认帧，且确认字段与该条的
+     * 期望字段一致（codec 写回 `0x17`，其余回首字节）。任何一条被拒都要
+     * 原样留下上行字节——**不要只记"失败"**，2.8.79 的教训是没有原始
+     * 上行就没法判断是格式不对还是时机不对。
+     *
+     * <p>本探针不判成败、不抛异常：它是取证，不是门禁。会话该怎么收尾
+     * 还怎么收尾。
+     */
+    private void runReceiveChainProbe() throws Exception {
+        StringBuilder note = new StringBuilder();
+        note.append("source=DmrProtocol.receiveChain（2.9.45 原厂 0x08017f78）\n");
+        note.append("count=").append(DmrProtocol.RECEIVE_CHAIN_COUNT)
+                .append("\n");
+        for (int index = 0; index < DmrProtocol.RECEIVE_CHAIN_COUNT; index++) {
+            byte[] frame = DmrProtocol.receiveChain(index);
+            int expectField = DmrProtocol.receiveChainAckField(index);
+            SerialTransport.RawExchange ex =
+                    transport.rawExchangeDetailed(frame, 500, 100);
+            byte[] observed = ex.combined();
+            evidence.saveEvent("rxchain", "req_" + index, frame);
+            evidence.saveEvent("rxchain", "rsp_" + index, observed);
+            note.append("step").append(index)
+                    .append("_req=").append(Bytes.hex(frame))
+                    .append(" expect_field=0x")
+                    .append(Integer.toHexString(expectField))
+                    .append(" rsp=").append(Bytes.hex(observed))
+                    .append("\n");
+        }
+        // 配置发完之后静听一段，看模块是否开始交帧。没有对端发射时这里
+        // 大概率一无所获——那不等于接收链不成立，只说明没有信号。
+        long listenUntil = SystemClock.elapsedRealtime() + 3000L;
+        int chunks = 0;
+        int bytes = 0;
+        while (SystemClock.elapsedRealtime() < listenUntil) {
+            byte[] chunk = transport.readAvailable(200L);
+            if (chunk.length > 0) {
+                evidence.saveEvent("rxchain", "listen_" + chunks, chunk);
+                chunks++;
+                bytes += chunk.length;
+            }
+        }
+        note.append("listen_ms=3000 chunks=").append(chunks)
+                .append(" bytes=").append(bytes).append("\n");
+        note.append("note=无对端发射时静听一无所获属预期，不据此判定接收链\n");
+        evidence.saveText("rxchain", "summary", note.toString());
+    }
+
     private void sendVendorCallStop() throws Exception {
         StringBuilder note = new StringBuilder();
         // v1.35 实测：CALL_STOP(type0 21) 被接受，但其后所有写都回 17 0f，
