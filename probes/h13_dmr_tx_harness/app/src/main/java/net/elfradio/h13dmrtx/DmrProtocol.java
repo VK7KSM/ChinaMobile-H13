@@ -23,6 +23,21 @@ final class DmrProtocol {
     static final int VLC_COUNT_AFTER_FIRST_DATA = VLC_COUNT - 2;
     static final int TERMINATION_COUNT = 1;
     static final int CLEANUP_COUNT = 2;
+    // 接收态（外部解码）配置链。逐字节取自原厂 0x08017f78 的模拟器追踪，
+    // 见 H13_new.md 2.9.45 与 docs/traces/接收外部解码序列.json。
+    // 与发射链 0x08019480 完全对称：同一个呼叫槽标志（+0x22）选通，
+    // 发射写 VOCODER_IO 0x60，接收写 0x0c。
+    //
+    // 三处与发射链的实质差别，都是此前接收采集拿不到帧的直接原因：
+    //   工作模式  接收 1，发射 2
+    //   声码器 IO 接收 0x0c，发射 0x60
+    //   载波就绪  接收 type 5 正文 19 02；此前写的是 type 0 正文 19 01
+    //
+    // 顺序按 MCU 固件：包装函数 0x0801dfa4 固定先 VOCODER_CMODE 再
+    // VOCODER_IO_SET。发射链沿用厂商 PC 工具的相反顺序（2.8.64），
+    // 已被真机证实，不动。两份厂商实现顺序本就不同。
+    static final int RECEIVE_CHAIN_COUNT = 8;
+
     static final int DATA36_BYTES = 36;
     static final int DATA36_WIRE_BYTES = 44;
 
@@ -64,6 +79,32 @@ final class DmrProtocol {
         return HpiCodec.frame(CODEC_PACKET_TYPE, new byte[] {
                 0x00, (byte) page, (byte) register, (byte) value, 0x00, 0x00
         });
+    }
+
+    /**
+     * 接收态外部解码配置链的第 index 条线上帧。
+     *
+     * <p>尚未接进 {@link TxStateMachine}：能否进入接收态之后持续交帧，
+     * 只能用射频验证（需要对端发射）。这里先把序列本身固化成可测的常量，
+     * 射频测试时直接取用，不再临场拼。
+     */
+    static byte[] receiveChain(int index) {
+        switch (index) {
+        case 0: return codecWrite(0, 0x56, 0x00);
+        case 1: return codecWrite(1, 0x3c, 0x00);
+        case 2: return codecWrite(1, 0x3b, 0x00);
+        case 3: return HpiCodec.frame(0, new byte[] {0x18, 0x01, 0x00, 0x00});
+        case 4: return HpiCodec.frame(5, new byte[] {0x6f, 0x00});
+        case 5: return HpiCodec.frame(0, new byte[] {0x02, 0x18});
+        case 6: return HpiCodec.frame(0, new byte[] {0x3e, 0x0c});
+        case 7: return HpiCodec.frame(5, new byte[] {0x19, 0x02});
+        default: throw new IndexOutOfBoundsException("接收链索引");
+        }
+    }
+
+    /** 接收链每条的确认字段，与发射侧同规则：codec 写回 0x17，其余回首字节。 */
+    static int receiveChainAckField(int index) {
+        return index <= 2 ? CODEC_ACK_FIELD : (receiveChain(index)[6] & 0xff);
     }
 
     /** 五条发射 codec 写，顺序与原厂链一致；gain 取自设备增益表。 */
@@ -364,11 +405,6 @@ final class DmrProtocol {
             this.vendorVlc = true;
         }
 
-        /** 接收态采集用：把呼叫头位置换成载波就绪。 */
-        void useReceiveMode() {
-            receiveMode = true;
-        }
-
         int vlcCount() {
             return vendorVlc ? VENDOR_VLC_COUNT : VLC_COUNT;
         }
@@ -464,12 +500,6 @@ final class DmrProtocol {
             if (index < 0 || index >= vlcCount()) {
                 throw new IndexOutOfBoundsException("VLC索引");
             }
-            // 接收态：厂商 DMR_Receive 的序列是工作模式、处理模式、载波丢失、
-            // 载波就绪，并且不发呼叫头——呼叫头是开始发射呼叫的命令，发了
-            // 模块就去发射而不是接听。接收采集时把这两个位置换成载波就绪。
-            if (receiveMode) {
-                return HpiCodec.frame(0, new byte[] {0x19, 0x01});
-            }
             byte[] body;
             if (vendorVlc) {
                 body = lc9();
@@ -501,7 +531,6 @@ final class DmrProtocol {
             return runtime14.clone();
         }
 
-        private boolean receiveMode;
 
         private byte[] lc9() {
             // 九字节语音链路控制：[0] 全链路控制操作码、[1] 厂商标识、

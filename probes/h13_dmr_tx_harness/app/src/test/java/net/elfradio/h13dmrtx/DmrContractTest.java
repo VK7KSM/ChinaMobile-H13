@@ -2,6 +2,7 @@ package net.elfradio.h13dmrtx;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
@@ -259,6 +260,55 @@ public final class DmrContractTest {
         assertEquals("84 a9 61 00 0c 05 43 02 09 00 00 00 00 00 63 00 00 0d",
                 Bytes.hex(session.terminationVlc()));
         assertEquals(1, DmrProtocol.TERMINATION_COUNT);
+    }
+
+    /**
+     * 接收态外部解码链。逐字节对齐原厂 0x08017f78 的模拟器追踪
+     * （H13_new.md 2.9.45，docs/traces/接收外部解码序列.json）。
+     *
+     * 本用例是冻结用例：改动它之前必须先有新的原厂追踪或真机证据。
+     */
+    @Test
+    public void receiveChainMatchesVendorExternalDecodeSequence() {
+        assertEquals(8, DmrProtocol.RECEIVE_CHAIN_COUNT);
+        assertEquals("84 a9 61 00 06 40 00 00 56 00 00 00",
+                Bytes.hex(DmrProtocol.receiveChain(0)));
+        assertEquals("84 a9 61 00 06 40 00 01 3c 00 00 00",
+                Bytes.hex(DmrProtocol.receiveChain(1)));
+        assertEquals("84 a9 61 00 06 40 00 01 3b 00 00 00",
+                Bytes.hex(DmrProtocol.receiveChain(2)));
+        // 工作模式 1 ＝ 接收；发射链这一条是 18 02 00 00（双工）
+        assertEquals("84 a9 61 00 04 00 18 01 00 00",
+                Bytes.hex(DmrProtocol.receiveChain(3)));
+        assertEquals("84 a9 61 00 02 05 6f 00",
+                Bytes.hex(DmrProtocol.receiveChain(4)));
+        // MCU 固件的包装函数固定先 CMODE 再 IO；发射链相反，见 2.9.45
+        assertEquals("84 a9 61 00 02 00 02 18",
+                Bytes.hex(DmrProtocol.receiveChain(5)));
+        // 0x0c ＝ 外部解码；发射是 0x60 ＝ 外部编码
+        assertEquals("84 a9 61 00 02 00 3e 0c",
+                Bytes.hex(DmrProtocol.receiveChain(6)));
+        // 载波就绪值 2、包类型 5。此前接收分支写的是类型 0、值 1，两处都错
+        assertEquals("84 a9 61 00 02 05 19 02",
+                Bytes.hex(DmrProtocol.receiveChain(7)));
+
+        assertEquals(0x17, DmrProtocol.receiveChainAckField(0));
+        assertEquals(0x17, DmrProtocol.receiveChainAckField(2));
+        assertEquals(0x18, DmrProtocol.receiveChainAckField(3));
+        assertEquals(0x6f, DmrProtocol.receiveChainAckField(4));
+        assertEquals(0x3e, DmrProtocol.receiveChainAckField(6));
+        assertEquals(0x19, DmrProtocol.receiveChainAckField(7));
+        assertThrows(IndexOutOfBoundsException.class,
+                () -> DmrProtocol.receiveChain(8));
+
+        // 接收链与发射链必须在这三处不同，否则就是又把发射配置当接收用
+        DmrProtocol.Session tx = DmrProtocol.session(13, 99, 0, RUNTIME14);
+        assertNotEquals(Bytes.hex(tx.setup(1)),
+                Bytes.hex(DmrProtocol.receiveChain(6)));
+        assertNotEquals(Bytes.hex(tx.setup(4)),
+                Bytes.hex(DmrProtocol.receiveChain(3)));
+        assertNotEquals(Bytes.hex(tx.setup(0)),
+                Bytes.hex(DmrProtocol.receiveChain(7)));
     }
 
     @Test

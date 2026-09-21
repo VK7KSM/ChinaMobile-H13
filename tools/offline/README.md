@@ -57,6 +57,18 @@ python run_all_selftests.py
 
 全部内置单次发射 30 秒上限校验。
 
+## 固件与设备侧工具（不在本目录，列在这里便于索引）
+
+| 工具 | 用途 |
+|---|---|
+| `../firmware/fw_xref.py` | 固件静态分析：按字符串找引用（字面量池与 **ADR** 两路，只扫字面量池会漏掉绝大多数调试字符串）、定位函数边界、找 BL 调用者、反汇编 |
+| `../emulator/trace_sct_seq.py` | 在模拟器里直调固件入口，截取发往 SCT3258 的每条 HPI 包 |
+| `../device/mcu_console.sh` | MCU 调试控制台客户端。只读白名单、`--rx` 才放行接收类、发射类一律不放行；下发期间持续采样 `pa_enable` |
+| `../device/batch_repeatability.sh` | 零射频复现性批次 |
+
+`mcu_console.sh` 的由来见 H13_new.md 2.9.44：固件自带约一百条控制台命令，
+一直挂在我们用的那条串口上，`memread`/`memwrite` 只是其中三条。
+
 ## 几条反复踩过的坑
 
 1. **证据落盘时间不等于事件发生时间**——热路径会推迟写入，用它算耗时会
@@ -65,3 +77,5 @@ python run_all_selftests.py
    设备侧其实已写满，必须两侧并看。
 3. **改了源码要出包才生效**——否则测的是旧版本。
 4. **后台批次要互斥**——两个批次争抢设备会让结果交错作废。
+5. **跑 gradle 要先设 `JAVA_HOME`**——系统 PATH 里没有 java，
+   用 `C:\Users\x\.jdks\jdk-17.0.20.1+1`（Windows 路径形式）。
