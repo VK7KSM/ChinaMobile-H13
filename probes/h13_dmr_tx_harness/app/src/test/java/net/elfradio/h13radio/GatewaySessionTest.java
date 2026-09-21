@@ -91,7 +91,7 @@ public class GatewaySessionTest {
         RadioService s = configuredService();
         useCalibratedCode(s);
         for (int i = 0; i < 5; i++) {
-            byte[] f = new byte[JitterBuffer.FRAME_BYTES];
+            byte[] f = new byte[JitterBuffer.UNIT_BYTES];
             f[0] = (byte) (i + 1);
             s.pushNetFrame(f);
         }
@@ -177,7 +177,7 @@ public class GatewaySessionTest {
         RadioService s = configuredService();
         useCalibratedCode(s);
         for (int i = 0; i < 5; i++) {
-            s.pushNetFrame(new byte[JitterBuffer.FRAME_BYTES]);
+            s.pushNetFrame(new byte[JitterBuffer.UNIT_BYTES]);
         }
         RfSafetyGate g = armedGate();
         FakeTransport t = new FakeTransport(5);
@@ -211,7 +211,7 @@ public class GatewaySessionTest {
         RfSafetyGate g = armedGate();
 
         for (int i = 0; i < 5; i++) {
-            s.pushNetFrame(new byte[JitterBuffer.FRAME_BYTES]);
+            s.pushNetFrame(new byte[JitterBuffer.UNIT_BYTES]);
         }
         FakeTransport first = new FakeTransport(5);
         assertTrue(new GatewaySession(s, g, first)
@@ -222,7 +222,7 @@ public class GatewaySessionTest {
         FakeTransport tooSoon = new FakeTransport(5);
         tooSoon.setNow(afterFirst);
         for (int i = 0; i < 5; i++) {
-            s.pushNetFrame(new byte[JitterBuffer.FRAME_BYTES]);
+            s.pushNetFrame(new byte[JitterBuffer.UNIT_BYTES]);
         }
         GatewaySession.Result refused =
                 new GatewaySession(s, g, tooSoon).runNetTransmit(5, 1000);

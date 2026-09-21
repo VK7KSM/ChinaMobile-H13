@@ -81,6 +81,7 @@ class RadioService:
         return True, "开始发射（%s）" % source
 
     def push_net_frame(self, frame: bytes) -> None:
+        """入缓冲的是一个 60 毫秒的供数单元（27 字节），不是单帧 AMBE。"""
         self.buffer.push(frame)
 
     def on_module_offer(self) -> bytes:
@@ -148,7 +149,7 @@ def _selftest() -> int:
     ok, _ = s.start_tx(LOCAL, 3000)
     check(ok, "空闲后可发射")
     for i in range(3):
-        s.push_net_frame(bytes([i]) * 9)
+        s.push_net_frame(bytes([i]) * jb.UNIT_BYTES)
     got = [s.on_module_offer() for _ in range(10)]
     check(len(got) == 10, "交 10 帧回 10 帧")
     check(s.buffer.underruns == 7, "缺的 7 帧补静音（实际 %d）"

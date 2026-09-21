@@ -65,7 +65,7 @@ public class FramePumpTest {
 
     private static void fill(JitterBuffer b, int frames) {
         for (int i = 0; i < frames; i++) {
-            byte[] f = new byte[JitterBuffer.FRAME_BYTES];
+            byte[] f = new byte[JitterBuffer.UNIT_BYTES];
             f[0] = (byte) (i + 1);            // 非零，好与静音区分
             b.push(f);
         }

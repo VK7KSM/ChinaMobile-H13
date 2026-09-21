@@ -20,9 +20,16 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass, field
 
-FRAME_MS = 60
-DEFAULT_DEPTH = 3          # 约 180 毫秒
-SILENCE = b"\x00" * 9      # 占位静音帧
+# 缓冲元素是一个 60 毫秒的**供数单元**：三帧 AMBE × 9 字节 = 27 字节。
+# 2026-09-21 更正：这里原来写的是 9 字节。模型里长度不承重，写错也跑得过；
+# 但 Java 侧照着它写成 9 字节，一拼成全链路就当场崩了——网络来的一个突发
+# 拆出来是 27 字节。单帧 AMBE 是 20 毫秒、单元是 60 毫秒，差三倍，
+# 混用会让延迟预算直接错三倍。
+UNIT_MS = 60
+UNIT_BYTES = 27
+FRAME_MS = UNIT_MS         # 兼容旧调用点
+DEFAULT_DEPTH = 3          # 三个单元 ＝ 约 180 毫秒
+SILENCE = b"\x00" * UNIT_BYTES
 
 
 @dataclass
@@ -61,7 +68,7 @@ def _simulate(arrivals_ms: list[int], total_ms: int, depth: int) -> JitterBuffer
     idx = 0
     for now in range(0, total_ms, FRAME_MS):
         while idx < len(arrivals_ms) and arrivals_ms[idx] <= now:
-            jb.push(bytes([idx & 0xFF]) * 9)
+            jb.push(bytes([idx & 0xFF]) * UNIT_BYTES)
             idx += 1
         jb.pop()
     return jb

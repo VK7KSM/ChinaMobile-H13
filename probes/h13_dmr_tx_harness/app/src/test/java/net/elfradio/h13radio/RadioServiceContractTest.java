@@ -80,7 +80,7 @@ public class RadioServiceContractTest {
     public void bufferNeverStarvesAndDropsOldestWhenFull() {
         JitterBuffer b = new JitterBuffer(3);
         for (int i = 0; i < 5; i++) {
-            byte[] f = new byte[JitterBuffer.FRAME_BYTES];
+            byte[] f = new byte[JitterBuffer.UNIT_BYTES];
             f[0] = (byte) i;
             b.push(f);
         }
@@ -92,7 +92,7 @@ public class RadioServiceContractTest {
         b.pop();
         byte[] silence = b.pop();
         assertEquals("空了必须补静音，不能断流",
-                JitterBuffer.FRAME_BYTES, silence.length);
+                JitterBuffer.UNIT_BYTES, silence.length);
         for (byte v : silence) {
             assertEquals(0, v);
         }
@@ -103,7 +103,7 @@ public class RadioServiceContractTest {
     @Test
     public void bufferCopiesCallerFrames() {
         JitterBuffer b = new JitterBuffer();
-        byte[] f = new byte[JitterBuffer.FRAME_BYTES];
+        byte[] f = new byte[JitterBuffer.UNIT_BYTES];
         f[0] = 0x5a;
         b.push(f);
         f[0] = 0;                       // 调用方改回去，缓冲里的不该跟着变
@@ -220,13 +220,13 @@ public class RadioServiceContractTest {
         assertTrue(s.setChannel(433_550_000L, 8, 0, 99, false).ok);
         assertTrue(s.startTx(RadioService.Source.LOCAL, 3000).ok);
         for (int i = 0; i < 3; i++) {
-            byte[] f = new byte[JitterBuffer.FRAME_BYTES];
+            byte[] f = new byte[JitterBuffer.UNIT_BYTES];
             f[0] = (byte) i;
             s.pushNetFrame(f);
         }
         int returned = 0;
         for (int i = 0; i < 10; i++) {
-            assertEquals(JitterBuffer.FRAME_BYTES, s.onModuleOffer().length);
+            assertEquals(JitterBuffer.UNIT_BYTES, s.onModuleOffer().length);
             returned++;
         }
         assertEquals("交 10 帧回 10 帧", 10, returned);
