@@ -155,6 +155,14 @@ final class DmrTxController {
             "dmr_replay_f3shift_no_rf";
     static final String MODE_DMR_REPLAY_F3SHIFT_LOW_POWER_RF =
             "dmr_replay_f3shift_low_power_rf";
+    // 尾部回送静音单元（2026-10-13，2.9.78）。正文同 f3shift。唯一变量：
+    // 正文之后固定 500 毫秒尾部等待期内，模块每交一帧就回送一个尾部单元
+    // （前两个补上被后移的第三帧，其余三帧皆为素材自带的静音帧），
+    // 不再让模块用自己的帧填空口。
+    static final String MODE_DMR_REPLAY_F3TAIL_NO_RF =
+            "dmr_replay_f3tail_no_rf";
+    static final String MODE_DMR_REPLAY_F3TAIL_LOW_POWER_RF =
+            "dmr_replay_f3tail_low_power_rf";
     // 长时供数老化（2026-09-21）：同一条重放通路，素材换成 68 单元资产
     // 重复 15 次共 1020 单元、61.2 秒。零射频，只压帧泵——环形缓冲回绕、
     // 内存增长、MCU 省电节拍与 60 毫秒交帧的相互影响，都要靠时长暴露。
@@ -321,7 +329,14 @@ final class DmrTxController {
                 || isDmrReplayType0Mode(mode)
                 || isDmrReplayDupcMode(mode)
                 || isDmrReplayProbeMode(mode)
-                || isDmrReplayF3ShiftMode(mode);
+                || isDmrReplayF3ShiftMode(mode)
+                || isDmrReplayF3TailMode(mode);
+    }
+
+    /** 第三帧后移两单元、尾部回送静音单元的重放变体。 */
+    static boolean isDmrReplayF3TailMode(String mode) {
+        return MODE_DMR_REPLAY_F3TAIL_NO_RF.equals(mode)
+                || MODE_DMR_REPLAY_F3TAIL_LOW_POWER_RF.equals(mode);
     }
 
     /** 第三帧后移两单元补偿的重放变体。 */
@@ -643,6 +658,7 @@ final class DmrTxController {
                 || MODE_DMR_REPLAY_DUPC_NO_RF.equals(mode)
                 || MODE_DMR_REPLAY_PROBE_NO_RF.equals(mode)
                 || MODE_DMR_REPLAY_F3SHIFT_NO_RF.equals(mode)
+                || MODE_DMR_REPLAY_F3TAIL_NO_RF.equals(mode)
                 ? 3000L : 0L;
         offerPacedVoice = speechShortAbc || dmrReplayCaptured;
         // 配对采集：同一次会话里，模块经 HPI 交给宿主的帧与录音磁带里
@@ -819,6 +835,7 @@ final class DmrTxController {
                                : isDmrReplayProbeMode(mode)
                                ? "dmr_replay_probe.chan_d27.bin"
                                : isDmrReplayF3ShiftMode(mode)
+                                       || isDmrReplayF3TailMode(mode)
                                ? "dmr_replay_f3shift2.chan_d27.bin"
                                : "dmr_replay_captured.chan_d27.bin")));
                     int expectedReplayBytes = replayLong
@@ -839,6 +856,18 @@ final class DmrTxController {
                     // 不做任何变换。当前资产是把编码帧按 chan_d_to_wav 的映射
                     // 还原到交织前排列（C0,C1,C2,C3 顺序）的 A/B/C 素材，
                     // 用于验证"模块发射输入期望交织前排列"的假设。
+                    offerPacedTail = null;
+                    if (isDmrReplayF3TailMode(mode)) {
+                        offerPacedTail = readAll(assets.open(
+                                "software_ambe_vectors/"
+                                + "dmr_replay_f3shift2_tail.chan_d27.bin"));
+                        if (offerPacedTail.length != OFFER_PACED_TAIL_BYTES) {
+                            throw new IOException("尾部素材长度错误："
+                                    + offerPacedTail.length);
+                        }
+                        evidence.saveEvent("replay", "tail_payload",
+                                offerPacedTail);
+                    }
                     software49Bit36 = replay;
                     software49BitSource = RELAY_SOURCE_DMR_REPLAY_CAPTURED;
                     softwareFinalWirePayload = true;
@@ -1731,7 +1760,8 @@ final class DmrTxController {
                 || MODE_DMR_REPLAY_TYPE0_LOW_POWER_RF.equals(mode)
                 || MODE_DMR_REPLAY_DUPC_LOW_POWER_RF.equals(mode)
                 || MODE_DMR_REPLAY_PROBE_LOW_POWER_RF.equals(mode)
-                || MODE_DMR_REPLAY_F3SHIFT_LOW_POWER_RF.equals(mode);
+                || MODE_DMR_REPLAY_F3SHIFT_LOW_POWER_RF.equals(mode)
+                || MODE_DMR_REPLAY_F3TAIL_LOW_POWER_RF.equals(mode);
     }
 
     static long activePacedTargetAt(long firstFlushAt, int unitIndex) {
@@ -3105,6 +3135,11 @@ final class DmrTxController {
     private long postVlcListenMs;
     // 语音验证的两族模式改走按模块交帧逐帧回送，见 2.8.73。
     private boolean offerPacedVoice;
+    /** 尾部回送素材（仅 f3tail 模式），27 字节一单元；null 表示不回送。 */
+    private byte[] offerPacedTail;
+    private int offerPacedTailWritten;
+    static final int OFFER_PACED_TAIL_UNITS = 10;
+    static final int OFFER_PACED_TAIL_BYTES = OFFER_PACED_TAIL_UNITS * 27;
     private boolean pairedCapture;
     private int tapeUnitsBefore = -1;
     private final List<byte[]> bufferedRelayPlain = new ArrayList<>();
@@ -3635,6 +3670,8 @@ final class DmrTxController {
         }
         long tailTargetAt = SystemClock.elapsedRealtime()
                 + ACTIVE_PACED_TAIL_MS;
+        offerPacedTailWritten = 0;
+        StringBuilder tailTimings = new StringBuilder();
         while (SystemClock.elapsedRealtime() < tailTargetAt) {
             long readBegin = SystemClock.elapsedRealtime();
             byte[] chunk = transport.readAvailable(20L);
@@ -3652,6 +3689,30 @@ final class DmrTxController {
                         activeRelay.unitsWritten(), credits, readBegin,
                         20L, readReturn, chunk);
             }
+            // 尾部回送：沿用正文的一对一纪律，模块每交一帧才回送一帧，
+            // 素材用完即停，绝不超出尾部等待窗。
+            if (offerPacedTail != null
+                    && offerPacedTailWritten < OFFER_PACED_TAIL_UNITS
+                    && offers > offersUsed + offerPacedTailWritten) {
+                int offset = offerPacedTailWritten * 27;
+                byte[] request = DmrProtocol.voiceUnit(
+                        activeRelay.voiceFormat(),
+                        Arrays.copyOfRange(offerPacedTail, offset,
+                                offset + 27));
+                transport.rawTailWrite(request);
+                long flushAt = SystemClock.elapsedRealtime();
+                saveHotPathAwareEvent("relay",
+                        "tail_unit_" + offerPacedTailWritten, request);
+                tailTimings.append("tail_").append(offerPacedTailWritten)
+                        .append("_flush_ms=").append(flushAt).append('\n');
+                offerPacedTailWritten++;
+            }
+        }
+        if (offerPacedTail != null) {
+            saveHotPathAwareText("relay", "tail_summary",
+                    "tail_units_written=" + offerPacedTailWritten + "\n"
+                    + "tail_units_available=" + OFFER_PACED_TAIL_UNITS + "\n"
+                    + tailTimings);
         }
         saveHotPathAwareEvent("relay", "offer_paced_uplink_raw",
                 uplink.toByteArray());
@@ -4872,6 +4933,7 @@ final class DmrTxController {
                 && activeRelay.creditAccepted()) + "\n"
                 + "relay_units_written=" + (activeRelay == null ? 0
                 : activeRelay.unitsWritten()) + "\n"
+                + "relay_tail_units_written=" + offerPacedTailWritten + "\n"
                 + "relay_credits_consumed=" + (activeRelay == null ? 0
                 : activeRelay.creditsConsumed()) + "\n"
                 + "relay_payload_source=" + (activeRelay == null

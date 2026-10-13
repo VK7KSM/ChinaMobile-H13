@@ -29,6 +29,7 @@ final class SerialTransport implements AutoCloseable {
     private int controlFlushCompleted;
     private int dataWriteAttempts;
     private int dataFlushCompleted;
+    private int tailWriteAttempts;
 
     SerialTransport(File device, int baud) throws IOException {
         port = new SerialPort(device, baud, 0);
@@ -331,6 +332,22 @@ final class SerialTransport implements AutoCloseable {
         output.flush();
         dataFlushCompleted++;
         trace("tx", "hpi_write", request);
+    }
+
+    /**
+     * 正文之后尾部等待期内的回送写出（2.9.78）。与正文写出分开计数、分开
+     * 命名证据，正文 68 单元的既有计数与核对不受影响。
+     */
+    synchronized void rawTailWrite(byte[] request) throws Exception {
+        requireMode(Mode.BRIDGE);
+        tailWriteAttempts++;
+        output.write(request);
+        output.flush();
+        trace("tx", "hpi_tail_write", request);
+    }
+
+    synchronized int tailWriteAttempts() {
+        return tailWriteAttempts;
     }
 
     synchronized int controlWriteAttempts() {

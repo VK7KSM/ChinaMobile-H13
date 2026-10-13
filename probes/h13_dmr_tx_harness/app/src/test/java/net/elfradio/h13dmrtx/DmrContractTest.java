@@ -374,6 +374,51 @@ public final class DmrContractTest {
     }
 
     /**
+     * 尾部回送静音单元（2.9.78）：正文与 f3shift 相同；尾部素材 10 单元，
+     * 前两单元前两帧为静音帧、第三帧依次补原素材单元 66、67 的第三帧，
+     * 其余单元三帧皆为同一静音帧（原素材第 203 帧，b0=124）。
+     */
+    @Test
+    public void replayF3TailUsesShiftedBodyAndSilenceTail() throws Exception {
+        assertEquals(DmrProtocol.VoiceFormat.CHAN_D27_TYPE3,
+                DmrTxController.voiceFormatForMode(
+                        DmrTxController.MODE_DMR_REPLAY_F3TAIL_NO_RF));
+        assertEquals(DmrProtocol.VoiceFormat.CHAN_D27_TYPE3,
+                DmrTxController.voiceFormatForMode(
+                        DmrTxController.MODE_DMR_REPLAY_F3TAIL_LOW_POWER_RF));
+        assertTrue(DmrTxController.requestsLowPowerRf(
+                DmrTxController.MODE_DMR_REPLAY_F3TAIL_LOW_POWER_RF));
+        assertFalse(DmrTxController.requestsLowPowerRf(
+                DmrTxController.MODE_DMR_REPLAY_F3TAIL_NO_RF));
+        assertTrue(DmrTxController.isDmrReplayCapturedMode(
+                DmrTxController.MODE_DMR_REPLAY_F3TAIL_NO_RF));
+
+        java.io.File dir = new java.io.File(
+                "src/main/assets/software_ambe_vectors");
+        byte[] base = java.nio.file.Files.readAllBytes(
+                new java.io.File(dir, "dmr_replay_captured.chan_d27.bin")
+                        .toPath());
+        byte[] tail = java.nio.file.Files.readAllBytes(
+                new java.io.File(dir, "dmr_replay_f3shift2_tail.chan_d27.bin")
+                        .toPath());
+        assertEquals(DmrTxController.OFFER_PACED_TAIL_BYTES, tail.length);
+        byte[] silence = java.util.Arrays.copyOfRange(base, 67 * 27 + 18,
+                67 * 27 + 27);
+        for (int u = 0; u < DmrTxController.OFFER_PACED_TAIL_UNITS; u++) {
+            for (int f = 0; f < 3; f++) {
+                byte[] got = java.util.Arrays.copyOfRange(tail,
+                        u * 27 + f * 9, u * 27 + f * 9 + 9);
+                byte[] want = (u < 2 && f == 2)
+                        ? java.util.Arrays.copyOfRange(base,
+                                (66 + u) * 27 + 18, (66 + u) * 27 + 27)
+                        : silence;
+                assertTrue("尾部单元 " + u + " 第 " + (f + 1) + " 帧不符",
+                        java.util.Arrays.equals(want, got));
+            }
+        }
+    }
+
+    /**
      * 包类型 0 的重放变体（2.9.68）：唯一变量是单元包类型 3 → 0。
      * 素材、单元内容、字段 0x01 与长度 0x1b 必须与类型 3 逐字节相同，
      * 只有包类型那一个字节不同——否则就不是单变量实验。
