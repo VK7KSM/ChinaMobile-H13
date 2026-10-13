@@ -131,6 +131,14 @@ final class DmrTxController {
             "dmr_replay_type0_no_rf";
     static final String MODE_DMR_REPLAY_TYPE0_LOW_POWER_RF =
             "dmr_replay_type0_low_power_rf";
+    // 第三帧复制第一帧的重放变体（2026-10-13，2.9.69）。唯一变量：素材每个
+    // 单元的第三帧换成该单元第一帧，包类型、信道、功率、节拍同 captured。
+    // 用途：判别模块是否真的读取了我们单元里第三个位置的内容——
+    // 空口第三帧若随之等于第一帧，说明读了；仍然是乱的，说明没读。
+    static final String MODE_DMR_REPLAY_DUPC_NO_RF =
+            "dmr_replay_dupc_no_rf";
+    static final String MODE_DMR_REPLAY_DUPC_LOW_POWER_RF =
+            "dmr_replay_dupc_low_power_rf";
     // 长时供数老化（2026-09-21）：同一条重放通路，素材换成 68 单元资产
     // 重复 15 次共 1020 单元、61.2 秒。零射频，只压帧泵——环形缓冲回绕、
     // 内存增长、MCU 省电节拍与 60 毫秒交帧的相互影响，都要靠时长暴露。
@@ -294,7 +302,14 @@ final class DmrTxController {
         return MODE_DMR_REPLAY_CAPTURED_NO_RF.equals(mode)
                 || MODE_DMR_REPLAY_CAPTURED_LOW_POWER_RF.equals(mode)
                 || MODE_DMR_REPLAY_LONG_NO_RF.equals(mode)
-                || isDmrReplayType0Mode(mode);
+                || isDmrReplayType0Mode(mode)
+                || isDmrReplayDupcMode(mode);
+    }
+
+    /** 第三帧复制第一帧的重放变体。 */
+    static boolean isDmrReplayDupcMode(String mode) {
+        return MODE_DMR_REPLAY_DUPC_NO_RF.equals(mode)
+                || MODE_DMR_REPLAY_DUPC_LOW_POWER_RF.equals(mode);
     }
 
     /** 包类型 0 的重放变体：除单元包类型外一切同 dmr_replay_captured。 */
@@ -595,6 +610,7 @@ final class DmrTxController {
         // 2026-09-19 第十三次发射就是这样变成约十秒噪音的。
         postVlcListenMs = MODE_DMR_REPLAY_CAPTURED_NO_RF.equals(mode)
                 || MODE_DMR_REPLAY_TYPE0_NO_RF.equals(mode)
+                || MODE_DMR_REPLAY_DUPC_NO_RF.equals(mode)
                 ? 3000L : 0L;
         offerPacedVoice = speechShortAbc || dmrReplayCaptured;
         // 配对采集：同一次会话里，模块经 HPI 交给宿主的帧与录音磁带里
@@ -766,6 +782,8 @@ final class DmrTxController {
                             "software_ambe_vectors/"
                             + (replayLong
                                ? "dmr_replay_long.chan_d27.bin"
+                               : isDmrReplayDupcMode(mode)
+                               ? "dmr_replay_dupc.chan_d27.bin"
                                : "dmr_replay_captured.chan_d27.bin")));
                     int expectedReplayBytes = replayLong
                             ? RealtimeRelay.DMR_REPLAY_LONG_BYTES
@@ -1674,7 +1692,8 @@ final class DmrTxController {
                 .equals(mode)
                 || MODE_SPEECH_SHORT_ABC_LOW_POWER_RF.equals(mode)
                 || MODE_DMR_REPLAY_CAPTURED_LOW_POWER_RF.equals(mode)
-                || MODE_DMR_REPLAY_TYPE0_LOW_POWER_RF.equals(mode);
+                || MODE_DMR_REPLAY_TYPE0_LOW_POWER_RF.equals(mode)
+                || MODE_DMR_REPLAY_DUPC_LOW_POWER_RF.equals(mode);
     }
 
     static long activePacedTargetAt(long firstFlushAt, int unitIndex) {

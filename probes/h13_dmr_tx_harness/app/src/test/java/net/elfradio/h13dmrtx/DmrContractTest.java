@@ -263,6 +263,45 @@ public final class DmrContractTest {
     }
 
     /**
+     * 第三帧复制第一帧的重放变体（2.9.69）：唯一变量是素材第三帧的内容，
+     * 包类型保持类型 3，与原重放路径相同。
+     */
+    @Test
+    public void replayDupcKeepsType3AndOnlyRewritesThirdFrame()
+            throws Exception {
+        assertEquals(DmrProtocol.VoiceFormat.CHAN_D27_TYPE3,
+                DmrTxController.voiceFormatForMode(
+                        DmrTxController.MODE_DMR_REPLAY_DUPC_NO_RF));
+        assertEquals(DmrProtocol.VoiceFormat.CHAN_D27_TYPE3,
+                DmrTxController.voiceFormatForMode(
+                        DmrTxController.MODE_DMR_REPLAY_DUPC_LOW_POWER_RF));
+        assertTrue(DmrTxController.requestsLowPowerRf(
+                DmrTxController.MODE_DMR_REPLAY_DUPC_LOW_POWER_RF));
+        assertFalse(DmrTxController.requestsLowPowerRf(
+                DmrTxController.MODE_DMR_REPLAY_DUPC_NO_RF));
+
+        java.io.File dir = new java.io.File(
+                "src/main/assets/software_ambe_vectors");
+        byte[] base = java.nio.file.Files.readAllBytes(
+                new java.io.File(dir, "dmr_replay_captured.chan_d27.bin")
+                        .toPath());
+        byte[] dupc = java.nio.file.Files.readAllBytes(
+                new java.io.File(dir, "dmr_replay_dupc.chan_d27.bin")
+                        .toPath());
+        assertEquals(base.length, dupc.length);
+        for (int u = 0; u < base.length / 27; u++) {
+            for (int i = 0; i < 18; i++) {
+                assertEquals("前两帧必须与原素材逐字节相同",
+                        base[u * 27 + i], dupc[u * 27 + i]);
+            }
+            for (int i = 0; i < 9; i++) {
+                assertEquals("第三帧必须等于本单元第一帧",
+                        dupc[u * 27 + i], dupc[u * 27 + 18 + i]);
+            }
+        }
+    }
+
+    /**
      * 包类型 0 的重放变体（2.9.68）：唯一变量是单元包类型 3 → 0。
      * 素材、单元内容、字段 0x01 与长度 0x1b 必须与类型 3 逐字节相同，
      * 只有包类型那一个字节不同——否则就不是单变量实验。
