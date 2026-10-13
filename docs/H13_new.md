@@ -5953,3 +5953,8 @@ b0=124（标准静音码），其余均在正常基音范围；低位在前则�
 **流程与判读**：先零射频 `dmr_replay_f3tail_no_rf`（要求 PASS、恢复错误 0、正文 68 单元逐字节等于素材、尾部写出数＝等待窗内
 交帧数且内容等于尾部素材前 N 单元）；通过后请项目所有者当次许可再发射 `dmr_replay_f3tail_low_power_rf`，RX888 同步采集。
 通过＝结尾不再颤抖，RX888 解码在我们素材之后的帧为静音帧 S；失败＝仍颤抖或尾部帧不是 S。回滚：重启 H13 并核验基线。
+
+**零射频结果**（2.9.78，`new-dmr-tx-harness-dmr_replay_f3tail_no_rf-20261013_201639`，20:16–20:20 悉尼）：
+`result=PASS`、`reboot_required=false`、恢复错误 0、审计器不通过项 0；正文 68 个 HPI 写出逐字节等于
+`dmr_replay_f3shift2.chan_d27.bin`（不一致 0）；尾部 `relay_tail_units_written=8`，8 个 `hpi_tail_write` 逐字节等于
+尾部素材前 8 单元（不一致 0），间隔约 60 ms，均在 500 ms 等待窗内；生产 Interphone 已重新持有串口。待项目所有者当次许可上空口。
