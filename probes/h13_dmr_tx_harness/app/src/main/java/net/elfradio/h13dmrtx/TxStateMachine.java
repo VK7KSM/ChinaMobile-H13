@@ -487,8 +487,17 @@ final class TxStateMachine {
     }
 
     /**
-     * 第一桥射频路径：桥内收尾 ACK 已收下，phase4 保持窗到期后已调用
-     * 0x0801FF34。标记为 ROF!、gate 为 0。completion 只作观察。
+     * 第一桥射频路径：桥内收尾 ACK 已收下，phase4 保持窗到期。
+     *
+     * <p>2.9.81（2026-10-13）：{@code prepMarker}（桥内桩 ROF! 标记@0x200031c0）
+     * 与 {@code activeGate}（gate@0x20000138）降为**观察项**，不再作通过门。
+     * 依据：桥内自动关断桩的关断块被 phase4+保持计数器前置门挡住，在退桥
+     * 读点从不产生 marker=ROF!/gate=0——三种素材实测恒为 marker=0/gate=1，
+     * 2026-08-22 的 PASS 会话亦然（彼时此二项即为观察项）。把它们升成硬门
+     * 是回归，使每次 RF 会话必 FAIL。权威的射频关断证据不在此处，而由其后
+     * 独立的 {@code executeRfOff}→{@link #attestRfOff}（要求真实 ROF!+gate=0，
+     * 来自每次恢复路径已验证可靠的独立关断桩）提供，该硬门不变，安全不削弱。
+     * 调用方仍逐项落盘 marker/gate/slot/completion 作观察。
      */
     void attestFirstBridgeRfWithoutSecondBridge(int prepMarker,
             int activeGate, int completion, int slotCount,
@@ -497,8 +506,6 @@ final class TxStateMachine {
                 || !firstBridgeHpiCleanup
                 || !terminationAcked
                 || cleanupIndex != DmrProtocol.CLEANUP_COUNT
-                || prepMarker != RF_OFF_MARKER
-                || activeGate != 0
                 || observedAtMs < 0) {
             throw fail("第一桥射频窗证据不成立");
         }

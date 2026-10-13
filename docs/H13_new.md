@@ -6016,3 +6016,41 @@ b0=124（标准静音码），其余均在正常基音范围；低位在前则�
 **未显式写功率码、用残留值**（`DmrTxController.java:2244` 注释与现行 `upload(channel_power_code, le16(2030))`），现每次显式写 2030 后功率可复现。
 SDR 的 ±1 dB 残余含泄露耦合随时间漂移与窗口检测噪声；项目所有者功率表三次读数 1.15/1.01/1.01 W（±0.3 dB）更紧。
 **结论**：功率码 2030 下低功率发射功率可复现（约 ±1 dB），射频复现性达标。
+
+### 2.9.81 修复：第一桥射频窗判据把 marker/gate 降为观察项（2026-10-13 悉尼）
+
+**根因**（离线核对 `TxStateMachine.java:493-512`、`DmrTxController.java:3278` 与设备证据）：
+`attestFirstBridgeRfWithoutSecondBridge` 把 `prepMarker==RF_OFF_MARKER`（marker@0x200031c0=="ROF!"）与 `activeGate==0`
+升成了硬通过门，但桥内自动关断桩的关断块被 phase4+保持计数器前置门挡住，在退桥读点从不产生该状态——三种素材
+（probe/f3shift/f3tail）实测恒为 `marker=00000000 / gate=01`，2026-08-22 的 PASS 会话亦然（彼时此二项为观察项）。
+升成硬门是回归，使每次 RF 会话必 `result=FAIL`、`failure=第一桥射频窗证据不成立`、`reboot_required=true`，
+而射频实际发出、TYT/RX888 正常解码、`rf_off_confirmed=true`——即判据失败，非发射失败。
+
+决定性证据（f3tail 会话 `20261013_203125_631_rf`）：退桥读 `1988_…rf_marker_parsed=00 00 00 00`、
+`1980_…timing_state` gate 字节=01；恢复独立关断桩跑过后，**同址同 memread** 读出 `52 4f 46 21`=ROF!、gate=00
+（`2649/2660/2671`）。即该标记整个会话只在 `executeRfOff` 用独立桩显式关断后才出现。
+
+**权威关断门不动**：真实射频关断证据由其后独立的 `executeRfOff`（`DmrTxController.java:3278`：写 `VECTOR=RF_OFF_ENTRY`
+触发无条件独立关断桩 → 回读 → `attestRfOff` 硬性要求真实 ROF!+gate=0）提供，该硬门保留。故本改动不削弱安全：
+会话仍须一次真实 ROF!+gate=0 才能 COMPLETE。
+
+**唯一变量**：`attestFirstBridgeRfWithoutSecondBridge` 的失败条件删去 `prepMarker != RF_OFF_MARKER` 与
+`activeGate != 0` 两项（降为观察项，仍由调用方 `first_bridge_gate` 证据逐项落盘），其余前置
+（phase、pending、firstBridgeHpiCleanup、terminationAcked、cleanupIndex、观察值范围检查）与 `attestRfOff` 硬门不变。
+
+**制品**：v1.59（`1.59-rfgate-observe`，versionCode 159），`dist/H13_DMR_TX_Harness_v1.59_RfGateObserve.apk`，SHA-256
+`09C4A68C8B9F076181E8A989758961178D4E47EBD248E782CCBADB8BBD8A3ED7`；单元测试 205 项全过——新增
+`firstBridgeRfGateIsObservationButRfOffStaysHard`（marker=0/gate=1 放行到 WAIT_RF_OFF_ATTESTATION；假 marker/gate 仍被
+`attestRfOff` 拒绝；真实 ROF!+gate=0 到 COMPLETE），并按新契约更新既有
+`firstBridgeRfRequiresBridgedHpiCleanupNotSlotCompletion` 的三处 marker/gate 用例（由"抛错"改为"放行"）。
+宿主脚本 SHA-256 `EF87ABDC7C53CC81A2D91226152FE3C562F43C9182C4D28C831206DAB57979B0`，解析错误 0，相对 v1.58 只改冻结闸四项。
+
+**不改**：f3shift/f3tail 空口发射路径、桩、assets、MCU 固件均不动。素材用现有 `dmr_replay_f3tail_*`。
+
+**判读**：零射频 `dmr_replay_f3tail_no_rf` 仍应 PASS（非射频路径不受影响，作回归）；随后请项目所有者当次许可发射
+`dmr_replay_f3tail_low_power_rf`，**原子结果应首次为 `result=PASS`、`rf_prepare_executed=true`、`rf_off_confirmed=true`、
+`reboot_required=false`**；设备侧仍应保留 `bridge1_rf_marker=00000000 / gate=01`（观察，记录桥内自动关断在退桥读点不可见），
+而 `rf_off_marker`=ROF!、gate=0（权威关断证据）。失败＝仍 FAIL 或恢复不净，则根因不止此判据。
+
+**另两条独立线（不并入本次）**：①动态退桥预算 `firstBridgeExitMsFor` 与仅校验静态 150s 的 `rfHoldWindowWellFormed`
+失配；②恢复链 `0x20004b56` 读 280 字节失败等连带项——判据修复后主路径走正常收尾，预计大部分连带消除，待复测确认。

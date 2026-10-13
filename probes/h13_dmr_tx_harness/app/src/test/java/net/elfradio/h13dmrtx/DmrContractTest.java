@@ -1889,18 +1889,24 @@ public final class DmrContractTest {
         assertThrows(IllegalStateException.class,
                 () -> noRfRelay.attestFirstBridgeRfWithoutSecondBridge(
                         0, 0, 0xff, 0, 1000));
-        TxStateMachine oneshotMarker = readyForFirstBridgeCleanup();
-        assertThrows(IllegalStateException.class,
-                () -> oneshotMarker.attestFirstBridgeRfWithoutSecondBridge(
-                        TxStateMachine.RF_PREP_MARKER, 0, 1, 0, 1000));
-        TxStateMachine holdNotFired = readyForFirstBridgeCleanup();
-        assertThrows(IllegalStateException.class,
-                () -> holdNotFired.attestFirstBridgeRfWithoutSecondBridge(
-                        0, 0, 0xff, 0, 1000));
-        TxStateMachine gateStillOn = readyForFirstBridgeCleanup();
-        assertThrows(IllegalStateException.class,
-                () -> gateStillOn.attestFirstBridgeRfWithoutSecondBridge(
-                        TxStateMachine.RF_OFF_MARKER, 1, 0xff, 0, 1000));
+        // 2.9.81：marker/gate 降为观察项——非 ROF! 标记、marker=0、gate 仍为 1
+        // 都不再使第一桥判据失败，而是放行到 WAIT_RF_OFF_ATTESTATION；真实关断
+        // 证据改由其后的 attestRfOff 硬门把关（见下方 acceptedFf）。
+        TxStateMachine prepMarkerObs = readyForFirstBridgeCleanup();
+        prepMarkerObs.attestFirstBridgeRfWithoutSecondBridge(
+                TxStateMachine.RF_PREP_MARKER, 0, 1, 0, 1000);
+        assertEquals(TxStateMachine.Phase.WAIT_RF_OFF_ATTESTATION,
+                prepMarkerObs.phase());
+        TxStateMachine zeroMarkerObs = readyForFirstBridgeCleanup();
+        zeroMarkerObs.attestFirstBridgeRfWithoutSecondBridge(
+                0, 0, 0xff, 0, 1000);
+        assertEquals(TxStateMachine.Phase.WAIT_RF_OFF_ATTESTATION,
+                zeroMarkerObs.phase());
+        TxStateMachine gateOnObs = readyForFirstBridgeCleanup();
+        gateOnObs.attestFirstBridgeRfWithoutSecondBridge(
+                TxStateMachine.RF_OFF_MARKER, 1, 0xff, 0, 1000);
+        assertEquals(TxStateMachine.Phase.WAIT_RF_OFF_ATTESTATION,
+                gateOnObs.phase());
         TxStateMachine acceptedFf = readyForFirstBridgeCleanup();
         acceptedFf.attestFirstBridgeRfWithoutSecondBridge(
                 TxStateMachine.RF_OFF_MARKER, 0, 0xff, 0, 1000);
@@ -2462,5 +2468,64 @@ public final class DmrContractTest {
             return direct;
         }
         return new File("app/src/test/resources/software_ambe_vectors", name);
+    }
+
+    /**
+     * 2.9.81：第一桥射频窗判据把 marker/gate 降为观察项后，
+     * {@code attestFirstBridgeRfWithoutSecondBridge} 应接受桥内读点实测的
+     * marker=0/gate=1 并推进到 WAIT_RF_OFF_ATTESTATION；而权威关断门
+     * {@code attestRfOff} 仍硬性要求真实 ROF!（0x21464f52）+gate=0。
+     */
+    @Test
+    public void firstBridgeRfGateIsObservationButRfOffStaysHard()
+            throws Exception {
+        // 桥内读点实测 marker=0/gate=1：旧判据会抛错，新判据放行
+        TxStateMachine m = armedAtRfAttestation();
+        m.attestFirstBridgeRfWithoutSecondBridge(0, 1, 0, 80, 1000L);
+        assertEquals("marker/gate 为观察项，应推进到 WAIT_RF_OFF_ATTESTATION",
+                "WAIT_RF_OFF_ATTESTATION", phaseName(m));
+        // 权威关断门不变：假 marker/gate 仍须拒绝
+        assertThrows(IllegalStateException.class, () -> m.attestRfOff(0, 1));
+
+        // 真实 ROF!+gate=0 才能到 COMPLETE
+        TxStateMachine ok = armedAtRfAttestation();
+        ok.attestFirstBridgeRfWithoutSecondBridge(0, 1, 0, 80, 1000L);
+        ok.attestRfOff(TxStateMachine.RF_OFF_MARKER, 0);
+        assertEquals("真实 ROF!+gate=0 应到 COMPLETE",
+                "COMPLETE", phaseName(ok));
+    }
+
+    /** 把状态机摆到 WAIT_RF_ATTESTATION 的前置（其余通过门已满足）。 */
+    private static TxStateMachine armedAtRfAttestation() throws Exception {
+        TxStateMachine m = new TxStateMachine(
+                DmrProtocol.session(13, 99, 0, RUNTIME14.clone()),
+                true, true);
+        setField(m, "phase",
+                Enum.valueOf(phaseClass(), "WAIT_RF_ATTESTATION"));
+        setField(m, "terminationAcked", Boolean.TRUE);
+        setField(m, "cleanupIndex",
+                Integer.valueOf(DmrProtocol.CLEANUP_COUNT));
+        return m;
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static Class phaseClass() throws Exception {
+        return Class.forName(
+                "net.elfradio.h13dmrtx.TxStateMachine$Phase");
+    }
+
+    private static String phaseName(TxStateMachine m) throws Exception {
+        java.lang.reflect.Field f =
+                TxStateMachine.class.getDeclaredField("phase");
+        f.setAccessible(true);
+        return ((Enum<?>) f.get(m)).name();
+    }
+
+    private static void setField(Object o, String name, Object value)
+            throws Exception {
+        java.lang.reflect.Field f =
+                o.getClass().getDeclaredField(name);
+        f.setAccessible(true);
+        f.set(o, value);
     }
 }

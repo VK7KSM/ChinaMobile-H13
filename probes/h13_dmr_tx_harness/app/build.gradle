@@ -8,8 +8,8 @@ android {
         applicationId 'net.elfradio.h13dmrtx'
         minSdk 21
         targetSdk 27
-        versionCode 158
-        versionName '1.58-f3-tail-silence'
+        versionCode 159
+        versionName '1.59-rfgate-observe'
         testInstrumentationRunner 'android.support.test.runner.AndroidJUnitRunner'
         ndk {
             abiFilters 'armeabi-v7a'
