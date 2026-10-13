@@ -262,6 +262,38 @@ public final class DmrContractTest {
         assertEquals(1, DmrProtocol.TERMINATION_COUNT);
     }
 
+    /** 第三帧单比特探测（2.9.71）：前两帧恒定，第三帧按清单变化，类型 3。 */
+    @Test
+    public void replayProbeHasConstantFirstTwoFrames() throws Exception {
+        assertEquals(DmrProtocol.VoiceFormat.CHAN_D27_TYPE3,
+                DmrTxController.voiceFormatForMode(
+                        DmrTxController.MODE_DMR_REPLAY_PROBE_LOW_POWER_RF));
+        assertTrue(DmrTxController.requestsLowPowerRf(
+                DmrTxController.MODE_DMR_REPLAY_PROBE_LOW_POWER_RF));
+        byte[] probe = java.nio.file.Files.readAllBytes(new java.io.File(
+                "src/main/assets/software_ambe_vectors/dmr_replay_probe.chan_d27.bin")
+                .toPath());
+        assertEquals(68 * 27, probe.length);
+        int singles = 0;
+        for (int u = 0; u < 68; u++) {
+            for (int i = 0; i < 9; i++) {
+                assertEquals(probe[i], probe[u * 27 + i]);
+                assertEquals(probe[i], probe[u * 27 + 9 + i]);
+            }
+            int ones = 0;
+            for (int i = 0; i < 9; i++) {
+                ones += Integer.bitCount(probe[u * 27 + 18 + i] & 0xff);
+            }
+            if (ones == 1) {
+                singles++;
+            }
+            // 49 位左对齐：最后 23 位必须为零
+            assertEquals(0, probe[u * 27 + 26]);
+            assertEquals(0, probe[u * 27 + 25]);
+        }
+        assertEquals("49 个单比特探测", 49, singles);
+    }
+
     /**
      * 第三帧复制第一帧的重放变体（2.9.69）：唯一变量是素材第三帧的内容，
      * 包类型保持类型 3，与原重放路径相同。

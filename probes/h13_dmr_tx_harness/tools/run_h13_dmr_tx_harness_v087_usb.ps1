@@ -30,10 +30,12 @@
         'speech_short_abc_low_power_rf',
         'dmr_replay_type0_no_rf',
         'dmr_replay_dupc_no_rf',
+        'dmr_replay_probe_no_rf',
         'dmr_replay_captured_no_rf',
         'dmr_replay_long_no_rf',
         'dmr_replay_type0_low_power_rf',
         'dmr_replay_dupc_low_power_rf',
+        'dmr_replay_probe_low_power_rf',
         'dmr_replay_captured_low_power_rf',
         'dmr_rx_capture_no_rf',
         'at_probe_no_rf')]
@@ -57,10 +59,10 @@ $ProductionPackage = 'net.elfradio.h13interphone'
 $ProductionActivity = 'net.elfradio.h13interphone/com.bozhou.interphone.ui.talk.MainActivity'
 $Activity = 'net.elfradio.h13dmrtx/.MainActivity'
 $ExpectedFingerprint = 'CMCC/msm8909/msm8909:8.1.0/OPM1.171019.026/build11020953:user/test-keys'
-$ExpectedVersionCode = 155
-$ExpectedVersionName = '1.55-replay-dupc'
-$ExpectedApkSha256 = '5E34921D5EAB3CDBEECB87F3FD0639781E3FAE5EFB5B020FE613295DEF4AF69E'
-$Apk = Join-Path $PSScriptRoot '..\dist\H13_DMR_TX_Harness_v1.55_ReplayDupc.apk'
+$ExpectedVersionCode = 156
+$ExpectedVersionName = '1.56-frame3-probe'
+$ExpectedApkSha256 = '48D6227CB6B2BB069F7A82953925CC2A652EDCFDAD7699F0F47087359B381689'
+$Apk = Join-Path $PSScriptRoot '..\dist\H13_DMR_TX_Harness_v1.56_Frame3Probe.apk'
 $DeadlineHelper = Join-Path $PSScriptRoot '..\..\h13_radio\tools\h13_external_dmr_rf_deadline_device.sh'
 $RemoteDeadlineHelper = '/data/local/tmp/h13_dmr_tx_deadline.sh'
 $ExpectedDeadlineHelperSha256 = '522792E4E515DAAF674F56DA953178FC4E1A71812D71DFFE2D3F486BD82B2110'
@@ -278,6 +280,8 @@ function Assert-ModeResult {
         # replay of real captured DMR units: 66 units x 60 ms = 3.96 s
         'dmr_replay_captured_no_rf' { @{
             Mode='dmr_replay_captured_no_rf'; Setup=5; Vlc=2; Data=68 } }
+        'dmr_replay_probe_no_rf' { @{
+            Mode='dmr_replay_probe_no_rf'; Setup=5; Vlc=2; Data=68 } }
         'dmr_replay_dupc_no_rf' { @{
             Mode='dmr_replay_dupc_no_rf'; Setup=5; Vlc=2; Data=68 } }
         'dmr_replay_type0_no_rf' { @{
@@ -288,6 +292,8 @@ function Assert-ModeResult {
             Mode='dmr_replay_long_no_rf'; Setup=5; Vlc=2; Data=1020 } }
         'dmr_replay_captured_low_power_rf' { @{
             Mode='dmr_replay_captured_low_power_rf'; Setup=5; Vlc=2; Data=68 } }
+        'dmr_replay_probe_low_power_rf' { @{
+            Mode='dmr_replay_probe_low_power_rf'; Setup=5; Vlc=2; Data=68 } }
         'dmr_replay_dupc_low_power_rf' { @{
             Mode='dmr_replay_dupc_low_power_rf'; Setup=5; Vlc=2; Data=68 } }
         'dmr_replay_type0_low_power_rf' { @{
@@ -311,10 +317,12 @@ function Assert-ModeResult {
             'speech_short_abc_low_power_rf',
             'dmr_replay_type0_no_rf',
             'dmr_replay_dupc_no_rf',
+            'dmr_replay_probe_no_rf',
             'dmr_replay_captured_no_rf',
             'dmr_replay_long_no_rf',
             'dmr_replay_type0_low_power_rf',
             'dmr_replay_dupc_low_power_rf',
+            'dmr_replay_probe_low_power_rf',
             'dmr_replay_captured_low_power_rf')) { 6 } else { 0 }
     $CleanupCount = if ($Mode -in @(
             'realtime_relay_encode_dmr_morse_unique_five_low_power_rf',
@@ -322,6 +330,7 @@ function Assert-ModeResult {
             'speech_short_abc_low_power_rf',
             'dmr_replay_type0_low_power_rf',
             'dmr_replay_dupc_low_power_rf',
+            'dmr_replay_probe_low_power_rf',
             'dmr_replay_captured_low_power_rf')) { 2 } else { 0 }
     $TerminationCount = if ($Expected.Data -gt 0) { 1 } else { 0 }
     $ExpectedControlWrites = $Expected.Setup + $CodecCount + $Expected.Vlc + $TerminationCount + $CleanupCount + $RetryCount
@@ -628,6 +637,11 @@ function Assert-ModeResult {
             rf_prepare_executed='false'; rf_off_confirmed='false';
             device_deadline_arm_requested='false';
             device_deadline_armed='false'; sram_transaction_started='true' } }
+        'dmr_replay_probe_no_rf' { @{
+            first_bridge_exit_confirmed='true'; second_bridge_exit_confirmed='false';
+            rf_prepare_executed='false'; rf_off_confirmed='false';
+            device_deadline_arm_requested='false';
+            device_deadline_armed='false'; sram_transaction_started='true' } }
         'dmr_replay_dupc_no_rf' { @{
             first_bridge_exit_confirmed='true'; second_bridge_exit_confirmed='false';
             rf_prepare_executed='false'; rf_off_confirmed='false';
@@ -644,6 +658,11 @@ function Assert-ModeResult {
             device_deadline_arm_requested='false';
             device_deadline_armed='false'; sram_transaction_started='true' } }
         'dmr_replay_captured_low_power_rf' { @{
+            first_bridge_exit_confirmed='true'; second_bridge_exit_confirmed='false';
+            rf_prepare_executed='true'; rf_off_confirmed='true';
+            device_deadline_arm_requested='true';
+            device_deadline_armed='true'; sram_transaction_started='true' } }
+        'dmr_replay_probe_low_power_rf' { @{
             first_bridge_exit_confirmed='true'; second_bridge_exit_confirmed='false';
             rf_prepare_executed='true'; rf_off_confirmed='true';
             device_deadline_arm_requested='true';
@@ -2678,10 +2697,12 @@ if ($Mode -in @('realtime_relay_one_data36_no_rf',
         'speech_short_abc_low_power_rf',
         'dmr_replay_type0_no_rf',
         'dmr_replay_dupc_no_rf',
+        'dmr_replay_probe_no_rf',
         'dmr_replay_captured_no_rf',
         'dmr_replay_long_no_rf',
         'dmr_replay_type0_low_power_rf',
         'dmr_replay_dupc_low_power_rf',
+        'dmr_replay_probe_low_power_rf',
         'dmr_replay_captured_low_power_rf') -and -not $AllowPotentialRf) {
     throw '实时relay一包仍属潜在发射路径，需显式传入-AllowPotentialRf。'
 }
@@ -2849,6 +2870,7 @@ try {
             'speech_short_abc_low_power_rf',
             'dmr_replay_type0_low_power_rf',
             'dmr_replay_dupc_low_power_rf',
+            'dmr_replay_probe_low_power_rf',
             'dmr_replay_captured_low_power_rf')) {
         if (-not (Test-Path -LiteralPath $DeadlineHelper -PathType Leaf)) {
             throw "设备侧截止器脚本缺失：$DeadlineHelper"
@@ -2907,10 +2929,12 @@ try {
         'speech_short_abc_no_rf' { 'speech_short_abc_no_rf' }
         'speech_short_abc_low_power_rf' { 'speech_short_abc_low_power_rf' }
         'dmr_replay_captured_no_rf' { 'dmr_replay_captured_no_rf' }
+        'dmr_replay_probe_no_rf' { 'dmr_replay_probe_no_rf' }
         'dmr_replay_dupc_no_rf' { 'dmr_replay_dupc_no_rf' }
         'dmr_replay_type0_no_rf' { 'dmr_replay_type0_no_rf' }
         'dmr_replay_long_no_rf' { 'dmr_replay_long_no_rf' }
         'dmr_replay_captured_low_power_rf' { 'dmr_replay_captured_low_power_rf' }
+        'dmr_replay_probe_low_power_rf' { 'dmr_replay_probe_low_power_rf' }
         'dmr_replay_dupc_low_power_rf' { 'dmr_replay_dupc_low_power_rf' }
         'dmr_replay_type0_low_power_rf' { 'dmr_replay_type0_low_power_rf' }
         'dmr_rx_capture_no_rf' { 'dmr_rx_capture_no_rf' }
@@ -2931,6 +2955,7 @@ try {
             'speech_short_abc_low_power_rf',
             'dmr_replay_type0_low_power_rf',
             'dmr_replay_dupc_low_power_rf',
+            'dmr_replay_probe_low_power_rf',
             'dmr_replay_captured_low_power_rf')) {
         $StartArguments += @('--es','rf_permission','authorized_low_power_once')
     }
@@ -2992,6 +3017,7 @@ try {
                     'speech_short_abc_low_power_rf',
                     'dmr_replay_type0_low_power_rf',
                     'dmr_replay_dupc_low_power_rf',
+                    'dmr_replay_probe_low_power_rf',
                     'dmr_replay_captured_low_power_rf') -and
                     -not $DeviceDeadlineStarted) {
                 $FirstBridgeRfMode = $Mode -in @(
@@ -2999,6 +3025,7 @@ try {
                     'speech_short_abc_low_power_rf',
                     'dmr_replay_type0_low_power_rf',
                     'dmr_replay_dupc_low_power_rf',
+                    'dmr_replay_probe_low_power_rf',
                     'dmr_replay_captured_low_power_rf')
                 $ArmFile = if ($FirstBridgeRfMode) {
                     'rf_first_bridge_arm_request.txt'
@@ -3059,6 +3086,7 @@ try {
                     'speech_short_abc_low_power_rf',
                     'dmr_replay_type0_low_power_rf',
                     'dmr_replay_dupc_low_power_rf',
+                    'dmr_replay_probe_low_power_rf',
                     'dmr_replay_captured_low_power_rf') -and
                     $null -eq $RfPrepImminentAt -and
                 (Invoke-AdbOptional -Arguments @('shell','run-as',$Package,
@@ -3071,6 +3099,7 @@ try {
                     'speech_short_abc_low_power_rf',
                     'dmr_replay_type0_low_power_rf',
                     'dmr_replay_dupc_low_power_rf',
+                    'dmr_replay_probe_low_power_rf',
                     'dmr_replay_captured_low_power_rf') -and
                     $null -eq $RfStartObservedAt -and
                 (Invoke-AdbOptional -Arguments @('shell','run-as',$Package,
@@ -3172,6 +3201,7 @@ try {
             'speech_short_abc_low_power_rf',
             'dmr_replay_type0_low_power_rf',
             'dmr_replay_dupc_low_power_rf',
+            'dmr_replay_probe_low_power_rf',
             'dmr_replay_captured_low_power_rf') -and
             $Session -and $DeviceDeadlineStarted) {
         $Marker = "/sdcard/Android/data/$Package/files/deadlines/$Session.marker"
@@ -3199,6 +3229,7 @@ try {
             'speech_short_abc_low_power_rf',
             'dmr_replay_type0_low_power_rf',
             'dmr_replay_dupc_low_power_rf',
+            'dmr_replay_probe_low_power_rf',
             'dmr_replay_captured_low_power_rf') -and
             $Session) {
         $SafeBeforeArm = $Result -match '(?m)^result=FAIL\r?$' -and

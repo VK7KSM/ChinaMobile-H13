@@ -82,6 +82,8 @@ public final class MainActivity extends Activity {
                     || DmrTxController.MODE_DMR_REPLAY_TYPE0_LOW_POWER_RF
                     .equals(mode)
                     || DmrTxController.MODE_DMR_REPLAY_DUPC_LOW_POWER_RF
+                    .equals(mode)
+                    || DmrTxController.MODE_DMR_REPLAY_PROBE_LOW_POWER_RF
                     .equals(mode)) {
                 runDevice(mode, getIntent().getStringExtra("rf_permission"));
             } else if (DmrTxController.MODE_LOW_POWER_RF.equals(mode)) {
