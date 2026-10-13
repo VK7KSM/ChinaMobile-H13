@@ -5753,3 +5753,48 @@ dsd-fme 234 帧中 230 帧零误码，偏移 −9 处 204 帧全覆盖。用户�
 **零射频结果**（`20261013_175628`）：`result=PASS`、恢复错误 0、审计器无不通过项，68 单元写出；
 线上第 0、1、67 单元第三帧分别为全零、最高位、49 位全一，与清单一致。待用户当次许可上空口。
 预期听感很差（每三帧有一帧是探测图样），属正常。
+
+### 2.9.72 空口结果与 f 的量化（v1.56，2026-10-13 18:02–18:20 悉尼）
+
+接收：`captures/2026-10-13/k5-rx888-h13tx-probe-20261013_180045/`，dsd-fme 解出 216 帧，
+链路控制 12 次 `TGT=99 SRC=13 Group Call` 加 TLC。**唯一干净对齐为帧偏移 −24**（单元内第 3 帧
+相位 `(j+k)%3==2`，且前两帧对固定帧汉明 0–1、6 个全零单元空口第三帧全为 0）。
+
+**TYT 现象**：用户反馈「接收灯亮起，但没有声音、也不显示 TG 号」。SDR 侧同一发射解出的是正常
+`TGT=99 SRC=13` 群呼——这是探测图样素材的预期结果（每三帧有一帧是探测比特，语音不可懂），
+TYT 不出声/不显 TG 属接收端对异常语音帧的表现，记录备查，不作为链路异常。
+
+**f 的量化**（偏移 −24，源 `dsd_fme_fs.txt` + `sent_probe_raw49.bin` + 清单）：
+
+| 检验 | 结果 | 判读 |
+|---|---|---|
+| 6 个全零单元（解出 5 个）第三帧 | 全为 0 | **f(0)=0**，第三帧失真是内容相关的确定变换，非叠加噪声 |
+| 49 个单比特冲激响应重量分布 | 重量 0:4 个，1:32 个，2:12 个，3:1 个 | 高度结构化：多数输入位→单个输出位，4 个输入位被完全丢弃，远非随机破坏 |
+| 12 组成对单元线性检验 f(a⊕b)=f(a)⊕f(b) | 1 通过 / 9 不符 | **不能判定线性**：本次半数成对单元被解成 weight‑43 垃圾帧（空口/同步丢失），数据被污染 |
+| 全一单元 | 未解出 | — |
+
+「假设 f 线性」时该单比特列矩阵 GF(2) 秩 = 39/49（则不可逆、有信息丢失）；但线性未证实，此数仅参考。
+
+**阶段结论**：模块对每个 27 字节 `CHAN_D` 单元的**第 3 个 AMBE 帧单独**施加了确定性比特变换
+（前两帧原样通过），且 f(0)=0、单比特响应低重量且结构化。这与 DMR 突发里 SYNC/嵌入信令占用
+第三帧位段的可能相符，是下一步**离线**要查的方向（无需上机）。单比特数据干净但不足以独证线性，
+成对/全一单元需在更干净的一次采集里复测才能判定线性与可逆性。
+
+**宿主判据与恢复**：主试验 `result=FAIL`、`reboot_required=true`，与此前各次 RF 一致
+（`failure=第一桥射频窗证据不成立`）。本次宿主进程在"主试验"阶段被上一会话结束而中断，未能现场拉证据；
+device 侧 finally 实际跑完：
+
+- `rf_window_observed=true`（整 30 秒）、deadline 助手 `device_deadline_fired=true`、
+  `hard_stop_confirmed=true`、全程 `isolation_violation=false` 仅探针占口；
+- 原子结果 `first_bridge_exit_confirmed=true`、`rf_off_confirmed=true`、`rf_may_be_active=false`（未在发射）；
+- `sram_restored=false`（`0x20004b56` memread 长度错）、`text_recovery_confirmed=false`、5 项恢复失败
+  → `reboot_required=true`。
+
+**原始数据归档**：device 侧内部会话目录 `/data/.../captures/20261013_180328_299_rf`（4530 文件 + marker/monitor，
+含完整串口转录、SRAM 回读、recovery_failure_1..5、`atomic_result.txt`）已在重启前整目录拉到
+`captures/2026-10-13/new-dmr-tx-harness-dmr_replay_probe_low_power_rf-20261013_180256/device_session_salvage_20261013_180328_299_rf/`
+（本地 4532 文件，`atomic_result.txt` SHA‑256 前缀 `8f9026d2f7323bfb`，自带 `artifacts_sha256.tsv` 4530 行）。
+
+**恢复核验（重启后，18:19–18:20 悉尼）**：重新 `pm enable net.elfradio.h13interphone` → `adb reboot` →
+`sys.boot_completed=1`；生产 Interphone（新 PID）重新独占 `/dev/ttyHS0`、无探针残留；生产 logcat
+`+DMOCONNECT:0`、`+DMOGETSOFTVERSION:0.3.66;V2.01.07I3`（模块版本 0.3.66 正确）；Wi‑Fi 已连。基线恢复完整。
