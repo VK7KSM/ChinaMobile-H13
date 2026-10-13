@@ -121,6 +121,16 @@ final class DmrTxController {
             "dmr_replay_captured_no_rf";
     static final String MODE_DMR_REPLAY_CAPTURED_LOW_POWER_RF =
             "dmr_replay_captured_low_power_rf";
+    // 包类型 0 的重放变体（2026-10-13）。唯一变量：语音单元的包类型 3 → 0，
+    // 素材、信道、功率、节拍一律与 dmr_replay_captured 相同。
+    // 依据：SDR 闭环（2.9.67）显示每个单元的第三帧 AMBE 参数整帧错误；
+    // 原厂 SCT_Dsp_Send_CHAN_D（0x0801b1e0）组包时包类型参数为 0，模块自己
+    // 交上来的帧是 0x20（类型 0 加读方向位），而我们一直回的是类型 3
+    // ——手册上 dPMR 专用的类型（2.8.17 一带的记录）。
+    static final String MODE_DMR_REPLAY_TYPE0_NO_RF =
+            "dmr_replay_type0_no_rf";
+    static final String MODE_DMR_REPLAY_TYPE0_LOW_POWER_RF =
+            "dmr_replay_type0_low_power_rf";
     // 长时供数老化（2026-09-21）：同一条重放通路，素材换成 68 单元资产
     // 重复 15 次共 1020 单元、61.2 秒。零射频，只压帧泵——环形缓冲回绕、
     // 内存增长、MCU 省电节拍与 60 毫秒交帧的相互影响，都要靠时长暴露。
@@ -172,6 +182,10 @@ final class DmrTxController {
         // 厂商示例那台用 36 字节是因为它的 vocoder_output_len 不同，
         // 照搬 36 会把 27 字节单元序列按 36 字节切片，每个包都跨在
         // 单元边界上，空口必然是噪音。两族短素材改用 27 字节格式。
+        // 必须排在通用重放判断之前：type0 变体也属于重放模式。
+        if (isDmrReplayType0Mode(mode)) {
+            return DmrProtocol.VoiceFormat.CHAN_D27_TYPE0;
+        }
         if (isDmrReplayCapturedMode(mode) || isSpeechShortAbcMode(mode)) {
             return DmrProtocol.VoiceFormat.CHAN_D27_TYPE3;
         }
@@ -279,7 +293,14 @@ final class DmrTxController {
     static boolean isDmrReplayCapturedMode(String mode) {
         return MODE_DMR_REPLAY_CAPTURED_NO_RF.equals(mode)
                 || MODE_DMR_REPLAY_CAPTURED_LOW_POWER_RF.equals(mode)
-                || MODE_DMR_REPLAY_LONG_NO_RF.equals(mode);
+                || MODE_DMR_REPLAY_LONG_NO_RF.equals(mode)
+                || isDmrReplayType0Mode(mode);
+    }
+
+    /** 包类型 0 的重放变体：除单元包类型外一切同 dmr_replay_captured。 */
+    static boolean isDmrReplayType0Mode(String mode) {
+        return MODE_DMR_REPLAY_TYPE0_NO_RF.equals(mode)
+                || MODE_DMR_REPLAY_TYPE0_LOW_POWER_RF.equals(mode);
     }
 
     /** 长时老化用的重放变体：同一条通路，素材更长。 */
@@ -573,6 +594,7 @@ final class DmrTxController {
         // 静听窗只用于零射频探针：射频路径里它会让载波先空发三秒无语音，
         // 2026-09-19 第十三次发射就是这样变成约十秒噪音的。
         postVlcListenMs = MODE_DMR_REPLAY_CAPTURED_NO_RF.equals(mode)
+                || MODE_DMR_REPLAY_TYPE0_NO_RF.equals(mode)
                 ? 3000L : 0L;
         offerPacedVoice = speechShortAbc || dmrReplayCaptured;
         // 配对采集：同一次会话里，模块经 HPI 交给宿主的帧与录音磁带里
@@ -1651,7 +1673,8 @@ final class DmrTxController {
         return MODE_RELAY_SOFTWARE_PRIVACY_TRIPLE_SOS_LOW_POWER_RF
                 .equals(mode)
                 || MODE_SPEECH_SHORT_ABC_LOW_POWER_RF.equals(mode)
-                || MODE_DMR_REPLAY_CAPTURED_LOW_POWER_RF.equals(mode);
+                || MODE_DMR_REPLAY_CAPTURED_LOW_POWER_RF.equals(mode)
+                || MODE_DMR_REPLAY_TYPE0_LOW_POWER_RF.equals(mode);
     }
 
     static long activePacedTargetAt(long firstFlushAt, int unitIndex) {

@@ -37,6 +37,7 @@ final class DeviceModePolicy {
                 || DmrTxController.MODE_DMR_REPLAY_CAPTURED_NO_RF
                         .equals(mode)
                 || DmrTxController.MODE_DMR_REPLAY_LONG_NO_RF.equals(mode)
+                || DmrTxController.MODE_DMR_REPLAY_TYPE0_NO_RF.equals(mode)
                 || DmrTxController.MODE_DMR_RX_CAPTURE_NO_RF.equals(mode)
 
                 || DmrTxController.MODE_AT_PROBE_NO_RF.equals(mode);

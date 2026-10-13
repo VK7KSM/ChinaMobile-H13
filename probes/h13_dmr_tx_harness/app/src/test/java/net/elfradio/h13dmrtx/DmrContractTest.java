@@ -263,6 +263,51 @@ public final class DmrContractTest {
     }
 
     /**
+     * 包类型 0 的重放变体（2.9.68）：唯一变量是单元包类型 3 → 0。
+     * 素材、单元内容、字段 0x01 与长度 0x1b 必须与类型 3 逐字节相同，
+     * 只有包类型那一个字节不同——否则就不是单变量实验。
+     */
+    @Test
+    public void replayType0DiffersFromType3OnlyInPacketType() {
+        assertEquals(DmrProtocol.VoiceFormat.CHAN_D27_TYPE0,
+                DmrTxController.voiceFormatForMode(
+                        DmrTxController.MODE_DMR_REPLAY_TYPE0_NO_RF));
+        assertEquals(DmrProtocol.VoiceFormat.CHAN_D27_TYPE0,
+                DmrTxController.voiceFormatForMode(
+                        DmrTxController.MODE_DMR_REPLAY_TYPE0_LOW_POWER_RF));
+        assertEquals("原重放模式保持类型 3 不变",
+                DmrProtocol.VoiceFormat.CHAN_D27_TYPE3,
+                DmrTxController.voiceFormatForMode(
+                        DmrTxController.MODE_DMR_REPLAY_CAPTURED_NO_RF));
+        assertTrue(DmrTxController.isDmrReplayCapturedMode(
+                DmrTxController.MODE_DMR_REPLAY_TYPE0_NO_RF));
+        assertTrue(DmrTxController.requestsLowPowerRf(
+                DmrTxController.MODE_DMR_REPLAY_TYPE0_LOW_POWER_RF));
+        assertFalse(DmrTxController.requestsLowPowerRf(
+                DmrTxController.MODE_DMR_REPLAY_TYPE0_NO_RF));
+
+        byte[] unit = new byte[27];
+        for (int i = 0; i < unit.length; i++) {
+            unit[i] = (byte) (0xf0 + i);
+        }
+        byte[] t3 = DmrProtocol.voiceUnit(
+                DmrProtocol.VoiceFormat.CHAN_D27_TYPE3, unit);
+        byte[] t0 = DmrProtocol.voiceUnit(
+                DmrProtocol.VoiceFormat.CHAN_D27_TYPE0, unit);
+        assertEquals(t3.length, t0.length);
+        assertEquals(3, t3[5]);
+        assertEquals(0, t0[5]);
+        int differing = 0;
+        for (int i = 0; i < t3.length; i++) {
+            if (t3[i] != t0[i]) {
+                differing++;
+                assertEquals("只允许包类型字节不同", 5, i);
+            }
+        }
+        assertEquals(1, differing);
+    }
+
+    /**
      * 接收态外部解码链。逐字节对齐原厂 0x08017f78 的模拟器追踪
      * （H13_new.md 2.9.45，docs/traces/接收外部解码序列.json）。
      *
