@@ -6054,3 +6054,31 @@ SDR 的 ±1 dB 残余含泄露耦合随时间漂移与窗口检测噪声；项�
 
 **另两条独立线（不并入本次）**：①动态退桥预算 `firstBridgeExitMsFor` 与仅校验静态 150s 的 `rfHoldWindowWellFormed`
 失配；②恢复链 `0x20004b56` 读 280 字节失败等连带项——判据修复后主路径走正常收尾，预计大部分连带消除，待复测确认。
+
+#### 空口复测结果（v1.59，2026-10-14 11:14–11:47 悉尼）
+
+项目所有者当次许可后发射 `dmr_replay_f3tail_low_power_rf`（假负载、功率码 2030）。听感：开头约 1 秒类似模拟对讲机的
+背景噪音（素材语音之前的模块自有帧，较前次长），之后清晰。设备侧会话 `20261014_111640_159_rf`，归档 6377 文件至
+`captures/2026-10-14/new-dmr-tx-harness-dmr_replay_f3tail_low_power_rf-20261014_111609/device_session_salvage_20261014_111640_159_rf/`
+（清单为 `.tmp`，会话未正常收尾）。
+
+**判据修复确认生效（2.9.81 成立）**：
+- `rf_prepare_executed=true`、`rf_off_confirmed=true`、`rf_may_be_active=false`——第一桥射频窗判据这次**通过**，
+  主路径走到 `executeRfOff`：独立关断桩 11:16:59 执行、回读 `rf_off_marker`=ROF!、gate=0（`attestRfOff` 权威门过）。
+- `failure` 不再是「第一桥射频窗证据不成立」，证明该回归已修。
+
+**露出下一层墙（恢复路径，首次走到）**：`failure=ReadFailure:memread长度错误 address=0x20004b56 expected=280 parsed=0 raw=0`、
+`sram_restored=false`、`reboot_required=true`、`recovery_error_count=5`。时间线（session.log）：
+- RF 关闭 11:16:59 成功（关断桩回 207 字节）；
+- 最后一次**非空**文本回复 11:18:09（RF 关闭后文本面还正常约 70 秒）；
+- 其后所有 `text_response`/`serial_rx_text_response` 均 bytes=0——**模块文本面停止响应**，SRAM/privacy/文本基线/省电/debug
+  五项恢复全部读空失败，retry 使文件涨到 6375；11:42:00 写出原子结果、探针退出。
+- 宿主 900 秒单步超时 11:31:30 抢口，比文本面变空（11:18:09）晚 13 分钟——**非抢口所致，是设备侧 RF 关闭后文本面停摆**。
+- 注：早期 `0x20004b56` 读在会话内（0440，RF 前）成功返回 280 字节；失败的是恢复阶段的读，因文本面已死而 raw=0。
+
+**判定**：这条"完整成功恢复"路径以前每次都更早倒在第一桥门、走短恐慌恢复，从未暴露。属 2.9.81 所列独立线③
+（恢复链），真实机制为「RF 关闭约 70 秒后模块文本面停摆」，非单地址读不了。另：宿主单步超时对更长的成功恢复
+路径偏短（独立线，另计）。
+
+**设备恢复（11:46 重启后）**：生产 Interphone 独占 `/dev/ttyHS0`、`+DMOGETSOFTVERSION:0.3.66`、Wi-Fi 正常、无探针残留。
+发射质量链（f3shift/f3tail）不受影响。下一步待项目所有者决定：追查 RF 后文本面停摆，或先搁置恢复链、推进其它发射场景。
