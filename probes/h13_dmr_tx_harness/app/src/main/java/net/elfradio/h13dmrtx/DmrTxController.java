@@ -2147,8 +2147,13 @@ final class DmrTxController {
         sram.backupStable("data_gate", McuAssets.DATA_GATE, 1);
         sram.backupStable("session_scalars", McuAssets.SESSION_SCALARS,
                 McuAssets.SESSION_SCALARS_LENGTH);
-        sram.backupStable("session_queues", McuAssets.QUEUES,
-                McuAssets.QUEUES_LENGTH);
+        // 2.9.82（2026-10-14）：不再备份/恢复队列区 0x20004b56（QUEUES，280 字节）。
+        // 探针从不写这块区（全代码无 upload），它是 MCU 运行时自管理的活队列。
+        // 备份在会话前捕获（队列空、全零、两轮一致），但会话期间 MCU 在此填入
+        // 活指针；restoreAll 把全零原像写回、逐字清零，写到 0x20004b90（此刻为活
+        // 指针）即搞崩 MCU 文本处理任务——v1.59 实测 RF 关闭约 70 秒后文本面停摆、
+        // 五项恢复全读空、reboot_required。恢复一块自己没改过的活内存本就越界；
+        // 按"只恢复自己改过的"原则移除，探针少碰一块 SRAM，严格更安全。
         sram.backupStable("second_bridge_code", McuAssets.SECOND_BRIDGE_CODE,
                 McuAssets.SECOND_BRIDGE_LENGTH);
         sram.backupStable("second_bridge_counter", McuAssets.SECOND_BRIDGE_COUNTER,

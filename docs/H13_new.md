@@ -6082,3 +6082,32 @@ SDR 的 ±1 dB 残余含泄露耦合随时间漂移与窗口检测噪声；项�
 
 **设备恢复（11:46 重启后）**：生产 Interphone 独占 `/dev/ttyHS0`、`+DMOGETSOFTVERSION:0.3.66`、Wi-Fi 正常、无探针残留。
 发射质量链（f3shift/f3tail）不受影响。下一步待项目所有者决定：追查 RF 后文本面停摆，或先搁置恢复链、推进其它发射场景。
+
+### 2.9.82 修复：RF 后文本面停摆根因＝恢复一块从未改过的 MCU 活队列（2026-10-14 悉尼）
+
+**根因**（离线核对 v1.59 设备侧 6377 文件证据 + 代码）：探针 `backupStable("session_queues", 0x20004b56, 280)`
+（`DmrTxController.java:2150`）备份并由 `restoreAll()` 恢复队列区，但**全代码无一处写该区**（grep 确认无 upload）——
+它是 MCU 运行时自管理的活队列。备份在会话前捕获：队列空、原像全零、两轮一致，通过 `backupStable` 的动态一致性检查。
+会话期间 MCU 在此填入活指针；收尾 `restoreAll()` 把全零原像逐字写回。
+
+决定性证据（设备侧 `20261014_111640_159_rf`，恢复阶段 memwrite 扫描）：
+`0x20004b7c/b80/b84/b88/b8c` 写零均得到非空回复（文本面活），写 **`0x20004b90` 第一次无回复**，其后
+`0x20004b94/b98/…` 全部无回复——即写零到 `0x20004b90`（此刻为 MCU 活指针）当场搞崩文本处理任务。
+最后非空回复 11:18:09（RF 关闭后约 70 秒），之后五项恢复全读空、retry 使文件涨到 6375、`reboot_required=true`。
+v1.59 那 24 分钟会话时长系文本面死后的重试风暴，非恢复路径本身长。
+
+**修法（唯一变量）**：移除 `session_queues` 备份/恢复（删 `DmrTxController.java:2150-2151` 一处 `backupStable`）。
+探针从不写队列区，无需恢复；恢复它反而拿过时全零覆盖 MCU 活状态。按"只恢复自己改过的"原则，探针少碰一块
+SRAM，严格更安全。其余备份/恢复区（vector、bridge_flag、data_gate、session_scalars、各桩与 RF 控制区——均为探针实际
+上传过的区）不变。
+
+**制品**：v1.60（`1.60-no-queue-restore`，versionCode 160），`dist/H13_DMR_TX_Harness_v1.60_NoQueueRestore.apk`，
+SHA-256 `6C9E8890E714DF152837DEA4C9931C6B6EF42C02E0EC57582BB9858014B68252`；单元测试 205 项全过（无测试依赖队列备份）；
+宿主脚本 SHA-256 `9669EC18848042F6488521EEE2CDCAB879842AD14A44E93940BDD310A1E004D0`，解析错误 0，相对 v1.59 只改冻结闸四项。
+`McuAssets.QUEUES/QUEUES_LENGTH` 常量保留（现未引用）。
+
+**判读**：零射频 `dmr_replay_f3tail_no_rf` 仍应 PASS（回归）。随后请项目所有者当次许可发射
+`dmr_replay_f3tail_low_power_rf`，**原子结果应首次 `result=PASS`、`sram_restored=true`、`text_recovery_confirmed=true`、
+`reboot_required=false`、`recovery_error_count=0`**；设备侧应见文本面全程响应（无 11:18 式停摆）、恢复在正常时长内完成
+（无重试风暴），会话结束后生产 Interphone 应能**不经重启**重夺 `/dev/ttyHS0`。失败＝仍 FAIL 或文本面仍停摆，则队列区
+并非唯一致因。回滚：重启 H13 并核验基线。
