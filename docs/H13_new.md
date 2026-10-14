@@ -6184,3 +6184,64 @@ SHA-256 `A1422DAD71FE53E8CE7D11A421F5071FA843AF7BD578C7FF882E290DF19B5BCA`；单
 rf_off_confirmed=true、reboot_required=true、rf_path_recovery_by_reboot=true`**，recovery_error_count 应为 0，
 捕获文件回落到正常几百量级（无重试风暴），原子结果时间戳应在 `rf_actual_stop` 后数秒内（文本面尚活），宿主报"设备流程通过
 （RF 路径）"。之后手动 `pm enable` 生产应用+重启+核验基线。失败＝仍 FAIL 或出现重试风暴，则机制判读有误。
+
+### 2.9.85 实测确认：v1.61 fix B 真机 RF 发射一次通过——原子结果干净 PASS＋重启收尾、无重试风暴，收尾闭环成立（2026-10-14 悉尼）
+
+按 2.9.84 的预期，v1.61（versionCode 161，APK SHA-256 `A1422DAD71FE53E8CE7D11A421F5071FA843AF7BD578C7FF882E290DF19B5BCA`）在项目所有者当次明确许可下，以假负载、功率码 2030（出厂低功率，实测约 1.01 W）发射一次 `dmr_replay_f3tail_low_power_rf`，RX888 同步留档（借用中，解码留档见 2.9.86）。设备侧原子结果**首次干净落地**，fix B 的「RF 路径确认关断后跳过注定失败的全量文本面恢复、判 PASS＋重启收尾」判读得到真机证实。会话 `20261014_141234_957_rf`。
+
+**设备侧原子结果（决定性，`atomic_result.txt`，SHA-256 `8C24B3992E4E235814A6E98865F708623A8D0F88C8250D3ABAFABB6851516EA8`，设备写出 epoch 1791947641）逐字节关键字段：**
+
+```
+result=PASS
+launch_session_id=20261014_141234_957_rf
+terminal_phase=DONE_PASS
+mode=dmr_replay_f3tail_low_power_rf
+phase=COMPLETE
+rf_prepare_executed=true
+rf_off_confirmed=true
+rf_may_be_active=false
+reboot_required=true
+rf_path_recovery_by_reboot=true
+recovery_error_count=0
+recovery_errors=
+failure=
+relay_units_written=68
+relay_tail_units_written=8
+data36_written=68
+power_save_disabled=true
+power_save_mutation_active=true
+power_save_restored=false
+power_save_entry_value=0
+power_save_restored_value=-1
+sram_restored=false
+text_recovery_confirmed=false
+```
+
+**三条印证 fix B 判读的铁证：**
+
+1. **一次通过、无重试风暴**：本会话 salvage 共 2660 文件（正常几百量级之上的完整逐事件归档，非暴增），对照 2.9.82/2.9.83 所述 v1.59/v1.60 RF 失败会话——文本面在 RF 后约 10.7s 停摆后反复重试恢复读写、捕获文件暴增——此现象彻底消失。`recovery_error_count=0`、`recovery_errors=` 空、`failure=` 空。
+2. **原子结果赶在死亡窗前落盘**：`rf_actual_stop` 事件记于 **2026-10-14T14:13:53.565+1100**（`session.log` 对应 `2021_rf_actual_stop.bin`；RF 空口窗时长约 20.1s，elapsed_realtime 3861696→3881809ms，`rf_timeout_sec=30`），原子结果设备写出于 epoch 1791947641（≈14:14:01，设备文件时间 1s 粒度），间隔约 8 秒（H13-dev 据会话日志细粒度记 8.4s），**提前于 RF 后约 10.7s 文本面死亡窗约 2–3 秒**——即在文本面尚存活的数秒内本地写出，正是 fix B「RF 关断后不再向文本面发恢复读写」的直接效果。
+3. **探针自记跳过原因**：`2654_recovery_rf_path_by_reboot.bin` 逐字节为 `rf_prepare_executed=true` / `rf_off_confirmed=true` / `full_text_face_restore_skipped=true` / `reason=rf_off_text_face_dies_at_about_10_7s`，与 2.9.83 的定性同一锚点。
+
+**安全闭环（与 2.9.84 一致，真机复核）**：`rf_off_confirmed=true`、`rf_may_be_active=false`——射频关断由 `executeRfOff/attestRfOff`（硬性 ROF!+gate=0+VECTOR=flash）在收尾块之前独立确认；`first_bridge_exit_confirmed=true`、`second_bridge_exit_confirmed=false`。随后按 2.9.84 收尾走手动 `pm enable` 生产应用＋重启＋核验基线；本收尾工作接手时设备已恢复并核实：adb 5038、`device`、序列号 `0`、`product:msm8909 model:PoC_H13`，生产 Interphone 基线复位（接手期间经历一次 USB 掉线/被别的 adb server 抢占，换口/线后回到 5038 正常）。
+
+**宿主端一处尚待端到端确认**：本次 v1.61 发射时宿主脚本仍为 ②补丁前版本，设备流程已 PASS，但宿主在「省电恢复语义门」误报失败（`power_save_mutation_active=true`、`power_save_restored=false` 在 RF 重启路径下是预期值，旧门按无射频语义硬性要求 `=false`）。该宿主门缺陷已由 ②补丁修复——`Assert-ModeResult` 对 `rf_path_recovery_by_reboot=true` 整体跳过省电/原像语义门、非 RF 路径照旧严格核验——并提交推送（`4e5ec9f`，`VK7KSM/ChinaMobile-H13` main；宿主脚本新 SHA-256 `0F9D7F736D7E97DD92F783054593AE57D817C4C0CC7388A95161225672D0E6AA`，ParseFile 0 错误）。修复后宿主端到端（应报「设备流程通过（RF 路径）」）尚需一次发射复验，列为待办，须项目所有者当次许可方可执行。
+
+**发射质量**：本版唯一变量是 RF 收尾路径，发射内容与 2.9.7x/2.9.8x 的 `dmr_replay_f3tail` 素材一致（第三帧后移补偿 v1.57＋正文后尾部回送静音单元 v1.58，`relay_tail_units_written=8`），项目所有者此前已用 TYT 实测确认「与真·DMR 对讲机说话完全一样」；v1.61 未改发射内容，故不另立新 TYT 结论。
+
+**原始数据清单（本版，归档于时间戳捕获目录，不可变）：**
+
+| 项 | 路径（相对工作区根） | 长度/数量 | SHA-256 / 时刻 |
+| --- | --- | --- | --- |
+| 宿主捕获目录 | `research/h13_radio/captures/2026-10-14/new-dmr-tx-harness-dmr_replay_f3tail_low_power_rf-20261014_141203/` | 本地共 2706 文件（含运行时 `device_capture/` 及宿主件；宿主清单 `host_artifacts_sha256.tsv` 394068 字节） | 运行阶段：测试前/中/后 |
+| 设备侧完整证据包（本版拉取归档） | `.../device_session_salvage_20261014_141234_957_rf_PASS/` | 2660 文件，934040 字节，0 skipped | 设备清单 `artifacts_sha256.tsv` SHA-256 `25685A806DBB2DD01B49DD68C5FE23836C73ECE41201780E21AC0C551370D28E`（2660 行＝1 表头＋2659 条目，自列覆盖全包；采于设备 finally 恢复闭环，14:14） |
+| 原子结果 | `.../device_session_salvage_.../atomic_result.txt`（与 `device_capture/atomic_result.txt`、`atomic_result_host.txt` 去 BOM 后字节一致） | 1226 字节 | SHA-256 `8C24B3992E4E235814A6E98865F708623A8D0F88C8250D3ABAFABB6851516EA8`，设备写出 epoch 1791947641 |
+| 会话日志（含 RF 停事件） | `.../device_session_salvage_.../session.log` | 428038 字节 | SHA-256 `91F94165D4BFA5E93ACA8716CDD755389D1CDB298617613092B553D1EFBFE5EF`；`rf_actual_stop` 行 14:13:53.565+1100 |
+| RF 重启恢复证据 | `.../device_session_salvage_.../2654_recovery_rf_path_by_reboot.bin` | 见上逐字节 | 测试中（收尾判决） |
+| 独立复算清单（本会话另行全量 SHA256，交叉校验设备 tsv 用） | `.../device_session_salvage_20261014_141234_957_rf_PASS.sha256.tsv` | 2660 行（相对路径＋字节数＋SHA-256） | 恢复后归档 |
+
+**原始数据完整性结论**：完整。sdcard salvage 2660 文件 0 skipped 全量拉取到不可变时间戳捕获目录；设备侧 `artifacts_sha256.tsv` 自洽（2660 行覆盖全包）；本会话另行逐文件全量复算 SHA-256，与设备 tsv 逐条（路径，SHA256）**2659 条目零差异交叉校验通过**；原子结果设备侧 / 宿主侧 / salvage 三份去 BOM 后字节一致（SHA 均 `8C24B399…`）。本版对设备现场无 `memwrite`/清零/新上传桩（沿用既有 fix B 收尾），无需现场原像备份；salvage 即本版全部原始数据的权威归档。
+
+**制品/宿主**：探针 v1.61 APK SHA-256 `A1422DAD71FE53E8CE7D11A421F5071FA843AF7BD578C7FF882E290DF19B5BCA`，versionCode 161，versionName `1.61-rf-reboot-recovery`；宿主脚本（含 ②补丁）SHA-256 `0F9D7F736D7E97DD92F783054593AE57D817C4C0CC7388A95161225672D0E6AA`，提交 `4e5ec9f`。
+
+**结论**：H13 软件注入 DMR 语音并低功率发射——发射质量 TYT 实听已确认（2.9.7x/2.9.8x），RF 收尾路径 fix B **真机一次通过**（原子结果干净 PASS、无重试风暴、赶在文本面死亡窗前落盘、`rf_path_recovery_by_reboot=true` 走重启恢复，`recovery_error_count=0`）。唯一遗留：宿主端 ②补丁端到端复验（需项目所有者当次许可再发射一次 `dmr_replay_f3tail_low_power_rf`，届时宿主应报「设备流程通过（RF 路径）」）；RX888 本次录音解码留档见 2.9.86。
