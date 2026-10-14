@@ -580,6 +580,8 @@ final class DmrTxController {
     private boolean rfOffConfirmed;
     private boolean textRecoveryConfirmed;
     private boolean rebootRequired;
+    /** 2.9.83：RF 路径确认关断后跳过会崩的全量文本面恢复、以重启收尾。 */
+    private boolean rfPathRecoveryByReboot;
     private final List<String> recoveryErrors = new ArrayList<>();
     private boolean used;
     private String sessionId;
@@ -1373,42 +1375,7 @@ final class DmrTxController {
                         ackPacedVlcSoftware,
                         ackPacedVlcSoftwareTripleSos,
                         voiceFormatForMode(mode));
-                if (allowRf) {
-                    status("第一桥射频窗已关闭，禁止第二桥");
-                    if (secondBridgeExitConfirmed || !rfPrepareExecuted
-                            || !rfOffConfirmed || rfMayBeActive) {
-                        throw new IOException("第一桥射频窗关闭证据不成立");
-                    }
-                } else if (deadlineHandshakeOnly) {
-                    status("第一桥已验收，验证截止器延后武装");
-                    requestAndRequireDeviceDeadlineAfterFirstBridge();
-                    machine.completeNoRfAfterFirstBridge();
-                } else {
-                    machine.completeNoRfAfterFirstBridge();
-                }
-                status("恢复SRAM真实原像");
-                sram.restoreAll();
-                captureRfEdgeCounter("恢复后");
-                restorePrivacyOff();
-                verifyPostRestoreText();
-                if (pairedCapture) {
-                    readPairedTape();
-                }
-                restorePowerSavePreimage();
-                disableDebugOutputAndVerify();
-                if (allowRf) {
-                    publishRfReleaseAfterRestore();
-                }
-                success = machine.phase() == TxStateMachine.Phase.COMPLETE
-                        && sram.restored() && !privacyMutation
-                        && !rfMayBeActive && textRecoveryConfirmed
-                        && debugOutput.restored() && powerSaveWasDisabled
-                        && powerSaveRestored
-                        && (!allowRf || (rfPrepareExecuted && rfOffConfirmed
-                        && !secondBridgeExitConfirmed
-                        && deviceDeadlineArmRequested
-                        && deviceDeadlineArmed))
-                        && (!relayOne
+                boolean relayContractComplete = !relayOne
                         || (activeRelay != null
                         && (!postVlcThreeLiveSoftwareOne
                         ? (ackPacedVlcSoftwareTripleSos
@@ -1419,7 +1386,61 @@ final class DmrTxController {
                         >= activeRelay.requiredTriggerUnits()
                         && machine.relayComplete()
                         && machine.dataWritten()
-                        == activeRelay.maximumUnits()));
+                        == activeRelay.maximumUnits());
+                if (allowRf) {
+                    status("第一桥射频窗已关闭，禁止第二桥");
+                    if (secondBridgeExitConfirmed || !rfPrepareExecuted
+                            || !rfOffConfirmed || rfMayBeActive) {
+                        throw new IOException("第一桥射频窗关闭证据不成立");
+                    }
+                    // 2.9.83：射频关断后文本面约 10.7 秒必被定时触发事件打死，
+                    // RF 路径上全量文本面恢复注定失败并引发重试风暴（三条铁证见
+                    // 2.9.83）。射频关断已由 executeRfOff/attestRfOff 在上面独立
+                    // 硬确认（ROF!+gate=0+VECTOR=flash）。此处不再做会崩的全量恢复，
+                    // 按"预期收尾即重启"判定：令 rebootRequired=true、判 PASS，
+                    // 文本面/privacy/省电/SRAM 原像恢复全部交由宿主重启路线完成。
+                    // 严格以 allowRf（即 rfPrepareExecuted 真发过射频）分流，不按模式名。
+                    rfPathRecoveryByReboot = true;
+                    rebootRequired = true;
+                    status("射频路径确认关断，跳过文本面恢复，以重启收尾");
+                    evidence.saveText("recovery", "rf_path_by_reboot",
+                            "rf_prepare_executed=" + rfPrepareExecuted + "\n"
+                            + "rf_off_confirmed=" + rfOffConfirmed + "\n"
+                            + "full_text_face_restore_skipped=true\n"
+                            + "reason=rf_off_text_face_dies_at_about_10_7s\n");
+                    success = machine.phase()
+                            == TxStateMachine.Phase.COMPLETE
+                            && !rfMayBeActive && rfPrepareExecuted
+                            && rfOffConfirmed && !secondBridgeExitConfirmed
+                            && deviceDeadlineArmRequested
+                            && deviceDeadlineArmed
+                            && relayContractComplete;
+                } else {
+                    if (deadlineHandshakeOnly) {
+                        status("第一桥已验收，验证截止器延后武装");
+                        requestAndRequireDeviceDeadlineAfterFirstBridge();
+                        machine.completeNoRfAfterFirstBridge();
+                    } else {
+                        machine.completeNoRfAfterFirstBridge();
+                    }
+                    status("恢复SRAM真实原像");
+                    sram.restoreAll();
+                    captureRfEdgeCounter("恢复后");
+                    restorePrivacyOff();
+                    verifyPostRestoreText();
+                    if (pairedCapture) {
+                        readPairedTape();
+                    }
+                    restorePowerSavePreimage();
+                    disableDebugOutputAndVerify();
+                    success = machine.phase()
+                            == TxStateMachine.Phase.COMPLETE
+                            && sram.restored() && !privacyMutation
+                            && !rfMayBeActive && textRecoveryConfirmed
+                            && debugOutput.restored() && powerSaveWasDisabled
+                            && powerSaveRestored
+                            && relayContractComplete;
+                }
             }
             if (!success) {
                 throw new IOException("发送状态机未到完整结束态");
@@ -4855,7 +4876,10 @@ final class DmrTxController {
     }
 
     private void closeTransport() {
-        if (powerSaveMutation && !powerSaveRestoreAttempted
+        // 2.9.83：RF 路径以重启收尾，文本面在 RF 关断后约 10.7 秒已停摆，
+        // 此处不再尝试任何文本面收尾（否则只会超时挂起并徒增恢复错误）。
+        if (!rfPathRecoveryByReboot
+                && powerSaveMutation && !powerSaveRestoreAttempted
                 && debugOutput != null && debugOutput.enabled()
                 && transport != null
                 && transport.mode() == SerialTransport.Mode.TEXT) {
@@ -4865,7 +4889,8 @@ final class DmrTxController {
                 recordRecoveryError("power_save_close", error);
             }
         }
-        if (debugOutput != null && !debugOutput.restored()
+        if (!rfPathRecoveryByReboot
+                && debugOutput != null && !debugOutput.restored()
                 && transport != null
                 && transport.mode() == SerialTransport.Mode.TEXT) {
             try {
@@ -4976,6 +5001,7 @@ final class DmrTxController {
                 + "power_save_restored_value=" + powerSaveRestoredValue + "\n"
                 + "text_recovery_confirmed=" + textRecoveryConfirmed + "\n"
                 + "reboot_required=" + rebootRequired + "\n"
+                + "rf_path_recovery_by_reboot=" + rfPathRecoveryByReboot + "\n"
                 + "recovery_error_count=" + recoveryErrors.size() + "\n"
                 + "recovery_errors=" + joinRecoveryErrors() + "\n"
                 + "failure=" + failure + "\n";

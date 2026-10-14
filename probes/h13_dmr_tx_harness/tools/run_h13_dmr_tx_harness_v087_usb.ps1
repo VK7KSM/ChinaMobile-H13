@@ -63,10 +63,10 @@ $ProductionPackage = 'net.elfradio.h13interphone'
 $ProductionActivity = 'net.elfradio.h13interphone/com.bozhou.interphone.ui.talk.MainActivity'
 $Activity = 'net.elfradio.h13dmrtx/.MainActivity'
 $ExpectedFingerprint = 'CMCC/msm8909/msm8909:8.1.0/OPM1.171019.026/build11020953:user/test-keys'
-$ExpectedVersionCode = 160
-$ExpectedVersionName = '1.60-no-queue-restore'
-$ExpectedApkSha256 = '6C9E8890E714DF152837DEA4C9931C6B6EF42C02E0EC57582BB9858014B68252'
-$Apk = Join-Path $PSScriptRoot '..\dist\H13_DMR_TX_Harness_v1.60_NoQueueRestore.apk'
+$ExpectedVersionCode = 161
+$ExpectedVersionName = '1.61-rf-reboot-recovery'
+$ExpectedApkSha256 = 'A1422DAD71FE53E8CE7D11A421F5071FA843AF7BD578C7FF882E290DF19B5BCA'
+$Apk = Join-Path $PSScriptRoot '..\dist\H13_DMR_TX_Harness_v1.61_RfRebootRecovery.apk'
 $DeadlineHelper = Join-Path $PSScriptRoot '..\..\h13_radio\tools\h13_external_dmr_rf_deadline_device.sh'
 $RemoteDeadlineHelper = '/data/local/tmp/h13_dmr_tx_deadline.sh'
 $ExpectedDeadlineHelperSha256 = '522792E4E515DAAF674F56DA953178FC4E1A71812D71DFFE2D3F486BD82B2110'
@@ -201,6 +201,19 @@ function Test-ResultAllowsProductionRestore {
         $ResultText -match '(?m)^recovery_error_count=0\r?$' -and
         $ResultText -match '(?m)^reboot_required=false\r?$' -and
         $ResultText -match '(?m)^rf_may_be_active=false\r?$'
+}
+
+# 2.9.83：RF 路径以重启收尾——射频关断后文本面约 10.7 秒必被定时触发事件打死，
+# 全量文本面恢复在 RF 后注定失败，探针确认关断后直接判 PASS+reboot_required=true，
+# 由重启路线恢复。这条路径的验收门不是"免重启的全量恢复"，而是"射频确已安全关断、
+# 收尾即重启"：要求 rf_path_recovery_by_reboot=true、rf_off_confirmed=true、
+# rf_may_be_active=false、rf_prepare_executed=true。生产应用由本脚本后续重启恢复。
+function Test-RfPathRebootRecovery {
+    param([string]$ResultText)
+    return $ResultText -match '(?m)^rf_path_recovery_by_reboot=true\r?$' -and
+        $ResultText -match '(?m)^rf_off_confirmed=true\r?$' -and
+        $ResultText -match '(?m)^rf_may_be_active=false\r?$' -and
+        $ResultText -match '(?m)^rf_prepare_executed=true\r?$'
 }
 
 function Test-ActivityStartAccepted {
@@ -3350,10 +3363,17 @@ if ($Result -notmatch '(?m)^result=PASS\r?$') {
     throw "设备流程失败。捕获目录：$Capture"
 }
 Assert-ModeResult $Result
-if (-not (Test-ResultAllowsProductionRestore $Result) -or $HardStop) {
+# 2.9.83：验收门接受两种收尾——(A) 免重启的全量恢复，或 (B) RF 路径确认安全关断后
+# 以重启收尾。任一成立且非硬停即通过；两者皆不成立或硬停则仍判失败。
+if ((-not (Test-ResultAllowsProductionRestore $Result) -and
+        -not (Test-RfPathRebootRecovery $Result)) -or $HardStop) {
     throw "设备流程虽报告PASS，但安全恢复字段或截止状态不满足验收门。捕获目录：$Capture"
 }
-Write-Host "设备流程通过。捕获目录：$Capture"
+if (Test-RfPathRebootRecovery $Result) {
+    Write-Host "设备流程通过（RF 路径：射频已安全关断，收尾即重启，需重启恢复模块）。捕获目录：$Capture"
+} else {
+    Write-Host "设备流程通过。捕获目录：$Capture"
+}
 } finally {
     Write-HostManifest
 }

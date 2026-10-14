@@ -6155,3 +6155,32 @@ v1.60 删除 session_queues 恢复后，收尾恢复**走过了队列区**，但
 新增 `rf_path_recovery_by_reboot=true` 表明"需要重启"是该路径的**预期收尾**而非失败；严格按 `rfPrepareExecuted` 分流、
 不按模式名。安全不削弱——射频关断由 `executeRfOff/attestRfOff`（硬性要求 ROF!+gate=0+VECTOR=flash）在恢复块之前独立确认；
 且该改法同时消除重试风暴（RF 后不再向文本面发恢复读写，原子结果在文本面尚活的数秒内干净写出）。无射频路径保持全量恢复不变。
+
+### 2.9.84 实现：fix B 落地——RF 路径确认关断后跳过全量文本面恢复、判 PASS+重启收尾（v1.61，2026-10-14 悉尼）
+
+按 2.9.83 实现。**探针唯一变量**：`DmrTxController.runDevice` 的收尾块按 `allowRf` 分流。
+- RF 路径（`allowRf && rfPrepareExecuted && rfOffConfirmed && !rfMayBeActive`）：验证第一桥射频窗关闭后，**跳过**
+  `sram.restoreAll()`/`restorePrivacyOff`/`verifyPostRestoreText`/`readPairedTape`/`restorePowerSavePreimage`/
+  `disableDebugOutputAndVerify`/`publishRfReleaseAfterRestore`，令 `rfPathRecoveryByReboot=true`、`rebootRequired=true`，
+  `success` 只要求 machine 到 COMPLETE、`!rfMayBeActive`、`rfPrepareExecuted`、`rfOffConfirmed`、`!secondBridgeExitConfirmed`、
+  deadline 已请求并武装、relay 合同完成——不再要求 `sram.restored()`/`textRecoveryConfirmed`/`powerSaveRestored`/
+  `debugOutput.restored()`。`closeTransport` 的两处文本面收尾也加 `!rfPathRecoveryByReboot` 守卫（RF 后文本面已死，
+  再试只会超时挂起徒增恢复错误）。原子结果新增 `rf_path_recovery_by_reboot`。
+- 无射频路径（`!allowRf`）：全量文本面恢复与原 `success` 判定**逐字节不变**（`deadlineHandshakeOnly`/`pairedCapture` 仅无射频成立，
+  已移入该分支）。
+- 安全不削弱：射频关断由 `executeRfOff/attestRfOff`（硬性 ROF!+gate=0+VECTOR=flash）在收尾块之前独立确认，fix B 只是不再做
+  RF 后注定失败的文本面恢复。该改法同时消除重试风暴——RF 关断后无任何文本面读写，原子结果在文本面尚活的数秒内本地写出。
+
+**宿主唯一变量**：验收门接受两种收尾——(A) 免重启全量恢复 `Test-ResultAllowsProductionRestore`，或 (B) RF 重启收尾
+`Test-RfPathRebootRecovery`（要求 `rf_path_recovery_by_reboot=true`+`rf_off_confirmed=true`+`rf_may_be_active=false`+
+`rf_prepare_executed=true`）。任一成立且非硬停即"设备流程通过"。生产应用在 RF 路径仍不自动文本面恢复，由重启恢复。
+
+**制品**：v1.61（`1.61-rf-reboot-recovery`，versionCode 161），`dist/H13_DMR_TX_Harness_v1.61_RfRebootRecovery.apk`，
+SHA-256 `A1422DAD71FE53E8CE7D11A421F5071FA843AF7BD578C7FF882E290DF19B5BCA`；单元测试 205 项全过；宿主脚本 SHA-256
+`9F97DBC752CF746DDDA9579863D187464C3A044962D0E7DA5CE2B74AEDAD277D`，解析错误 0。
+
+**判读**：零射频 `dmr_replay_f3tail_no_rf` 仍须 `result=PASS、sram_restored=true、reboot_required=false`（证明无射频路径不变）。
+随后请项目所有者当次许可发射 `dmr_replay_f3tail_low_power_rf`，**原子结果应 `result=PASS、rf_prepare_executed=true、
+rf_off_confirmed=true、reboot_required=true、rf_path_recovery_by_reboot=true`**，recovery_error_count 应为 0，
+捕获文件回落到正常几百量级（无重试风暴），原子结果时间戳应在 `rf_actual_stop` 后数秒内（文本面尚活），宿主报"设备流程通过
+（RF 路径）"。之后手动 `pm enable` 生产应用+重启+核验基线。失败＝仍 FAIL 或出现重试风暴，则机制判读有误。
