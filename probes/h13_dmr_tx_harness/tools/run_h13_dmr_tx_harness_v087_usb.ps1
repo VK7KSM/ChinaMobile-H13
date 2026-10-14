@@ -760,6 +760,10 @@ function Assert-ModeResult {
             throw "模式布尔语义门失败：要求$Name=$Value"
         }
     }
+    # 2.9.83：RF 重启路径（rf_path_recovery_by_reboot=true）省电/文本面恢复延后至
+    # 重启，以下省电恢复与原像语义门不适用，整体跳过；非 RF 重启路径照旧严格核验。
+    $RfPathReboot = $ResultText -match '(?m)^rf_path_recovery_by_reboot=true\r?$'
+    if (-not $RfPathReboot) {
     # at_probe_no_rf 与 clear_only 一样只走文本路径，不动省电入口。
     $ExpectedPowerSaveDisabled = if ($Mode -in @('clear_only','at_probe_no_rf')) { 'false' } else { 'true' }
     foreach ($Pair in @(
@@ -788,6 +792,7 @@ function Assert-ModeResult {
         if ($ResultText -notmatch "(?m)^power_save_restored_value=$EntryValue\r?$") {
             throw '省电原像语义门失败：恢复值与入口值不一致。'
         }
+    }
     }
 }
 
