@@ -6314,3 +6314,44 @@ failure=
 **原始数据清单（归档目录 `research/h13_radio/captures/2026-10-14/new-dmr-tx-harness-dmr_replay_f3tail_no_rf-20261014_153355/`，不可变）：** 本地 4033 文件（含 `device_capture/` 3988 + 宿主件）；`host_artifacts_sha256.tsv` 4033 行、SHA-256 `D628186B…9BBA69F`；原子结果 SHA-256 `D7FF95BF…701826B`；宿主脚本 SHA-256 `0F9D7F73…0E6AA`。预检目录 `…clear_only-20261014_153157`（570 文件）。**完整性结论**：完整；本次无 SRAM 写/清零/新桩，无需现场原像备份。
 
 **结论**：②补丁宿主脚本零射频路径一次通过、与补丁前逐字段一致、设备全量恢复——待办4 的零射频回归达成。**唯一遗留**：宿主端到端 RF 路径复验（应报「设备流程通过（RF 路径）」），须项目所有者当次明确「可以发射」后，再发射一次 `dmr_replay_f3tail_low_power_rf`（假负载、功率码 2030，约 1.01 W）方可执行；未获许可前不发射。
+
+### 2.9.88 验收：②补丁宿主端到端 RF 路径一次通过，宿主报「设备流程通过（RF 路径）」＋TYT 实听清晰（v1.61，2026-10-14 悉尼）
+
+项目所有者当次明确「可以发射」后执行一次低功率发射（假负载、功率码 2030，约 1.01 W），完成待办4 第二步——含 ②补丁宿主脚本的 RF 路径端到端复验。**唯一变量**＝含 ②补丁的宿主脚本（`0F9D7F73`）相对补丁前；模式/APK/设备不变。
+
+**执行（两步）**：
+1. 新鲜 `clear_only` privacy 预检（不复用旧预检）：`…clear_only-20261014_165513`，「设备流程通过」。
+2. RF 发射：`-Mode dmr_replay_f3tail_low_power_rf -AllowInstall -AllowDisableInterphone -AllowPotentialRf -Setup0Stable -ClearPrecheckCapture <①>`。会话 `20261014_165910_255_rf`，捕获目录 `…dmr_replay_f3tail_low_power_rf-20261014_165806`。
+
+**宿主判定（决定性，待办4 第二步的验收目标）**：宿主脚本退出码 0，打印
+`设备流程通过（RF 路径：射频已安全关断，收尾即重启，需重启恢复模块）`
+——即含 ②补丁的宿主对本 RF 原子结果，经 `Test-RfPathRebootRecovery`（`rf_path_recovery_by_reboot=true`＋`rf_off_confirmed=true`＋`rf_may_be_active=false`＋`rf_prepare_executed=true`）通过验收门。补丁前此处卡在「省电恢复语义门失败：要求 power_save_mutation_active=false」（见 2.9.85），②补丁修复后端到端跑通。
+
+**设备侧原子结果（`atomic_result.txt` SHA-256 `68A513E8CC5B7A9567BD5B81D707520B385C72FEA4EC4EB654C3DBAFC9CE09BE`）关键字段：**
+
+```
+result=PASS
+launch_session_id=20261014_165910_255_rf
+mode=dmr_replay_f3tail_low_power_rf
+rf_prepare_executed=true
+rf_off_confirmed=true
+rf_may_be_active=false
+reboot_required=true
+rf_path_recovery_by_reboot=true
+recovery_error_count=0
+failure=
+relay_units_written=68
+relay_tail_units_written=8
+```
+
+与 2.9.85 的 v1.61 首次 RF 发射（141234）逐字段一致，2652 文件正常量级、无重试风暴，`production_restore_blocked.txt` 存在（RF 路径按设计未自动恢复生产，留重启恢复）。
+
+**TYT 实听（项目所有者，空口端到端权威确认）**：本次发射项目所有者 TYT 实听「通道了 TYT 发出的声音，很清晰」——继 2.9.85 的发射质量结论后，再次真实空口确认 H13 软件注入 DMR 语音可被真·DMR 对讲机清晰接收。
+
+**恢复（RF 路径＝重启恢复）**：RF 路径宿主不自动恢复生产（文本面 RF 后约 10.7 s 死）。手动收尾：`pm enable --user 0 net.elfradio.h13interphone`（注意：`pm disable-user --user 0` 须用 `pm enable --user 0` 清除，单纯 `pm enable` 不清 user-0 禁用态）→ `adb reboot`（17:02:54 发出 → 17:04:10 `boot_completed=1`，本次 USB 未掉线、干净回 5038）→ `am start` 生产。核验：生产 Interphone 运行（PID 2487）、**重新独占 `/dev/ttyHS0`**、无探针进程、WiFi 启用、GPIO `audio_switch=0`、设备在线（`0 device model:PoC_H13`）、指纹 `…build11020953`。基线完全恢复。
+
+**SDR 留档（RX888，本次采集完整覆盖 RF 窗）**：录音 `h13tx_rfverify_165806.sc16`（2,404,122,624 字节，SHA-256 `D911A95A…6938B2`，RMS 0.0029 较 2.9.86 强约 5.6 倍，突发在 181–185 s≈17:00 即键控窗）。FM 解调后 dsd-fme 识别 **DMR MS/DM MODE、VC\*（语音帧）、SLOT 1 FLCO**，但 off-air 泄漏弱信号 FEC 误码重（`Total audio errors 52`），**SDR 仅留档**，发射质量以 TYT 实听为准。归档目录 `research/h13_radio/captures/2026-10-14/rx888_rfverify_20261014_165910/`，清单 SHA-256 `17824AE5264006523CF7DBE60143AF502AD3B11DC7065224D9A44505AB964484`。用毕 `fx3_tool reset` 释放 RX888（FX3 重枚举为引导设备 PID 00F3），交还 flight 重启 ADS-B。
+
+**原始数据清单**：RF 会话捕获目录 `…dmr_replay_f3tail_low_power_rf-20261014_165806/` 本地 2699 文件（device_capture 2652＋宿主件）；`host_artifacts_sha256.tsv` 2699 行；宿主脚本 `host_script_sha256.txt`＝`0F9D7F73…0E6AA`（②补丁）；原子结果 SHA-256 `68A513E8…CE09BE`；预检目录 `…clear_only-20261014_165513`。SDR 归档见上。**完整性结论**：完整。
+
+**结论（待办4 全部达成）**：含 ②补丁的宿主脚本在 RF 路径端到端一次通过并报「设备流程通过（RF 路径）」，原子结果干净 PASS＋重启收尾、无重试风暴，TYT 实听清晰，设备经 `pm enable --user 0`＋重启全量恢复。H13 软件注入 DMR 语音发射闭环（质量 v1.57/v1.58、fix B 收尾 v1.61、无射频回归、RF 端到端复验）全部收尾完成。
