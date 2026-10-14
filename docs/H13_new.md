@@ -6245,3 +6245,72 @@ text_recovery_confirmed=false
 **制品/宿主**：探针 v1.61 APK SHA-256 `A1422DAD71FE53E8CE7D11A421F5071FA843AF7BD578C7FF882E290DF19B5BCA`，versionCode 161，versionName `1.61-rf-reboot-recovery`；宿主脚本（含 ②补丁）SHA-256 `0F9D7F736D7E97DD92F783054593AE57D817C4C0CC7388A95161225672D0E6AA`，提交 `4e5ec9f`。
 
 **结论**：H13 软件注入 DMR 语音并低功率发射——发射质量 TYT 实听已确认（2.9.7x/2.9.8x），RF 收尾路径 fix B **真机一次通过**（原子结果干净 PASS、无重试风暴、赶在文本面死亡窗前落盘、`rf_path_recovery_by_reboot=true` 走重启恢复，`recovery_error_count=0`）。唯一遗留：宿主端 ②补丁端到端复验（需项目所有者当次许可再发射一次 `dmr_replay_f3tail_low_power_rf`，届时宿主应报「设备流程通过（RF 路径）」）；RX888 本次录音解码留档见 2.9.86。
+
+### 2.9.86 留档：RX888 录音 FM 解调经 dsd-fme 确认含 H13 DMR（Color Code 11，SDR 仅留档，2026-10-14 悉尼）
+
+发射质量已由项目所有者 TYT 实听确认（2.9.7x/2.9.8x），本节仅对 v1.61 发射期借用 RX888 的 SDR 录音做解码留档，**不作为发射质量判据**。
+
+**录音（不可变原始，K5 采集）**：`h13tx_20261014_140846.sc16`，2,400,059,392 字节，SHA-256 `A82BD289FE900EA1BB6D755413EBF4DE6128CEBE09354F743002D66B9C323604`（K5 端与主机拉取后本地逐字节一致）。格式 SC16（int16 交错 I/Q），采样率 2 MS/s，LO 433.450 MHz，H13 信号在 +100 kHz，时长 300 s（开头 1 s 不输出），600,014,848 样本，RMS 0.000519，削顶 0（`.log` 原文）。录音窗 14:08:46–14:13:46，仅覆盖 v1.61 RF 窗（约 14:13:33–14:13:53，见 2.9.85）尾段约 13 s，另含同一会话序列中更早的 DMR 活动。
+
+**解调管线（主机 numpy/scipy；K5 无可用 Python）**：SC16 → 混频 −100 kHz → `resample_poly(3,125)` 2 MHz→48 kHz → FIR 低通 8 kHz → FM 鉴频 `angle(iq[1:]·conj(iq[:-1]))·fs/2π` → `/2500·16000` → 48 kHz 单声道 int16 WAV（`rx888_demod.py`，已并入归档）。
+
+**dsd-fme 解码（K5，build AW 2025-216；`-fs -xr -n 50 -Z`）**：全程 48 kHz WAV 经 dsd-fme 识别为 **DMR MS/DM MODE/MONO**，锁定 **Color Code=11**、CACH 突发、至少一帧 **VC\*（语音帧）**、**SLOT 1 FLCO**、多条 **DMR PDU Payload**（`dsd_xr_stdout.log` 原文，如 `Sync: -DMR MS/DM MODE/MONO | Color Code=11 | VC*`、`DMR PDU Payload [08][AA][A8]…`）。FEC 误码较多（`CACH/Burst FEC ERR`，`Total audio errors: 51`），合成语音 WAV 11,564 字节。误码符合 1.01 W 假负载泄漏弱信号 + 录音仅覆盖发射尾段的 SDR 留档预期。
+
+**突发定位**：解调后 +100 kHz 信道每秒功率包络峰值在 77–82 s（峰/中位≈60）；对该窗 FFT 精确对中（实测载频 99,062 Hz，残差 ~938 Hz）后单独解码得 Color Code=XX，说明洁净 CC=11 段不在该窗。SDR 留档性质，未继续调优定位；真机发射质量以 TYT 实听为准。
+
+**工具要点（留档）**：此 dsd-fme build 的 `-N` 为“**启用** ncurses”（与旧 skill 说法相反），SSH 无 PTY 下须**省略** `-N` 方可无头运行；`-n <float>` 为模拟输出增益（H13-dev「必加否则全零」即此）；解调须在主机做（K5 仅有商店占位 python，无 numpy/scipy），dsd-fme 在 K5 跑。
+
+**原始数据清单（归档目录 `research/h13_radio/captures/2026-10-14/rx888_decode_h13tx_20261014_140846/`，不可变）：**
+
+| 项 | 文件 | 长度 | SHA-256 |
+| --- | --- | --- | --- |
+| 原始 IQ | `h13tx_20261014_140846.sc16` | 2,400,059,392 | `A82BD289…C323604`（=K5） |
+| 采集日志 | `h13tx_20261014_140846.log` | 375 | `F19B8FAA…633854` |
+| 全程解调 WAV | `h13tx_20261014_140846_demod_48k.wav` | 28,800,756 | `7469F566…6C6B6D` |
+| dsd-fme 解码日志（CC=11 证据） | `dsd_xr_stdout.log` | 3,450 | `EF2B3F80…C87FF42C` |
+| 合成语音 WAV | `h13tx_20261014_140846_dsd_xr.wav` | 11,564 | `644DD9CD…28B8D7C` |
+| 突发窗解调/解码 | `*_burst75-85_h13ch_48k.wav`、`burst_h13ch_dsd.log/.wav` | — | 见清单 |
+| 解调脚本 | `rx888_demod.py`、`rx888_burst.py` | — | 见清单 |
+| 归档清单 | `rx888_decode_artifacts_sha256.tsv` | 12 项 | `3BBD777DDF7352A8E982A45C1AAC92DBD4B2A63D8B6BB0A1C18EA15EFDFD38B7` |
+
+**原始数据完整性结论**：完整。IQ 从 K5 全量拉取，本地 SHA 与 K5 一致（双站保存）；解调/解码产物与脚本齐备、逐项有 SHA。K5 上我创建的临时中间件已清理，仅保留原始 `.sc16/.log`。**结论**：RX888 录音确含 H13 DMR 发射（Color Code 11、语音帧），留档完成；发射质量判据仍以 TYT 实听为准，SDR 不改变该结论。
+
+### 2.9.87 回归：含②补丁宿主脚本的零射频路径端到端一次通过，与补丁前逐字段一致（v1.61，2026-10-14 悉尼）
+
+**目的**：证实 2.9.85/待办中的宿主省电门 ②补丁（`Assert-ModeResult` 对 `rf_path_recovery_by_reboot=true` 整体跳过省电/原像语义门，非 RF 路径不变，提交 `4e5ec9f`）**不破坏无射频路径**，且含补丁宿主脚本端到端跑通。无射频、不发射，无需发射许可。
+
+**静态已证**：无射频原子结果 `rf_path_recovery_by_reboot=false`（见 140423），故 ②补丁的 `if (-not $RfPathReboot)` 判真、省电门**逐字节照旧执行**；本节为真机端到端复证。
+
+**执行（两步，单变量＝宿主脚本 ②补丁，APK/模式/设备不变）**：
+1. 新鲜 `clear_only` privacy 预检（规则要求不复用旧预检）：`-Mode clear_only -AllowInstall -AllowDisableInterphone` → 「设备流程通过」，捕获目录 `…clear_only-20261014_153157`（570 文件，预检原子 SHA-256 `56A80836…768EB56`）。
+2. 零射频回归：`-Mode dmr_replay_f3tail_no_rf -AllowInstall -AllowDisableInterphone -AllowPotentialRf -Setup0Stable -ClearPrecheckCapture <①>`。会话 `20261014_153439_239_relay_no_rf`，宿主报「设备流程通过」。
+（`-AllowPotentialRf` 为 relay/replay 代码路径的总闸确认，非实际键控；`_no_rf` 模式决定不发射，已由 140423 的 `rf_prepare_executed=false` 印证。）
+
+**设备侧原子结果（决定性，`atomic_result.txt` SHA-256 `D7FF95BF…701826B`）关键字段：**
+
+```
+result=PASS
+mode=dmr_replay_f3tail_no_rf
+rf_prepare_executed=false
+rf_off_confirmed=false
+rf_may_be_active=false
+sram_restored=true
+privacy_restored=true
+power_save_mutation_active=false
+power_save_restored=true
+text_recovery_confirmed=true
+reboot_required=false
+rf_path_recovery_by_reboot=false
+recovery_error_count=0
+failure=
+```
+
+与 140423（②补丁前旧脚本 `9F97DBC7` 运行的同模式）**逐字段一致**——②补丁对无射频路径无害，静态＋端到端双重证实。含②补丁的宿主脚本（`host_script_sha256.txt`＝`0F9D7F73…0E6AA`）对本无射频原子结果的省电门实跑并通过（`rf_path_recovery_by_reboot=false` → 门执行 → `power_save_restored=true` 等满足），报「设备流程通过」。
+
+**无发射确认**：`rf_prepare_executed=false`、`rf_off_confirmed=false`、`rf_may_be_active=false`，捕获目录无 `rf_actual_start/stop`——本次全程未键控发射。
+
+**恢复核验**：生产 `net.elfradio.h13interphone` 重新启用并运行（PID 2552）、重新独占 `/dev/ttyHS0`（`port_owner_after` 原文 `o.h13inte 2552 … /dev/ttyHS0`）、无探针进程、设备在线（adb 5038 `0 device`、`model:PoC_H13`）。
+
+**原始数据清单（归档目录 `research/h13_radio/captures/2026-10-14/new-dmr-tx-harness-dmr_replay_f3tail_no_rf-20261014_153355/`，不可变）：** 本地 4033 文件（含 `device_capture/` 3988 + 宿主件）；`host_artifacts_sha256.tsv` 4033 行、SHA-256 `D628186B…9BBA69F`；原子结果 SHA-256 `D7FF95BF…701826B`；宿主脚本 SHA-256 `0F9D7F73…0E6AA`。预检目录 `…clear_only-20261014_153157`（570 文件）。**完整性结论**：完整；本次无 SRAM 写/清零/新桩，无需现场原像备份。
+
+**结论**：②补丁宿主脚本零射频路径一次通过、与补丁前逐字段一致、设备全量恢复——待办4 的零射频回归达成。**唯一遗留**：宿主端到端 RF 路径复验（应报「设备流程通过（RF 路径）」），须项目所有者当次明确「可以发射」后，再发射一次 `dmr_replay_f3tail_low_power_rf`（假负载、功率码 2030，约 1.01 W）方可执行；未获许可前不发射。
