@@ -6355,3 +6355,18 @@ relay_tail_units_written=8
 **原始数据清单**：RF 会话捕获目录 `…dmr_replay_f3tail_low_power_rf-20261014_165806/` 本地 2699 文件（device_capture 2652＋宿主件）；`host_artifacts_sha256.tsv` 2699 行；宿主脚本 `host_script_sha256.txt`＝`0F9D7F73…0E6AA`（②补丁）；原子结果 SHA-256 `68A513E8…CE09BE`；预检目录 `…clear_only-20261014_165513`。SDR 归档见上。**完整性结论**：完整。
 
 **结论（待办4 全部达成）**：含 ②补丁的宿主脚本在 RF 路径端到端一次通过并报「设备流程通过（RF 路径）」，原子结果干净 PASS＋重启收尾、无重试风暴，TYT 实听清晰，设备经 `pm enable --user 0`＋重启全量恢复。H13 软件注入 DMR 语音发射闭环（质量 v1.57/v1.58、fix B 收尾 v1.61、无射频回归、RF 端到端复验）全部收尾完成。
+
+### 2.9.89 判定：模拟 FM 接收音频无法经 HPI 进出，VOCODER_IO_SET 位图更正（离线三层，2026-10-15 悉尼）
+
+超级无线电平台规划触发的离线只读判定（未碰真机、未发射、未改设备现场）。完整带出处判定见独立文档 `research/ChinaMobile-H13/docs/2026-10-15-模拟FM音频无法经HPI进出-离线三层判定.md`，本节只记定论与一处必须纠正的位图。
+
+**定论**：把模拟 FM 的解调接收音频经 HPI 导出给 MCU/Android——**【已证不可行】**（出厂固件+公开文档）；残留「强改路由」=【推断不可行】，可一次真机无射频实验关闭（文档末节）。镜像发射侧：模拟模式注入 PCM 只得未调制 CW，同根。数字侧不受影响：DMR 接收 PCM/CHAN_D 经 HPI 导出【已证可行】（2.9.x 与 §17 既有证据）。根因：H13 架构上是自足模拟电台，模拟收/发音频锁在 codec 内部模拟链（右 ADC=FM 解调→DSP→左 DAC=扬声器；麦克风=左 ADC→调制器），HPI 只服务数字（声码器/CHAN_D）域，模拟模式旁路声码器。
+
+**三层证据（摘）**：
+1. 固件实跑（最硬）：模拟建立函数 `0x08019ffc`（Unicorn 模拟器 + disasm 第 38906 行起）只发 `CODEC_SEL(1)→VOCODER_SEL(16=Analog)→PROCESS_MODE(0x80)→ANALOG_SUBAUDIO→WORK_MODE(0x43)→SQ_LEVEL`，**全程零 VOCODER_IO_SET（0x0801d0c8）、零 field 0x00**；VOCODER_IO_SET 的 11 个调用点全在数字/DPMR 路径。
+2. 数据手册：`SCT3258_Packet_Interface.pdf` p.51-52，VOCODER_IO_SET「仅用于 DPMR 模式」；`SCT3258_Analog_Setup.pdf` p.15-16，模拟音频全在 codec 内部，MCU 只经 HPI 配 codec 增益、从不经 HPI 收解调 PCM。
+3. 厂商工具源：`FormVOCODEUser.cs`/`SCT3252.cs` 的文件路由全是声码器域（PCM↔AMBE），无「模拟解调音频转出」。
+
+**★VOCODER_IO_SET(field 0x3E) 位图更正**：此前本项目记录/交接引用的「bit7 Voice In / bit1:0 Voice Out(Codec/File)」来自厂商 DLL 时代解释，**与手册不符**。手册实际位：bit7 Reserved；bit6 MOD_IN（0=vocoder/1=MCU 经 CHAN_D）；bit5:4 ENC_OUT；bit3 DEC_IN；bit2 DEMOD_OUT；bit1/bit0 Reserved。使用示例：Local Recording=0x20、Remote Recording=0x04、Local Play=0x08、Remote Play=0x40，全在声码器/CHAN_D 数字域，**无「Voice Out」位**。此更正不影响既有 DMR 发射工作（走 CHAN_D/MOD_IN，与手册一致）。
+
+**对平台含义**：模拟 RX 玩法（APRS/SSTV/扫描/录模拟）不能靠 H13 本机模块经 HPI 导出音频——交给基地 SDR（§16 Radio OS 架构）做宽带模拟 RX、H13 当控制终端；或走 codec 模拟口由 Android ADC 采（耳机/附件口接线未证）。
