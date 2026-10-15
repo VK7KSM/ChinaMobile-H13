@@ -6370,3 +6370,12 @@ relay_tail_units_written=8
 **★VOCODER_IO_SET(field 0x3E) 位图更正**：此前本项目记录/交接引用的「bit7 Voice In / bit1:0 Voice Out(Codec/File)」来自厂商 DLL 时代解释，**与手册不符**。手册实际位：bit7 Reserved；bit6 MOD_IN（0=vocoder/1=MCU 经 CHAN_D）；bit5:4 ENC_OUT；bit3 DEC_IN；bit2 DEMOD_OUT；bit1/bit0 Reserved。使用示例：Local Recording=0x20、Remote Recording=0x04、Local Play=0x08、Remote Play=0x40，全在声码器/CHAN_D 数字域，**无「Voice Out」位**。此更正不影响既有 DMR 发射工作（走 CHAN_D/MOD_IN，与手册一致）。
 
 **对平台含义**：模拟 RX 玩法（APRS/SSTV/扫描/录模拟）不能靠 H13 本机模块经 HPI 导出音频——交给基地 SDR（§16 Radio OS 架构）做宽带模拟 RX、H13 当控制终端；或走 codec 模拟口由 Android ADC 采（耳机/附件口接线未证）。
+
+### 2.9.90 H13 能力边界与最终定性（2026-10-16 悉尼）
+
+经约两个月逆向与本轮五角度封闭测试,确立 H13 的务实定性,归档为"先读"文档 `research/ChinaMobile-H13/docs/2026-10-16-H13能力边界与最终定性.md`。一句话:**H13 不是"超级无线电平台"的核心,它是平台里一个便携的 UHF DMR/FM 语音终端 + 经 Wi-Fi 的网络 DMR(BrandMeister)口;宽带/全模式/SDR/HF/VHF/模拟信号解码类归基地 SDR(§16),H13 当控制与本机语音终端。**
+
+已证能做:UHF 本机模拟 FM 语音对讲;DMR 本机语音对讲(软件注入空口 TYT 实听清晰,v1.61);DMR 数字语音数据面(CHAN_D/PCM 经 HPI 导出+软件 AMBE 解码);AT 控制面 + RSSI/BER;DMR 数据消息。
+已证做不到(硬件天花板):模拟音频导出/注入五角度全封(APRS/SSTV/录模拟 本机不可行);只 UHF ~400-430、无 VHF/HF;只模拟FM/DMR/dPMR、无 SSB/全模式/宽带SDR;固件重刷未建立且高风险;DMR 第二轮信用不重启、RF 后文本面约10.7s必死需重启;MSM8909 低端+Android 8.1。
+对计划含义:第一阶段 H13 侧收敛为"可用 UHF 模拟FM+DMR 对讲机 + DMR 数字数据/录音/网络"(阶段0-5);阶段6b(模拟音频注入/导出)判死划掉;APRS/SSTV/SDR/全模式/VHF/HF 不排进 H13 本机(归基地 SDR 或换硬件)。
+价值留存:DMR 收发数据面已整条啃下,换别的 SCT3258/DMR 平台通用;已钉死的"做不到"是实测结果,省后续弯路。
